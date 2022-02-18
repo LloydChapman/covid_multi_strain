@@ -51,6 +51,16 @@ plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
     legend("left", lwd = 1, col = cols, legend = names(cols), bty = "n")
 }
 
+plot_incidence <- function(incidence_modelled,incidence_observed,times){
+    matplot(times, t(incidence_modelled[5,,-1]),
+            type= "l", col = alpha("black",0.1), xlab = "Day", ylab = "Cases")
+    points(times, incidence_observed, pch=19)
+}
+
+true_history <- readRDS("test_examples/sir_true_history.rds")
+plot_particle_filter(filter$history(), true_history, incidence$day)
+plot_incidence(filter$history(), incidence$cases, incidence$day)
+
 beta <- pmcmc_parameter("beta", 0.2, min = 0)
 gamma <- pmcmc_parameter("gamma", 0.1, min = 0,
                          prior = function(p)
@@ -66,8 +76,8 @@ control <- pmcmc_control(
     progress = TRUE)
 pmcmc_run <- pmcmc(mcmc_pars, filter, control = control)
 
-true_history <- readRDS("test_examples/sir_true_history.rds")
 plot_particle_filter(pmcmc_run$trajectories$state, true_history, incidence$day)
+plot_incidence(pmcmc_run$trajectories$state, incidence$cases, incidence$day)
 
 processed_chains <- pmcmc_thin(pmcmc_run, burnin = 200, thin = 2)
 parameter_mean_hpd <- apply(processed_chains$pars, 2, mean)
