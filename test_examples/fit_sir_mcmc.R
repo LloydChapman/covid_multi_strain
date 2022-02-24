@@ -108,7 +108,7 @@ plot_particle_filter(filter$history(), true_history, data_raw$day)
 plot_incidence(filter$history(), incidence, data_raw$day)
 
 # Set up MCMC
-init_pars <- c(R0 = 2,gamma = 0.1)
+init_pars <- c(R0 = 1.9,gamma = 0.09)
 pars_min <- c(0,0)
 pars_max <- c(Inf,Inf)
 priors <- list(R0 = function(x) 1e-10,
@@ -127,9 +127,19 @@ transform <- function(pars){
     parameter_transform(pars,dt = dt,S_ini = S_ini,I_ini = I_ini)
 }
 
-n_iters <- 100
+n_iters <- 4000
+iter0 <- 100
+scaling_factor_start <- 1
 
-res <- mcmc(transform,filter,init_pars,priors,n_particles,n_iters,proposal_matrix,pars_min,pars_max)
+res <- mcmc(transform,filter,init_pars,priors,n_particles,n_iters,scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0)
+
+# Trace plots
+plot(res$pars[,1],type="l")
+plot(res$pars[,2],type="l")
+
+# Scaling factor
+plot(res$scaling_factor,type="l")
+
 
 plot_particle_filter(res$states, true_history, data_raw$day)
 plot_incidence(res$states, incidence, data_raw$day)

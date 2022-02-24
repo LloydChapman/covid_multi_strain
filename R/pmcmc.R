@@ -7,7 +7,10 @@
 # }
 # 
 
-mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,proposal_matrix,pars_min,pars_max){
+mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0){
+    # Get number of parameters being fitted
+    n_pars <- length(curr_pars)
+    
     # Apply transform function to bind fixed parameter values
     transform_pars <- transform(curr_pars)
     
@@ -25,11 +28,12 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,proposal_
     curr_ss <- filter$history(particle_idx)[, , ,drop=T]
     
     # Create arrays for storing output
-    pars <- matrix(nrow = n_iters + 1,ncol = length(curr_pars))
+    pars <- matrix(nrow = n_iters + 1,ncol = n_pars)
     ll <- numeric(n_iters + 1)
     lprior <- numeric(n_iters + 1)
     lpost <- numeric(n_iters + 1)
     states <- array(dim = c(nrow(curr_ss),n_iters + 1,ncol(curr_ss)))
+    scaling_factor <- numeric(n_iters + 1)
     
     # Record initial parameter values and log-likelihood 
     pars[1, ] <- curr_pars
@@ -38,13 +42,24 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,proposal_
     lpost[1] <- curr_lpost
     states[,1, ] <- curr_ss
     
+    mean_pars <- curr_pars
+    
     # Initialise acceptance counter
     acc <- 0
+    
+    # Initialise scaling factor for proposal matrix
+    scaling_factor[1] <- scaling_factor_start
+    
+    # Target acceptance rate
+    a <- 0.234
+    iter_start <- 5/(a*(1 - a))
+    A <- -qnorm(a/2)
+    delta <- (1 - 1/n_pars)*sqrt(2*pi)*exp(A^2/2)/(2*A) + 1/(n_pars*(a*(1-a)))
         
-    for (iter in seq_len(n_iters) + 1){
+    for (iter in seq_len(n_iters)){
         # Propose new parameter values
         # prop_pars <- rmvn(n = 1, mu = curr_pars, sigma = proposal_matrix)
-        prop_pars <- mvrnorm(n = 1, mu = curr_pars, Sigma = proposal_matrix)
+        prop_pars <- mvrnorm(n = 1, mu = curr_pars, Sigma = 2.38^2/n_pars*scaling_factor[iter]^2*proposal_matrix)
         if (all(prop_pars > pars_min & prop_pars < pars_max)){
             transform_pars <- transform(prop_pars)
             prop_ll <- filter$run(pars = transform_pars,save_history = T)
@@ -53,8 +68,8 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,proposal_
             particle_idx <- sample.int(n_particles,1)
             prop_ss <- filter$history(particle_idx)[, , ,drop=T]
             
-            acc_prob <- prop_lpost - curr_lpost
-            if (log(runif(1)) < acc_prob){
+            log_acc_prob <- min(0,prop_lpost - curr_lpost)
+            if (log(runif(1)) < log_acc_prob){
                 # Update parameter values and log-likelihood
                 curr_pars <- prop_pars
                 curr_lprior <- prop_lprior
@@ -63,14 +78,27 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,proposal_
                 curr_ss <- prop_ss
                 acc <- acc + 1
             }
+        } else {
+            log_acc_prob <- -Inf
+        }
+        tmp <- scaling_factor[iter] * exp(delta*(exp(log_acc_prob) - a)/(iter_start + iter))
+        scaling_factor[iter + 1] <- tmp
+        if (abs(log(scaling_factor[iter + 1]) - log(scaling_factor_start)) > log(3)){
+            scaling_factor_start <- scaling_factor[iter + 1]
+            iter_start <- 5/(a*(1 - a)) - iter
         }
         
         # Save samples
-        pars[iter,] <- curr_pars
-        ll[iter] <- curr_ll
-        lprior[iter] <- curr_lprior
-        lpost[iter] <- curr_lpost
-        states[,iter, ] <- curr_ss
+        pars[iter+1,] <- curr_pars
+        ll[iter+1] <- curr_ll
+        lprior[iter+1] <- curr_lprior
+        lpost[iter+1] <- curr_lpost
+        states[,iter+1, ] <- curr_ss
+        
+        # Update empirical covariance matrix
+        tmp <- update_mean_and_cov_Spencer(mean_pars,proposal_matrix,pars,iter,iter0,ncol(pars))
+        pars_mean <- tmp$mean_new
+        proposal_matrix <- tmp$cov_new
     }
     
     res <- list(pars = pars,
@@ -78,7 +106,9 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,proposal_
                 lprior = lprior,
                 lpost = lpost,
                 states = states,
-                acc = acc)
+                acc = acc,
+                proposal_matrix = proposal_matrix,
+                scaling_factor = scaling_factor)
     return(res)
     
 }
@@ -88,6 +118,23 @@ calc_lprior <- function(pars,priors) {
     lp <- Map(function(p,value) priors[[p]](value),names(priors),pars)
     lprior <- sum(unlist(lp))
     return(lprior)
+}
+
+update_mean_and_cov_Spencer <- function(mean_old,cov_old,x,i,i0,n_pars){
+    # Add 1 to x row index as can't index from 0
+    fi <- floor(i/2)
+    if (i==1){ # if i==1
+        mean_new <- (x[1,] + x[2,])/2
+        cov_new <- ((i0+n_pars+1)*cov_old + x[1,]%*%t(x[1,]) + x[2,]%*%t(x[2,]) - 2*mean_new%*%t(mean_new))/(i0+n_pars+3)
+    }
+    else if (fi==floor((i-1)/2)+1){ # if i is even, replace the oldest observation in the estimates of the mean and covariance with the new observation
+        mean_new <- mean_old + (x[i+1,]-x[fi,])/(i-fi+1)
+        cov_new <- cov_old + (x[i+1,]%*%t(x[i+1,]) - x[fi,]%*%t(x[fi,]) + (i-fi+1)*(mean_old%*%t(mean_old) - mean_new%*%t(mean_new)))/(i-fi+i0+n_pars+2)
+    } else { # if i is odd, add the new observation to the estimates of the mean and covariance
+        mean_new <- ((i-fi)*mean_old + x[i+1,])/(i-fi+1)
+        cov_new <- ((i-fi+i0+n_pars+1)*cov_old + x[i+1,]%*%t(x[i+1,])+(i-fi)*(mean_old%*%t(mean_old)) - (i-fi+1)*(mean_new%*%t(mean_new)))/(i-fi+i0+n_pars+2)
+    }
+    return(list(mean_new=mean_new,cov_new=cov_new))  
 }
 
 # propose_parameters <- function(pars, proposal_kernel, pars_discrete, pars_min, pars_max) {
