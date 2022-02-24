@@ -151,7 +151,7 @@ n_GD[, , ] <- rbinom(G[i,j,k], p_GD)
 # otherwise:
 #  R1 and R2 can progress to S (w.r. waning_rate[i]) or
 #  R1 can progress to E3 (w.r. strain 2 (3 - 1))
-#  R2 can progress tp E4 (w.r. strain 1 (3 - 2))
+#  R2 can progress to E4 (w.r. strain 1 (3 - 2))
 #
 # Note that (if n_real_strains == 2)
 # cross_immunity[1] is the cross immunity of strain 1 against strain 2

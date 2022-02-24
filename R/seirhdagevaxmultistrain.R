@@ -325,6 +325,33 @@ seed_over_steps <- function(start_step, weights) {
 }
 
 
+plot_trajectories <- function(time,x,n_age,n_strains,n_vax){
+    # Plot trajectories
+    for (k in 1) { #:n_vax){
+        for (j in 1:n_strains) {
+            par(mfrow = c(2,4), oma=c(2,3,0,0))
+            for (i in 1:n_age) {
+                par(mar = c(3, 4, 2, 0.5))
+                cols <- c(S = "#8c8cd9", E = "#ffff00", I_P = "#cc0044", I_A = "green", I_C = "blue", R = "#999966", D = "#000000")
+                matplot(time, x[20 + i + (k-1)*n_age, ,-1], type = "l", # Offset to access numbers in age compartment
+                        xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
+                        col = cols[["S"]], lty = 1, ylim=range(x[-1:-4,,]))
+                matlines(time, x[60 + i + (j-1)*n_age + (k-1)*n_age*n_strains, ,-1], col = cols[["E"]], lty = 1)
+                matlines(time, x[60 + i + (j-1)*n_age + (k-1)*n_age*n_strains + n_age*n_strains*n_vax, ,-1], col = cols[["I_P"]], lty = 1)
+                matlines(time, x[60 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 2*n_age*n_strains*n_vax, ,-1], col = cols[["I_A"]], lty = 1)
+                matlines(time, x[60 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 3*n_age*n_strains*n_vax, ,-1], col = cols[["I_C"]], lty = 1)
+                matlines(time, x[60 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 4*n_age*n_strains*n_vax, ,-1], col = cols[["R"]], lty = 1)
+                matlines(time, x[60 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 7*n_age*n_strains*n_vax, ,-1], col = cols[["D"]], lty = 1)
+                legend("right", lwd = 1, col = cols, legend = names(cols), bty = "n")
+                axis(2, las = 2)
+            }
+            mtext("Number of individuals", side=2, line=1, outer=T, las=0)
+            mtext("Time", side = 1, line = 0, outer =T)    
+        }    
+    }
+}
+
+
 index <- function(info){
     index <- info$index
     
@@ -477,9 +504,9 @@ plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
         # matplot(times, t(history[i, ,-1]), type = "l", # Offset to access numbers in age compartment
         #         xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
         #         col = alpha(cols[["S"]],0.1), lty = 1, ylim=range(history))
-        matplot(times, t(history[i + n_age*n_vax, ,-1]), type = "l", # Offset to access numbers in age compartment
+        matplot(times, t(history[i + n_age*n_vax + n_age, ,-1]), type = "l", # Offset to access numbers in age compartment
                 xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
-                col = alpha(cols[["E"]],0.01), lty = 1, ylim=range(true_history[60 + i, ,-1]))
+                col = alpha(cols[["E"]],0.1), lty = 1, ylim=range(true_history[60 + i, ,-1]))
         # # matlines(times, t(history[i + n_age*n_vax, ,-1]), col = alpha(cols[["E"]],0.01), lty = 1)
         # matlines(times, t(history[i + 2*n_age*n_vax, ,-1]), col = alpha(cols[["I_P"]],0.01), lty = 1)
         # matlines(times, t(history[i + 3*n_age*n_vax, ,-1]), col = alpha(cols[["I_A"]],0.01), lty = 1)
@@ -490,7 +517,7 @@ plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
         # #           col = cols)
         # matpoints(times[1:obs_end], t(true_history[i + 12 + seq(n_age*n_vax,4*n_age*n_vax,by = n_age*n_vax), ,-1]), pch = 19,
         #           col = cols[2:5])
-        points(times[1:obs_end], true_history[60 + i, ,-1], pch = 19,
+        points(times[1:obs_end], true_history[60 + n_age + i, ,-1], pch = 19,
                col = cols[2])
         # legend("right", lwd = 1, col = cols, legend = names(cols), bty = "n")
         legend("right", lwd = 1, col = cols[2:5], legend = names(cols[2:5]), bty = "n")
@@ -588,6 +615,147 @@ make_transform <- function(dt,
     
 }
 
+make_transform_multistage <- function(dt,
+                                      n_age,
+                                      n_vax,
+                                      m,
+                                      gamma_E,
+                                      gamma_A,
+                                      gamma_H,
+                                      gamma_G,
+                                      theta_A,
+                                      p_C,
+                                      p_H,
+                                      p_G,
+                                      p_D,
+                                      population,
+                                      # start_date,
+                                      initial_seed_size,
+                                      initial_seed_pattern,
+                                      strain_transmission,
+                                      # strain_seed_date,
+                                      strain_seed_size,
+                                      strain_seed_pattern,
+                                      strain_rel_p_sympt,
+                                      strain_rel_p_hosp_if_sympt,
+                                      strain_rel_p_death,
+                                      rel_susceptibility,
+                                      rel_p_sympt,
+                                      rel_p_hosp_if_sympt,
+                                      rel_p_death,
+                                      rel_infectivity,
+                                      vaccine_progression_rate,
+                                      schedule,
+                                      vaccine_index_dose2,
+                                      vaccine_catchup_fraction,
+                                      n_doses,
+                                      waning_rate,
+                                      cross_immunity,
+                                      start_date1,
+                                      strain_transmission1,
+                                      cross_immunity1){
+    
+    function(pars){
+        beta <- pars[["beta"]]
+        # ngm <- t(t(transmission)*(p_C*(1/pars[["gamma"]]+1/pars[["gamma"]])+(1-p_C)*theta_A/gamma_A)*population)
+        # beta <- pars[["R0"]]/eigen(ngm)$value[1]
+        gamma <- pars[["gamma"]]
+        start_date <- pars[["start_date"]]
+        strain_seed_date <- pars[["strain_seed_date"]]
+        strain_seed_date1 <- pars[["strain_seed_date1"]]
+        
+        # Parameters for 1st epoch
+        p <- parameters(dt,
+                        n_age,
+                        n_vax,
+                        m,
+                        beta = beta,
+                        gamma_E,
+                        gamma_P = gamma,
+                        gamma_A,
+                        gamma_C = gamma,
+                        gamma_H,
+                        gamma_G,
+                        theta_A,
+                        p_C,
+                        p_H,
+                        p_G,
+                        p_D,
+                        population,
+                        start_date = start_date,
+                        initial_seed_size,
+                        initial_seed_pattern,
+                        strain_transmission,
+                        strain_seed_date = strain_seed_date,
+                        strain_seed_size,
+                        strain_seed_pattern,
+                        strain_rel_p_sympt,
+                        strain_rel_p_hosp_if_sympt,
+                        strain_rel_p_death,
+                        rel_susceptibility,
+                        rel_p_sympt,
+                        rel_p_hosp_if_sympt,
+                        rel_p_death,
+                        rel_infectivity,
+                        vaccine_progression_rate,
+                        schedule,
+                        vaccine_index_dose2,
+                        vaccine_catchup_fraction = vaccine_catchup_fraction,
+                        n_doses = n_doses,
+                        waning_rate = waning_rate,
+                        cross_immunity = cross_immunity)
+        
+        # Parameters for 2nd epoch
+        p1 <- parameters(dt,
+                         n_age,
+                         n_vax,
+                         transmission,
+                         beta = beta,
+                         gamma_E,
+                         gamma_P = gamma,
+                         gamma_A,
+                         gamma_C = gamma,
+                         gamma_H,
+                         gamma_G,
+                         theta_A,
+                         p_C,
+                         p_H,
+                         p_G,
+                         p_D,
+                         population,
+                         start_date = start_date1,
+                         initial_seed_size = 0,
+                         initial_seed_pattern,
+                         strain_transmission = strain_transmission1,
+                         strain_seed_date = strain_seed_date1,
+                         strain_seed_size,
+                         strain_seed_pattern,
+                         strain_rel_p_sympt,
+                         strain_rel_p_hosp_if_sympt,
+                         strain_rel_p_death,
+                         rel_susceptibility,
+                         rel_p_sympt,
+                         rel_p_hosp_if_sympt,
+                         rel_p_death,
+                         rel_infectivity,
+                         vaccine_progression_rate,
+                         schedule,
+                         vaccine_index_dose2,
+                         vaccine_catchup_fraction = vaccine_catchup_fraction,
+                         n_doses = n_doses,
+                         waning_rate = waning_rate,
+                         cross_immunity = cross_immunity1)
+        
+        epochs <- list(
+            multistage_epoch(start_date1, pars = p1, transform_state = transform_state)
+        )
+        p_multistage <- multistage_parameters(p, epochs)
+        p_multistage
+    }
+    
+}
+
+
 plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, times, n_age, n_vax, n_strains){
     par(mfrow = c(2,4), oma=c(2,3,0,0))
     idx1 <- n_age*n_vax + 8*n_age*n_strains*n_vax + 1
@@ -608,4 +776,98 @@ plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, ti
         points(times, incidence_observed[,9+i],pch=19,col="red")
         axis(2, las = 2)
     }
+}
+
+##' Rotate strains, so that strain 1 becomes the sum of strains 1 and
+##' 2 and strain 2 is empty. Use this to allow sequential replacement
+##' of strains.
+##'
+##' @title Rotate strains
+##'
+##' @param state Model state
+##'
+##' @param info Model info
+##'
+##' @param ... Additional arguments, ignored. This exists so that this
+##'   function can be used as an argument to
+##'   [mcstate::multistage_epoch].  Practically your two model
+##'   informations in this case would be equivalent.
+##'
+##' @export
+rotate_strains <- function(state, info, ...) {
+    if (is.null(dim(state))) {
+        stop("Expected a matrix or array for 'state'")
+    }
+    if (nrow(state) != info$len) {
+        stop(sprintf("Expected a matrix with %d rows for 'state'",
+                     info$len))
+    }
+    
+    ## Push all state down into a common rank to avoid lots of boring
+    ## dimension arithmetic (e.g., we might have this structured by
+    ## region, or a single particle's state etc, but what matters is the
+    ## structure by particle only).
+    dim_orig <- dim(state)
+    if (length(dim(state)) > 2) {
+        state <- matrix(state, nrow(state))
+    }
+    
+    ## Currently we only support one sort of move: Anyone who has been
+    ## infected in the past is moved to now be indexed by strain 1 (no
+    ## matter whether they had multiple infections before), and strain 2
+    ## will be completely empty.
+    strain_from_idx <- c(2, 3, 4)
+    strain_to_idx <- 1
+    
+    n_particle <- ncol(state)
+    for (i in seq_along(rotate_strain_compartments)) {
+        name <- rotate_strain_compartments[[i]]
+        dim <- info$dim[[name]]
+        state_i <- array(state[info$index[[name]], ], c(dim, n_particle))
+        
+        if (length(dim) == 4) {
+            for (j in strain_from_idx) {
+                tomove <- state_i[, j, , , , drop = FALSE]
+                state_i[, strain_to_idx, , , ] <-
+                    state_i[, strain_to_idx, , , , drop = FALSE] + tomove
+                state_i[, j, , , ] <- 0
+            }
+        } else if (length(dim) == 3) {
+            for (j in strain_from_idx) {
+                tomove <- state_i[, j, , , drop = FALSE]
+                state_i[, strain_to_idx, , ] <-
+                    state_i[, strain_to_idx, , , drop = FALSE] + tomove
+                state_i[, j, , ] <- 0
+            }
+        } else if (length(dim) == 1) {
+            ## this loop range ensures that the move can still happen when
+            ## the object has dimension n_real_strains not n_strains
+            ## e.g. for prob_strain
+            stopifnot(dim %in% c(2, 4))
+            for (j in strain_from_idx[strain_from_idx <= dim]) {
+                tomove <- state_i[j, , drop = FALSE]
+                state_i[strain_to_idx, ] <-
+                    state_i[strain_to_idx, , drop = FALSE] + tomove
+                state_i[j, ] <- 0
+            }
+        } else {
+            ## This is unreachable unless the model changes to include
+            ## something that has a rank-2 variable that needs transforming.
+            stop(sprintf("Unexpected dimensions (%d) in rotate_strain", # nocov
+                         length(dim)))                                  # nocov
+        }
+        state[info$index[[name]], ] <- state_i
+    }
+    
+    dim(state) <- dim_orig
+    state
+}
+
+
+rotate_strain_compartments <- c(
+    ## those with dimension c(n_groups, n_strains, n_vacc_classes):
+    "E", "I_A", "I_P", "I_C", "R", "G", "H", "D")
+
+transform_state <- function(state, model, model_new){
+    rotate_strains(state,model$info())
 }
