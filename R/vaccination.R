@@ -138,7 +138,7 @@ vaccine_schedule_future <- function(start,
                                     lag_groups = NULL,
                                     lag_days = NULL,
                                     booster_daily_doses_value = NULL,
-                                    booster_proportion = rep(1L, 19)) {
+                                    booster_proportion = rep(1L, 8)) {
     
     has_booster <- !is.null(booster_daily_doses_value)
     

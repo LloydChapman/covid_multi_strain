@@ -66,7 +66,7 @@ p_H <- ihr/(p_C*(1-p_G))
 # Generate model
 dt <- 0.25
 n_age <- length(age.limits)
-n_vax <- 3
+n_vax <- 5
 
 # Transmission and natural history parameters
 gamma_E <- 0.5
@@ -92,10 +92,12 @@ strain_seed_size <- 100
 strain_seed_pattern <- 1
 
 # Vaccination parameters
-vaccine_progression_rate <- c(0,0,1/(26*7))
+vaccine_progression_rate <- c(0,0,1/(26*7),0,1/(26*7))
 
-daily_doses <- rep(0,365) #rep(1000,365) #rep(5,365)
+daily_doses <- c(rep(100,100),rep(0,200)) #rep(1000,365) #rep(5,365)
 mean_days_between_doses <- 12*7
+booster_daily_doses <- c(rep(0,200),rep(100,100))
+
 # index_dose <- c(1L,2L)
 # 
 # # Build vaccination progression rate matrix
@@ -104,11 +106,13 @@ mean_days_between_doses <- 12*7
 
 # Make example vaccine schedule
 pop_mat <- matrix(rep(population,1),nrow = length(population))
-schedule <- vaccine_schedule_future(30, daily_doses, mean_days_between_doses, pop_mat)
+schedule <- vaccine_schedule_future(1, daily_doses, mean_days_between_doses, pop_mat, 
+                                    booster_daily_doses_value = booster_daily_doses)
 
 vaccine_index_dose2 <- 2L
+vaccine_index_booster <- 4L
 vaccine_catchup_fraction <- 1
-n_doses <- 2L
+n_doses <- 3L #2L
 
 # Relative probabilities of symptoms, hospitalisation and death for different strains
 strain_rel_p_sympt <- 1
@@ -116,11 +120,11 @@ strain_rel_p_hosp_if_sympt <- 1
 strain_rel_p_death <- 1
 
 # Parameters for impact of vaccination of susceptibility and infectiousness
-rel_susceptibility <- c(1,0.8,0.5) # relative susceptibility to infection in each vaccine stratum
-rel_p_sympt <- c(1,0.6,0.3) # relative risk of symptoms in each vaccine stratum
-rel_p_hosp_if_sympt <- c(1,0.95,0.95) # relative risk of hospitalisation given infection in each vaccine stratum
-rel_p_death <- c(1,0.9,0.9) # relative risk of death in each vaccine stratum
-rel_infectivity <- c(1,0.5,0.5) # relative infectiousness of infected individuals in each vaccine stratum
+rel_susceptibility <- c(1,0.8,0.5,0.8,0.5) # relative susceptibility to infection in each vaccine stratum
+rel_p_sympt <- c(1,0.6,0.3,0.6,0.3) # relative risk of symptoms in each vaccine stratum
+rel_p_hosp_if_sympt <- c(1,0.95,0.95,0.95,0.95) # relative risk of hospitalisation given infection in each vaccine stratum
+rel_p_death <- c(1,0.9,0.9,0.9,0.9) # relative risk of death in each vaccine stratum
+rel_infectivity <- c(1,0.5,0.5,0.5,0.5) # relative infectiousness of infected individuals in each vaccine stratum
 
 # Waning parameters
 waning_rate <- 1/365
@@ -170,12 +174,13 @@ p <- parameters(dt,
                 vaccine_progression_rate,
                 schedule,
                 vaccine_index_dose2,
-                vaccine_catchup_fraction = vaccine_catchup_fraction,
-                n_doses = n_doses,
-                waning_rate = waning_rate,
-                cross_immunity = cross_immunity,
-                sero_sensitivity_1 = sero_sensitivity_1,
-                sero_specificity_1 = sero_specificity_1)
+                vaccine_index_booster,
+                vaccine_catchup_fraction,
+                n_doses,
+                waning_rate,
+                cross_immunity,
+                sero_sensitivity_1,
+                sero_specificity_1)
 
 # Number of steps in 1st epoch
 n_steps <- 800
@@ -223,12 +228,13 @@ p1 <- parameters(dt,
                  vaccine_progression_rate,
                  schedule,
                  vaccine_index_dose2,
-                 vaccine_catchup_fraction = vaccine_catchup_fraction,
-                 n_doses = n_doses,
-                 waning_rate = waning_rate,
-                 cross_immunity = cross_immunity1,
-                 sero_sensitivity_1 = sero_sensitivity_1,
-                 sero_specificity_1 = sero_specificity_1)
+                 vaccine_index_booster,
+                 vaccine_catchup_fraction,
+                 n_doses,
+                 waning_rate,
+                 cross_immunity,
+                 sero_sensitivity_1,
+                 sero_specificity_1)
 
 n_steps1 <- 1200 # number of steps to run model up to
 
@@ -254,10 +260,11 @@ plot_trajectories(time,x,n_age,n_strains,n_vax)
 true_history <- x[ , ,seq(0,n_steps1+1,by=1/dt)+1,drop=F]
 
 # Add noise to simulated data
-index(out$info)
-hosps <- true_history[3:7, ,-1]
-deaths <- true_history[8:12, ,-1]
-sero_pos <- true_history[14:19, ,-1]
+info <- out$info
+idx <- index(info)
+hosps <- true_history[idx$run[grep("hosps_",names(idx$run))]-1, ,-1]
+deaths <- true_history[idx$run[grep("deaths_",names(idx$run))]-1, ,-1]
+sero_pos <- true_history[idx$run[grep("sero_pos_1_",names(idx$run))]-1, ,-1]
 
 par(mfrow = c(1,1))
 days <- seq(1,n_steps1*dt)
@@ -290,7 +297,16 @@ data_raw$hosps <- NA
 data_raw$deaths <- NA
 data_raw$sero_pos_1 <- NA
 data_raw$sero_tot_1 <- rep(sum(p$N_tot),length(days))
-data_raw$sero_tot_1_20_29 <- rep(p$N_tot[3],length(days))
+sero_tot_1 <- data.frame(matrix(rep(p$N_tot[3:length(p$N_tot)],each = length(days)),nrow = length(days)))
+names(sero_tot_1) <- paste0("sero_tot_1_",c("20_29","30_39","40_49","50_59","60_69","70_plus"))
+data_raw <- cbind(data_raw,sero_tot_1)
+# Make sure simulated number of seropositives doesn't exceed number in age group
+data_raw$sero_pos_1_20_29 <- pmin(data_raw$sero_pos_1_20_29,data_raw$sero_tot_1_20_29)
+data_raw$sero_pos_1_30_39 <- pmin(data_raw$sero_pos_1_20_29,data_raw$sero_tot_1_30_39)
+data_raw$sero_pos_1_40_49 <- pmin(data_raw$sero_pos_1_20_29,data_raw$sero_tot_1_40_49)
+data_raw$sero_pos_1_50_59 <- pmin(data_raw$sero_pos_1_20_29,data_raw$sero_tot_1_50_59)
+data_raw$sero_pos_1_60_69 <- pmin(data_raw$sero_pos_1_20_29,data_raw$sero_tot_1_60_69)
+data_raw$sero_pos_1_70_plus <- pmin(data_raw$sero_pos_1_20_29,data_raw$sero_tot_1_70_plus)
 # Convert to required format
 data <- particle_filter_data(data_raw,"day",1/dt)
 
@@ -318,8 +334,9 @@ filter$run(
 dimnames(filter$history())
 
 # Plot filtered trajectories
-plot_particle_filter(filter$history(),true_history,data_raw$day)
+plot_particle_filter(filter$history(),true_history,data_raw$day,idx)
 plot_hosps_and_deaths_age(filter$history(),data,data_raw$day,n_age,n_vax,n_strains)
+plot_sero(filter$history(),data,data_raw$day)
 
 # Infer parameters by pMCMC
 beta <- pmcmc_parameter("beta",0.08,min = 0,
@@ -412,6 +429,7 @@ transform <- make_transform_multistage(dt,
                                        vaccine_progression_rate,
                                        schedule,
                                        vaccine_index_dose2,
+                                       vaccine_index_booster,
                                        vaccine_catchup_fraction,
                                        n_doses,
                                        waning_rate,
@@ -441,7 +459,7 @@ pmcmc_run <- pmcmc(mcmc_pars,filter,control = control)
 
 dimnames(pmcmc_run$trajectories$state)
 
-plot_particle_filter(pmcmc_run$trajectories$state,true_history,data_raw$day)
+plot_particle_filter(pmcmc_run$trajectories$state,true_history,data_raw$day,idx)
 plot_hosps_and_deaths_age(pmcmc_run$trajectories$state,data,data_raw$day,n_age,n_vax,n_strains)
 plot_sero(pmcmc_run$trajectories$state,data,data_raw$day)
 

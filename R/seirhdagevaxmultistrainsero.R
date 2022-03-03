@@ -392,12 +392,12 @@ plot_trajectories <- function(time,x,n_age,n_strains,n_vax){
                 matplot(time, x[27 + i + (k-1)*n_age, ,-1], type = "l", # Offset to access numbers in age compartment
                         xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
                         col = cols[["S"]], lty = 1, ylim=range(x[-(1:27),,]))
-                matlines(time, x[67 + i + (j-1)*n_age + (k-1)*n_age*n_strains, ,-1], col = cols[["E"]], lty = 1)
-                matlines(time, x[67 + i + (j-1)*n_age + (k-1)*n_age*n_strains + n_age*n_strains*n_vax, ,-1], col = cols[["I_P"]], lty = 1)
-                matlines(time, x[67 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 2*n_age*n_strains*n_vax, ,-1], col = cols[["I_A"]], lty = 1)
-                matlines(time, x[67 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 3*n_age*n_strains*n_vax, ,-1], col = cols[["I_C"]], lty = 1)
-                matlines(time, x[67 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 4*n_age*n_strains*n_vax, ,-1], col = cols[["R"]], lty = 1)
-                matlines(time, x[67 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 7*n_age*n_strains*n_vax, ,-1], col = cols[["D"]], lty = 1)
+                matlines(time, x[91 + i + (j-1)*n_age + (k-1)*n_age*n_strains, ,-1], col = cols[["E"]], lty = 1)
+                matlines(time, x[91 + i + (j-1)*n_age + (k-1)*n_age*n_strains + n_age*n_strains*n_vax, ,-1], col = cols[["I_P"]], lty = 1)
+                matlines(time, x[91 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 2*n_age*n_strains*n_vax, ,-1], col = cols[["I_A"]], lty = 1)
+                matlines(time, x[91 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 3*n_age*n_strains*n_vax, ,-1], col = cols[["I_C"]], lty = 1)
+                matlines(time, x[91 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 4*n_age*n_strains*n_vax, ,-1], col = cols[["R"]], lty = 1)
+                matlines(time, x[91 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 7*n_age*n_strains*n_vax, ,-1], col = cols[["D"]], lty = 1)
                 legend("right", lwd = 1, col = cols, legend = names(cols), bty = "n")
                 axis(2, las = 2)
             }
@@ -539,19 +539,54 @@ compare <- function(state, observed, pars){
     # model_deaths_80_plus <- state["deaths_80_plus", ]
     
     # Modelled seropositives
-    model_sero_pos_1 <- state["sero_pos_1", ]
     # model_sero_pos_1 can go above N_tot (I think due to reinfection) so cap it to avoid probabilities > 1
+    model_sero_pos_1 <- state["sero_pos_1", ]
     model_sero_pos_1_capped <- pmin(model_sero_pos_1, sum(pars$N_tot))
     model_sero_prob_pos_1 <- test_prob_pos(model_sero_pos_1_capped,
                                            sum(pars$N_tot),
                                            pars$sero_sensitivity_1,
                                            pars$sero_specificity_1,
                                            exp_noise)
-    model_sero_pos_1_20_29 <- state["sero_pos_1_20_29", ]
     # model_sero_pos_1_X can go above N_tot_X (I think due to reinfection) so cap to avoid probabilities > 1
+    model_sero_pos_1_20_29 <- state["sero_pos_1_20_29", ]
     model_sero_pos_1_20_29_capped <- pmin(model_sero_pos_1_20_29, pars$N_tot[3])
     model_sero_prob_pos_1_20_29 <- test_prob_pos(model_sero_pos_1_20_29_capped,
                                                  pars$N_tot[3],
+                                                 pars$sero_sensitivity_1,
+                                                 pars$sero_specificity_1,
+                                                 exp_noise)
+    model_sero_pos_1_30_39 <- state["sero_pos_1_30_39", ]
+    model_sero_pos_1_30_39_capped <- pmin(model_sero_pos_1_30_39, pars$N_tot[4])
+    model_sero_prob_pos_1_30_39 <- test_prob_pos(model_sero_pos_1_30_39_capped,
+                                                 pars$N_tot[4],
+                                                 pars$sero_sensitivity_1,
+                                                 pars$sero_specificity_1,
+                                                 exp_noise)
+    model_sero_pos_1_40_49 <- state["sero_pos_1_40_49", ]
+    model_sero_pos_1_40_49_capped <- pmin(model_sero_pos_1_40_49, pars$N_tot[5])
+    model_sero_prob_pos_1_40_49 <- test_prob_pos(model_sero_pos_1_40_49_capped,
+                                                 pars$N_tot[5],
+                                                 pars$sero_sensitivity_1,
+                                                 pars$sero_specificity_1,
+                                                 exp_noise)
+    model_sero_pos_1_50_59 <- state["sero_pos_1_50_59", ]
+    model_sero_pos_1_50_59_capped <- pmin(model_sero_pos_1_50_59, pars$N_tot[6])
+    model_sero_prob_pos_1_50_59 <- test_prob_pos(model_sero_pos_1_50_59_capped,
+                                                 pars$N_tot[6],
+                                                 pars$sero_sensitivity_1,
+                                                 pars$sero_specificity_1,
+                                                 exp_noise)
+    model_sero_pos_1_60_69 <- state["sero_pos_1_60_69", ]
+    model_sero_pos_1_60_69_capped <- pmin(model_sero_pos_1_60_69, pars$N_tot[7])
+    model_sero_prob_pos_1_60_69 <- test_prob_pos(model_sero_pos_1_60_69_capped,
+                                                 pars$N_tot[7],
+                                                 pars$sero_sensitivity_1,
+                                                 pars$sero_specificity_1,
+                                                 exp_noise)
+    model_sero_pos_1_70_plus <- state["sero_pos_1_70_plus", ]
+    model_sero_pos_1_70_plus_capped <- pmin(model_sero_pos_1_70_plus, pars$N_tot[8])
+    model_sero_prob_pos_1_70_plus <- test_prob_pos(model_sero_pos_1_70_plus_capped,
+                                                 pars$N_tot[8],
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
@@ -598,28 +633,29 @@ compare <- function(state, observed, pars){
     # Log-likelihoods for seroprevalence
     ll_sero_pos_1 <- ll_binom(observed$sero_pos_1,observed$sero_tot_1,model_sero_prob_pos_1)
     ll_sero_pos_1_20_29 <- ll_binom(observed$sero_pos_1_20_29,observed$sero_tot_1_20_29,model_sero_prob_pos_1_20_29)
-    # ll_sero_pos_1_30_39 <- ll_binom(observed$sero_pos_1_30_39,observed$sero_tot_1_30_39,model_sero_prob_pos_1_30_39)
-    # ll_sero_pos_1_20_29 <- ll_binom(observed$sero_pos_1_40_49,observed$sero_tot_1_40_49,model_sero_prob_pos_1_40_49)
-    # ll_sero_pos_1_20_29 <- ll_binom(observed$sero_pos_1_50_59,observed$sero_tot_1_50_59,model_sero_prob_pos_1_50_59)
-    # ll_sero_pos_1_20_29 <- ll_binom(observed$sero_pos_1_60_69,observed$sero_tot_1_60_69,model_sero_prob_pos_1_60_69)
-    # ll_sero_pos_1_20_29 <- ll_binom(observed$sero_pos_1_70_plus,observed$sero_tot_1_70_plus,model_sero_prob_pos_1_70_plus)
+    ll_sero_pos_1_30_39 <- ll_binom(observed$sero_pos_1_30_39,observed$sero_tot_1_30_39,model_sero_prob_pos_1_30_39)
+    ll_sero_pos_1_40_49 <- ll_binom(observed$sero_pos_1_40_49,observed$sero_tot_1_40_49,model_sero_prob_pos_1_40_49)
+    ll_sero_pos_1_50_59 <- ll_binom(observed$sero_pos_1_50_59,observed$sero_tot_1_50_59,model_sero_prob_pos_1_50_59)
+    ll_sero_pos_1_60_69 <- ll_binom(observed$sero_pos_1_60_69,observed$sero_tot_1_60_69,model_sero_prob_pos_1_60_69)
+    ll_sero_pos_1_70_plus <- ll_binom(observed$sero_pos_1_70_plus,observed$sero_tot_1_70_plus,model_sero_prob_pos_1_70_plus)
     
     # Calculate total log-likelihood
     # ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
     # ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
     # ll_hosps_70_plus + ll_deaths_70_plus
-    ll_deaths_70_plus #+ ll_sero_pos_1_20_29
+    ll_deaths_70_plus + ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus
 }
 
 
 # Function for plotting fitted trajectories
-plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
+plot_particle_filter <- function(history, true_history, times, idx, obs_end = NULL) {
     if (is.null(obs_end)) {
         obs_end = max(times)
     }
     
     # par(mfrow = c(2,4), oma=c(2,3,0,0))
     par(mfrow = c(1,1), oma=c(2,3,0,0))
+    idx_E <- idx$state[grep("E",names(idx$state))]
     for (i in 1:n_age){
         par(mar = c(4.1, 5.1, 0.5, 0.5), las = 1)
         cols <- c(S = "#8c8cd9", E = "#ffff00", I_P = "#cc0044", I_A = "green", I_C = "blue", R = "#999966", D = "#000000")
@@ -628,7 +664,7 @@ plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
         #         col = alpha(cols[["S"]],0.1), lty = 1, ylim=range(history))
         matplot(times, t(history[i + n_age*n_vax + n_age, ,-1]), type = "l", # Offset to access numbers in age compartment
                 xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
-                col = alpha(cols[["E"]],0.1), lty = 1, ylim=range(true_history[67 + i, ,-1]))
+                col = alpha(cols[["E"]],0.1), lty = 1, ylim=range(true_history[idx_E - 2, ,-1]))
         # # matlines(times, t(history[i + n_age*n_vax, ,-1]), col = alpha(cols[["E"]],0.01), lty = 1)
         # matlines(times, t(history[i + 2*n_age*n_vax, ,-1]), col = alpha(cols[["I_P"]],0.01), lty = 1)
         # matlines(times, t(history[i + 3*n_age*n_vax, ,-1]), col = alpha(cols[["I_A"]],0.01), lty = 1)
@@ -639,7 +675,7 @@ plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
         # #           col = cols)
         # matpoints(times[1:obs_end], t(true_history[i + 12 + seq(n_age*n_vax,4*n_age*n_vax,by = n_age*n_vax), ,-1]), pch = 19,
         #           col = cols[2:5])
-        points(times[1:obs_end], true_history[67 + n_age + i, ,-1], pch = 19,
+        points(times[1:obs_end], true_history[idx_E[1] - 2 + n_age + i, ,-1], pch = 19,
                col = cols[2])
         # legend("right", lwd = 1, col = cols, legend = names(cols), bty = "n")
         legend("right", lwd = 1, col = cols[2:5], legend = names(cols[2:5]), bty = "n")
@@ -779,6 +815,7 @@ make_transform_multistage <- function(dt,
                                       vaccine_progression_rate,
                                       schedule,
                                       vaccine_index_dose2,
+                                      vaccine_index_booster,
                                       vaccine_catchup_fraction,
                                       n_doses,
                                       waning_rate,
@@ -836,12 +873,13 @@ make_transform_multistage <- function(dt,
                         vaccine_progression_rate,
                         schedule,
                         vaccine_index_dose2,
-                        vaccine_catchup_fraction = vaccine_catchup_fraction,
-                        n_doses = n_doses,
-                        waning_rate = waning_rate,
-                        cross_immunity = cross_immunity,
-                        sero_sensitivity_1 = sero_sensitivity_1,
-                        sero_specificity_1 = sero_specificity_1)
+                        vaccine_index_booster,
+                        vaccine_catchup_fraction,
+                        n_doses,
+                        waning_rate,
+                        cross_immunity,
+                        sero_sensitivity_1,
+                        sero_specificity_1)
         
         # Parameters for 2nd epoch
         p1 <- parameters(dt,
@@ -881,12 +919,13 @@ make_transform_multistage <- function(dt,
                          vaccine_progression_rate,
                          schedule,
                          vaccine_index_dose2,
-                         vaccine_catchup_fraction = vaccine_catchup_fraction,
-                         n_doses = n_doses,
-                         waning_rate = waning_rate,
-                         cross_immunity = cross_immunity1,
-                         sero_sensitivity_1 = sero_sensitivity_1,
-                         sero_specificity_1 = sero_specificity_1)
+                         vaccine_index_booster,
+                         vaccine_catchup_fraction,
+                         n_doses,
+                         waning_rate,
+                         cross_immunity,
+                         sero_sensitivity_1,
+                         sero_specificity_1)
         
         epochs <- list(
             multistage_epoch(start_date1, pars = p1, transform_state = transform_state)
@@ -900,34 +939,37 @@ make_transform_multistage <- function(dt,
 
 plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, times, n_age, n_vax, n_strains){
     par(mfrow = c(2,4), oma=c(2,3,0,0))
-    idx1 <- n_age*n_vax + 11*n_age*n_strains*n_vax + 1
+    nms <- dimnames(incidence_modelled)[[1]]
+    idx_hosps <- grep("hosps_",nms)
+    idx_deaths <- grep("deaths_",nms)
     for (i in 1:5){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[idx1+i, ,-1]),
+        matplot(times, t(incidence_modelled[idx_hosps[1]-1+i, ,-1]),
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
-                main = paste0("Age ", rownames(incidence_modelled)[idx1+i]))
+                main = paste0("Age ", rownames(incidence_modelled)[idx_hosps[1]-1+i]))
         points(times, incidence_observed[,4+i],pch=19,col="red")
         axis(2, las = 2)
     }
     par(mfrow = c(2,4), oma=c(2,3,0,0))
     for (i in 1:5){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[idx1+6+i, ,-1]),
+        matplot(times, t(incidence_modelled[idx_deaths[1]-1+i, ,-1]),
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",
-                main = paste0("Age ", rownames(incidence_modelled)[idx1+6+i]))
+                main = paste0("Age ", rownames(incidence_modelled)[idx_deaths[1]-1+i]))
         points(times, incidence_observed[,9+i],pch=19,col="red")
         axis(2, las = 2)
     }
 }
 
 plot_sero <- function(seroprev_modelled, seroprev_observed, times){
-    par(mfrow = c(1,1), oma = c(2,3,0,0))
-    idx1 <- n_age*n_vax + 11*n_age*n_strains*n_vax + 13
-    for (i in 1){ #:7){
+    par(mfrow = c(2,4), oma = c(2,3,0,0))
+    nms <- dimnames(seroprev_modelled)[[1]]
+    idx_sero <- grep("sero_pos_1_",nms)
+    for (i in 1:6){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(seroprev_modelled[idx1 + i, ,-1]),
+        matplot(times, t(seroprev_modelled[idx_sero[1]-1+i, ,-1]),
                 type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Seroprevalence",
-                main = paste0("Age ",rownames(seroprev_modelled)[idx1 + i]))
+                main = paste0("Age ",rownames(seroprev_modelled)[idx_sero[1]-1+i]))
         points(times, seroprev_observed[,14 + i], pch = 19, col = "red")
         axis(2, las = 2)
     }
