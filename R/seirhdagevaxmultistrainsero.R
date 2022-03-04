@@ -718,6 +718,7 @@ make_transform <- function(dt,
                            vaccine_progression_rate,
                            schedule,
                            vaccine_index_dose2,
+                           vaccine_index_booster,
                            vaccine_catchup_fraction,
                            n_doses,
                            waning_rate,
@@ -770,16 +771,18 @@ make_transform <- function(dt,
                         vaccine_progression_rate,
                         schedule,
                         vaccine_index_dose2,
-                        vaccine_catchup_fraction = vaccine_catchup_fraction,
-                        n_doses = n_doses,
-                        waning_rate = waning_rate,
-                        cross_immunity = cross_immunity,
-                        sero_sensitivity_1 = sero_sensitivity_1,
-                        sero_specificity_1 = sero_specificity_1)
+                        vaccine_index_booster,
+                        vaccine_catchup_fraction,
+                        n_doses,
+                        waning_rate,
+                        cross_immunity,
+                        sero_sensitivity_1,
+                        sero_specificity_1)
         p
     }
     
 }
+
 
 make_transform_multistage <- function(dt,
                                       n_age,

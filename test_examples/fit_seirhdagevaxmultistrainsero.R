@@ -106,7 +106,7 @@ booster_daily_doses <- c(rep(0,200),rep(100,100))
 
 # Make example vaccine schedule
 pop_mat <- matrix(rep(population,1),nrow = length(population))
-schedule <- vaccine_schedule_future(1, daily_doses, mean_days_between_doses, pop_mat, 
+schedule <- vaccine_schedule_future(0, daily_doses, mean_days_between_doses, pop_mat, 
                                     booster_daily_doses_value = booster_daily_doses)
 
 vaccine_index_dose2 <- 2L
