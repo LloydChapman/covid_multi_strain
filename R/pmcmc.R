@@ -7,7 +7,7 @@
 # }
 # 
 
-mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0){
+mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0,discrete = rep(FALSE,length(curr_pars))){
     # Get number of parameters being fitted
     n_pars <- length(curr_pars)
     
@@ -60,6 +60,7 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_f
         # Propose new parameter values
         # prop_pars <- rmvn(n = 1, mu = curr_pars, sigma = proposal_matrix)
         prop_pars <- mvrnorm(n = 1, mu = curr_pars, Sigma = 2.38^2/n_pars*scaling_factor[iter]^2*proposal_matrix)
+        prop_pars[discrete] <- round(prop_pars[discrete])
         if (all(prop_pars > pars_min & prop_pars < pars_max)){
             transform_pars <- transform(prop_pars)
             prop_ll <- filter$run(pars = transform_pars,save_history = T)
