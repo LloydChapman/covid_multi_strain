@@ -97,6 +97,135 @@ build_vaccine_progression_rate <- function(vaccine_progression_rate, n_groups, n
     mat_vaccine_progression_rate
 }
 
+
+##' The French Ministry of Health priority groups, in descending order are:
+##'
+##'  1. care home residents and staff over 50
+##'  2. individuals 75+ years not in a care home
+##'  3. individuals aged 65-74 years
+##'  4. individuals age 50-64 years
+##'  5. all individuals 18+ years 
+##' @title Compute vaccination order
+##'
+##' @param uptake A vector of length 19 with fractional uptake per
+##'   group. If a single number is given it is shared across all
+##'   groups (note that this includes under-18s)
+##'
+##' @param prop_hcw Assumed fraction of healthcare workers in each
+##'   group (length 19) - if `NULL` we use a default that is a guess
+##'   with hopefully the right general shape.
+##'
+##' @param prop_very_vulnerable Assumed fraction "very vulnerable" in
+##'   each group (length 19) - if `NULL` we use a default that is a
+##'   guess with hopefully the right general shape.
+##'
+##' @param prop_underlying_condition Assumed fraction "underlying
+##'   condition" in each group (length 19) - if `NULL` we use a
+##'   default that is a guess with hopefully the right general shape.
+##'
+##' @return A matrix with n_groups rows (19) and columns representing
+##'   priority groups, and element (i, j) is the proportion in group i
+##'   who should be vaccinated as part of priority group j, accounting
+##'   for uptake so that the sum over the rows corresponds to the
+##'   total fractional uptake in that group. For
+##'   `vaccine_priority_population`, the total number of
+##'   individuals replaces the proportion (based on the demography
+##'   used by sircovid).
+##'
+##' @rdname vaccine_priority
+##' @export
+vaccine_priority_proportion <- function(n_groups,
+                                        uptake,
+                                        prop_hcw = NULL,
+                                        prop_very_vulnerable = NULL,
+                                        prop_underlying_condition = NULL) {
+    
+    if (is.null(uptake)) {
+        uptake <- rep(1, n_groups)
+    } else {
+        uptake <- recycle(uptake, n_groups)
+    }
+    
+    prop_hcw <- prop_hcw %||%
+        c(rep(0, 4), rep(0.1, 10), rep(0, 5))
+    prop_very_vulnerable <- prop_very_vulnerable %||%
+        c(rep(0, 4), rep(0.05, 5), rep(0.1, 5), rep(0.15, 5))
+    prop_underlying_condition <- prop_underlying_condition %||%
+        c(rep(0, 4), rep(0.05, 5), rep(0.1, 5), rep(0.15, 5))
+    
+    n_priority_groups <- 4
+    p <- matrix(0, n_groups, n_priority_groups)
+    
+    ## Age-based priority list
+    priority <- list(
+        ## the age groups targeted in each priority group (see comments above)
+        8, 7, 6, 1:5)
+    
+    # ## 1. Start with non age-based priority:
+    # ## helper function
+    # add_prop_to_vacc <- function(j, idx, prop_to_vaccinate, p) {
+    #     p[idx, j] <- prop_to_vaccinate[idx]
+    #     p
+    # }
+    # 
+    # ## Group 2 includes frontline health and social care workers
+    # p <- add_prop_to_vacc(j = 2,
+    #                       idx = seq_len(priority[[2]] - 1),
+    #                       prop_to_vaccinate = prop_hcw,
+    #                       p)
+    # 
+    # ## Group 4 includes clinically extremely vulnerable individuals
+    # p <- add_prop_to_vacc(j = 4,
+    #                       idx = seq_len(priority[[4]] - 1),
+    #                       prop_to_vaccinate = (1 - prop_hcw) *
+    #                           prop_very_vulnerable,
+    #                       p)
+    # 
+    # ## Group 6 includes all individuals aged 16 years to 64 years with
+    # ## underlying health conditions which put them at higher risk of
+    # ## serious disease and mortality
+    # p <- add_prop_to_vacc(j = 6,
+    #                       idx = 4:13,
+    #                       prop_to_vaccinate = (1 - prop_hcw) *
+    #                           prop_underlying_condition,
+    #                       p)
+    
+    ## 2. Add age-based priority
+    for (j in seq_along(priority)) {
+        if (!is.null(priority[[j]])) {
+            ## discount those already vaccinated as part of non age-based priority
+            p[priority[[j]], j] <- 1 - rowSums(p)[priority[[j]]]
+        }
+    }
+    
+    ## 3. Account for uptake
+    uptake_mat <- matrix(rep(uptake, n_priority_groups),
+                         nrow = n_groups)
+    
+    p * uptake_mat
+}
+
+
+##' @param pop Vector of total population numbers in groups
+##'
+##' @rdname vaccine_priority
+##' @export
+vaccine_priority_population <- function(pop,
+                                        uptake,
+                                        prop_hcw = NULL,
+                                        prop_very_vulnerable = NULL,
+                                        prop_underlying_condition = NULL) {
+    n_groups <- length(pop)
+    p <- vaccine_priority_proportion(n_groups,
+                                     uptake,
+                                     prop_hcw,
+                                     prop_very_vulnerable,
+                                     prop_underlying_condition)
+    pop_mat <- matrix(rep(pop, ncol(p)), nrow = nrow(p))
+    round(p * pop_mat)
+}
+
+
 ##' Create future vaccination schedule from a projected number of
 ##' daily doses.
 ##'
