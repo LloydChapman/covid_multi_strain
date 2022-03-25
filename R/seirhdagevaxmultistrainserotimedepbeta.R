@@ -118,10 +118,6 @@ parameters <- function(dt,
     strain <- strain_parameters(strain_transmission, strain_seed_date, 
                                 strain_seed_size, strain_seed_pattern,p$dt)
     
-    # Make example vaccine schedule
-    pop_mat <- matrix(rep(population,1),nrow = length(population))
-    schedule <- vaccine_schedule_future(0, daily_doses, mean_days_between_doses, pop_mat)
-    
     # Construct vaccination parameters
     vaccination <- vaccination_parameters(p$N_tot,
                                           p$dt,
@@ -776,6 +772,110 @@ plot_particle_filter <- function(history, true_history, times, idx, obs_end = NU
 }
 
 
+make_transform <- function(dt,
+                           n_age,
+                           n_vax,
+                           m,
+                           beta_date,
+                           beta_type,
+                           gamma_E,
+                           gamma_A,
+                           gamma_H,
+                           gamma_G,
+                           gamma_pre_1,
+                           gamma_P_1,
+                           theta_A,
+                           p_C,
+                           p_H,
+                           p_G,
+                           p_D,
+                           population,
+                           # start_date,
+                           initial_seed_size,
+                           initial_seed_pattern,
+                           strain_transmission,
+                           # strain_seed_date,
+                           strain_seed_size,
+                           strain_seed_pattern,
+                           strain_rel_p_sympt,
+                           strain_rel_p_hosp_if_sympt,
+                           strain_rel_p_death,
+                           rel_susceptibility,
+                           rel_p_sympt,
+                           rel_p_hosp_if_sympt,
+                           rel_p_death,
+                           rel_infectivity,
+                           vaccine_progression_rate,
+                           schedule,
+                           vaccine_index_dose2,
+                           vaccine_index_booster,
+                           vaccine_catchup_fraction,
+                           n_doses,
+                           waning_rate,
+                           cross_immunity){
+    
+    function(pars){
+        # beta <- pars[["beta"]]
+        beta_value <- unname(pars[paste0("beta", seq_along(beta_date))])
+        # ngm <- t(t(transmission)*(p_C*(1/pars[["gamma"]]+1/pars[["gamma"]])+(1-p_C)*theta_A/gamma_A)*population)
+        # beta <- pars[["R0"]]/eigen(ngm)$value[1]
+        gamma <- pars[["gamma"]]
+        start_date <- pars[["start_date"]]
+        strain_seed_date <- pars[["strain_seed_date"]]
+        
+        # Parameters for 1st epoch
+        p <- parameters(dt,
+                        n_age,
+                        n_vax,
+                        m,
+                        beta_date,
+                        beta_value = beta_value,
+                        beta_type,
+                        gamma_E,
+                        gamma_P = gamma,
+                        gamma_A,
+                        gamma_C = gamma,
+                        gamma_H,
+                        gamma_G,
+                        gamma_pre_1,
+                        gamma_P_1,
+                        theta_A,
+                        p_C,
+                        p_H,
+                        p_G,
+                        p_D,
+                        population,
+                        start_date = start_date,
+                        initial_seed_size,
+                        initial_seed_pattern,
+                        strain_transmission,
+                        strain_seed_date = strain_seed_date,
+                        strain_seed_size,
+                        strain_seed_pattern,
+                        strain_rel_p_sympt,
+                        strain_rel_p_hosp_if_sympt,
+                        strain_rel_p_death,
+                        rel_susceptibility,
+                        rel_p_sympt,
+                        rel_p_hosp_if_sympt,
+                        rel_p_death,
+                        rel_infectivity,
+                        vaccine_progression_rate,
+                        schedule,
+                        vaccine_index_dose2,
+                        vaccine_index_booster,
+                        vaccine_catchup_fraction,
+                        n_doses,
+                        waning_rate,
+                        cross_immunity,
+                        sero_sensitivity_1,
+                        sero_specificity_1)
+        p
+    }
+    
+}
+
+
 make_transform_multistage <- function(dt,
                                       n_age,
                                       n_vax,
@@ -949,7 +1049,7 @@ plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, ti
         matplot(times, t(incidence_modelled[idx_hosps[1]-1+i, ,-1]),
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
                 main = paste0("Age ", rownames(incidence_modelled)[idx_hosps[1]-1+i]))
-        points(times, incidence_observed[,4+i],pch=19,col="red")
+        points(times, incidence_observed[[4+i]],pch=19,col="red")
         axis(2, las = 2)
     }
     par(mfrow = c(2,4), oma=c(2,3,0,0))
@@ -958,7 +1058,7 @@ plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, ti
         matplot(times, t(incidence_modelled[idx_deaths[1]-1+i, ,-1]),
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",
                 main = paste0("Age ", rownames(incidence_modelled)[idx_deaths[1]-1+i]))
-        points(times, incidence_observed[,9+i],pch=19,col="red")
+        points(times, incidence_observed[[9+i]],pch=19,col="red")
         axis(2, las = 2)
     }
 }
@@ -968,12 +1068,13 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, times){
     par(mfrow = c(2,4), oma = c(2,3,0,0))
     nms <- dimnames(seroprev_modelled)[[1]]
     idx_sero <- grep("sero_pos_1_",nms)
+    idx_sero_obs <- grep("sero_pos_1_",names(seroprev_observed))
     for (i in 1:6){
         par(mar = c(3, 4, 2, 0.5))
         matplot(times, t(seroprev_modelled[idx_sero[1]-1+i, ,-1]),
                 type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Seroprevalence",
                 main = paste0("Age ",rownames(seroprev_modelled)[idx_sero[1]-1+i]))
-        points(times, seroprev_observed[,14 + i], pch = 19, col = "red")
+        points(times, seroprev_observed[[idx_sero_obs[1]-1+i]], pch = 19, col = "red")
         axis(2, las = 2)
     }
 }
@@ -983,12 +1084,13 @@ plot_cases <- function(cases_modelled, cases_observed, times){
     par(mfrow = c(2,1), oma = c(2,3,0,0))
     nms <- dimnames(cases_modelled)[[1]]
     idx_cases <- grep("cases",nms)
+    idx_cases_obs <- grep("cases",names(cases_observed))
     for (i in 1:2){
         par(mar = c(3, 4, 2, 0.5))
         matplot(times, t(cases_modelled[idx_cases[1]-1+i, ,-1]),
                 type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Cases",
                 main = rownames(cases_modelled)[idx_cases[1]-1+i])
-        points(times, cases_observed[,20 + i], pch = 19, col = "red")
+        points(times, cases_observed[[idx_cases_obs[1]-1+i]], pch = 19, col = "red")
         axis(2, las = 2)
     }
 }
