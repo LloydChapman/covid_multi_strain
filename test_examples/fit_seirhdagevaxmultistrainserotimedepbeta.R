@@ -314,7 +314,7 @@ matplot(days,t(cases_non_variant),type="l",xlab="Day",ylab="Non-variant cases")
 
 # Create "observed" data
 data_raw <- data.frame(cbind(day = days,t(rbind(hosps,deaths,sero_pos,cases,cases_non_variant))))
-# Add empty columns for total cases and deaths
+# Add empty columns for total hospitalisations and deaths
 data_raw$hosps <- NA
 data_raw$deaths <- NA
 data_raw$sero_pos_1 <- NA
