@@ -124,9 +124,9 @@ sero_pos_dt[,age_group := cut(max_ages_sero,c(min_ages,Inf),labels = age_groups)
 sero_pos_dt <- sero_pos_dt[,lapply(.SD,function(x) sum(as.integer(round(x)))),.SDcols = c("n","seropos"),by = .(date,age_group)]
 
 ## Make data table of hospitalisations, deaths and seroprevalence for fitting 
-start_date <- hosps_dt[,min(date)]
+strt_date <- hosps_dt[,min(date)] - 15
 end_date <- as.Date("2021-11-21")
-dates <- seq.Date(start_date,end_date,by = 1)
+dates <- seq.Date(strt_date,end_date,by = 1)
 base_dt <- CJ(date = dates,age_group = age_groups_hosp)
 
 reformat_data <- function(x, base_dt, vrbl, fillna = F){
@@ -160,7 +160,7 @@ data_raw[,date := NULL]
 data_raw$hosps <- NA
 data_raw$deaths <- NA
 data_raw$sero_pos_1 <- NA
-data_raw$sero_tot_1 <- rep(sum(population),nrow(data_raw))
+data_raw$sero_tot_1 <- NA
 data_raw$cases <- NA
 data_raw$cases_non_variant <- NA
 
