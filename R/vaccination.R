@@ -1,3 +1,30 @@
+calculate_rel_param <- function(vax_eff_arr){
+    # Create matrix of 0s for "vaccine effectiveness" in unvaccinated individuals
+    unvax_eff <- array(0, dim = dim(vax_eff_arr)[c(1:2,4)])
+    # Bind to vaccine effectiveness array
+    e <- abind(unvax_eff,vax_eff_arr,along = 3)
+    # Name first layer
+    dimnames(e)[[3]][1] <- "unvaccinated"
+    
+    # Calculate relative parameters
+    rel_susceptibility <- 1 - e[,,,"infection"]
+    rel_p_sympt <- (e[,,,"symptoms"] - e[,,,"infection"])/(1 - e[,,,"infection"])
+    rel_p_hosp_if_sympt <- (e[,,,"hospitalisation"] - e[,,,"symptoms"])/(1 - e[,,,"symptoms"])
+    rel_p_death <- (e[,,,"death"] - e[,,,"hospitalisation"])/(1 - e[,,,"hospitalisation"])
+    rel_infectivity <- 1 - e[,,,"infectiousness"]
+    
+    # Ensure first layers for unvaccinated individuals are 1 (as parameters are relative)
+    rel_p_sympt[,,1] <- 1
+    rel_p_hosp_if_sympt[,,1] <- 1
+    rel_p_death[,,1] <- 1
+    
+    return(list(rel_susceptibility = rel_susceptibility,
+                rel_p_sympt = rel_p_sympt,
+                rel_p_hosp_if_sympt = rel_p_hosp_if_sympt,
+                rel_p_death = rel_p_death,
+                rel_infectivity = rel_infectivity))
+}
+
 # build_rel_param <- function(rel_param, n_groups, n_vacc_classes, name_param) {
 #     if (length(rel_param) == 1) {
 #         mat_rel_param <- array(rel_param, c(n_groups, n_vacc_classes))
