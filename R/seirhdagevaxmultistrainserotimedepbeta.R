@@ -812,7 +812,9 @@ make_transform <- function(dt,
                            vaccine_catchup_fraction,
                            n_doses,
                            waning_rate,
-                           cross_immunity){
+                           cross_immunity,
+                           sero_sensitivity_1,
+                           sero_specificity_1){
     
     function(pars){
         # beta <- pars[["beta"]]
