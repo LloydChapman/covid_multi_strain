@@ -122,7 +122,7 @@ strain_rel_p_sympt <- 1
 strain_rel_p_hosp_if_sympt <- 1
 strain_rel_p_death <- 1
 
-# Parameters for impact of vaccination of susceptibility and infectiousness
+# Parameters for impact of vaccination on susceptibility and infectiousness
 rel_susceptibility <- c(1,0.8,0.5,0.8,0.5) # relative susceptibility to infection in each vaccine stratum
 rel_p_sympt <- c(1,0.6,0.3,0.6,0.3) # relative risk of symptoms in each vaccine stratum
 rel_p_hosp_if_sympt <- c(1,0.95,0.95,0.95,0.95) # relative risk of hospitalisation given infection in each vaccine stratum
