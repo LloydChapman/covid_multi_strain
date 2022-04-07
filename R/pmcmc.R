@@ -7,9 +7,10 @@
 # }
 # 
 
-mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0,discrete = rep(FALSE,length(curr_pars))){
+mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0,discrete = rep(FALSE,length(curr_pars)),u = seq_along(curr_pars)){
     # Get number of parameters being fitted
     n_pars <- length(curr_pars)
+    n_u <- length(u)
     
     # Apply transform function to bind fixed parameter values
     transform_pars <- transform(curr_pars)
@@ -55,13 +56,15 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_f
     iter_start <- 5/(a*(1 - a))
     A <- -qnorm(a/2)
     delta <- (1 - 1/n_pars)*sqrt(2*pi)*exp(A^2/2)/(2*A) + 1/(n_pars*(a*(1-a)))
+    
+    prop_pars <- curr_pars
         
     for (iter in seq_len(n_iters)){
         # Propose new parameter values
         # prop_pars <- rmvn(n = 1, mu = curr_pars, sigma = proposal_matrix)
-        prop_pars <- mvrnorm(n = 1, mu = curr_pars, Sigma = 2.38^2/n_pars*scaling_factor[iter]^2*proposal_matrix)
+        prop_pars[u] <- mvrnorm(n = 1, mu = curr_pars[u], Sigma = 2.38^2/n_u*scaling_factor[iter]^2*proposal_matrix[u,u])
         prop_pars[discrete] <- round(prop_pars[discrete])
-        if (all(prop_pars > pars_min & prop_pars < pars_max)){
+        if (all(prop_pars >= pars_min & prop_pars <= pars_max)){
             transform_pars <- transform(prop_pars)
             prop_ll <- filter$run(pars = transform_pars,save_history = T)
             prop_lprior <- calc_lprior(pars = prop_pars,priors = priors)
@@ -83,7 +86,7 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_f
             log_acc_prob <- -Inf
         }
         tmp <- scaling_factor[iter] * exp(delta*(exp(log_acc_prob) - a)/(iter_start + iter))
-        scaling_factor[iter + 1] <- tmp
+        scaling_factor[iter + 1] <- 1 #tmp
         if (abs(log(scaling_factor[iter + 1]) - log(scaling_factor_start)) > log(3)){
             scaling_factor_start <- scaling_factor[iter + 1]
             iter_start <- 5/(a*(1 - a)) - iter
@@ -100,6 +103,10 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_f
         tmp <- update_mean_and_cov_Spencer(mean_pars,proposal_matrix,pars,iter,iter0,ncol(pars))
         pars_mean <- tmp$mean_new
         proposal_matrix <- tmp$cov_new
+        
+        if (iter %% 10 == 0){
+            print(iter)
+        }
     }
     
     res <- list(pars = pars,
