@@ -7,6 +7,7 @@ library(coda)
 library(scales)
 library(qs)
 library(data.table)
+library(extraDistr)
 
 #### Age-structured SEIR model with deaths
 gen_seirhd_age <- odin.dust::odin_dust("test_examples/seirhdage.R")
@@ -49,6 +50,13 @@ ifr <- 1.1*ifr_salje
 p_G <- (ifr - p_D*ihr)/((1-p_D)*ihr + ifr)
 p_H <- ihr/(p_C*(1-p_G))
 
+# # Get max values
+# p_D_max0 <- p_D[length(p_D)]
+# p_H_max0 <- p_H[length(p_H)]
+# # Normalise
+# p_D <- p_D/max(p_D)
+# p_H <- p_H/max(p_H)
+
 # IFR <- readRDS("~/UCSF/COVIDVaccineModelling/Data/IFR_by_age_ODriscoll.RDS")
 # p_death <- IFR$median_perc[19:27]/100
 # p_death[length(p_death)-1] <- (p_death[length(p_death)-1]+p_death[length(p_death)])/2
@@ -64,7 +72,7 @@ seirhd_age <- gen_seirhd_age$new(
     list(dt = dt,n_age = n_age,S_ini = S_ini,E_ini = E_ini,I_ini = I_ini,
          m = transmission,beta = 0.04,sigma = 0.5,gamma_P = 0.4,gamma_A = 0.2,
          gamma_C = 0.4,gamma_H = 0.1, gamma_G = 1/3, 
-         p_C = p_C,p_H = p_H,p_G = p_G,p_D = p_D),
+         p_C = p_C,p_H = p_H_max*p_H,p_G = p_G,p_D = p_D_max*p_D),
     step = 0,n_particles = 1,n_threads = 1,seed = 1)
 
 seirhd_age$info()
@@ -165,8 +173,17 @@ ll_nbinom <- function(data, model, kappa, exp_noise){
     if(is.na(data)) {
         return(numeric(length(model)))
     }
-    mu <- model + rexp(length(model),rate = exp_noise)
+    mu <- model + rexp(n = length(model), rate = exp_noise)
     dnbinom(data, kappa, mu = mu, log = TRUE)
+}
+
+ll_dirmnom <- function(data, model, size, exp_noise){
+    if(any(is.na(data))){
+        return(numeric(length(model)))
+    }
+    model <- model + rexp(n = length(model), rate = exp_noise)
+    alpha <- size * model/rowSums(model)
+    ddirmnom(data, rowSums(data), alpha, log = TRUE)
 }
 
 # Define comparison function for age-stratified data
@@ -180,6 +197,16 @@ compare <- function(state, observed, pars = NULL){
         kappa_death <- 2
     } else {
         kappa_death <- pars$kappa_death
+    }
+    if (is.null(pars$size_hosp)){
+        size_hosp <- 10
+    } else {
+        size_hosp <- pars$size_hosp
+    }
+    if (is.null(pars$size_death)){
+        size_death <- 10
+    } else {
+        size_death <- pars$size_death
     }
     if (is.null(pars$exp_noise)){
         exp_noise <- 1e6
@@ -204,26 +231,34 @@ compare <- function(state, observed, pars = NULL){
     # model_deaths_70_79 <- state["deaths_70_79", ]
     # model_deaths_80_plus <- state["deaths_80_plus", ]
     
-    # Log-likelihoods for deaths
-    ll_hosps <- ll_nbinom(observed$hosps,model_hosps,kappa_hosp,exp_noise)
-    ll_hosps_0_39 <- ll_nbinom(observed$hosps_0_39,model_hosps_0_39,kappa_hosp,exp_noise)
-    ll_hosps_40_49 <- ll_nbinom(observed$hosps_40_49,model_hosps_40_49,kappa_hosp,exp_noise)
-    ll_hosps_50_59 <- ll_nbinom(observed$hosps_50_59,model_hosps_50_59,kappa_hosp,exp_noise)
-    ll_hosps_60_69 <- ll_nbinom(observed$hosps_60_69,model_hosps_60_69,kappa_hosp,exp_noise)
-    ll_hosps_70_plus <- ll_nbinom(observed$hosps_70_plus,model_hosps_70_plus,kappa_hosp,exp_noise)
-    # ll_hosps_70_79 <- ll_nbinom(observed$hosps_70_79,model_hosps_70_79,kappa_hosp,exp_noise)
-    # ll_hosps_80_plus <- ll_nbinom(observed$hosps_80_plus,model_hosps_80_plus,kappa_hosp,exp_noise)
+    # Log-likelihoods for hospitalisations
+    # ll_hosps <- ll_nbinom(observed$hosps,model_hosps,5*kappa_hosp,exp_noise)
+    # ll_hosps_0_39 <- ll_nbinom(observed$hosps_0_39,model_hosps_0_39,kappa_hosp,exp_noise)
+    # ll_hosps_40_49 <- ll_nbinom(observed$hosps_40_49,model_hosps_40_49,kappa_hosp,exp_noise)
+    # ll_hosps_50_59 <- ll_nbinom(observed$hosps_50_59,model_hosps_50_59,kappa_hosp,exp_noise)
+    # ll_hosps_60_69 <- ll_nbinom(observed$hosps_60_69,model_hosps_60_69,kappa_hosp,exp_noise)
+    # ll_hosps_70_plus <- ll_nbinom(observed$hosps_70_plus,model_hosps_70_plus,kappa_hosp,exp_noise)
+    # # ll_hosps_70_79 <- ll_nbinom(observed$hosps_70_79,model_hosps_70_79,kappa_hosp,exp_noise)
+    # # ll_hosps_80_plus <- ll_nbinom(observed$hosps_80_plus,model_hosps_80_plus,kappa_hosp,exp_noise)
 
-    # Log-likelihoods for deaths
-    ll_deaths <- ll_nbinom(observed$deaths,model_deaths,kappa_death,exp_noise)
-    ll_deaths_0_39 <- ll_nbinom(observed$deaths_0_39,model_deaths_0_39,kappa_death,exp_noise)
-    ll_deaths_40_49 <- ll_nbinom(observed$deaths_40_49,model_deaths_40_49,kappa_death,exp_noise)
-    ll_deaths_50_59 <- ll_nbinom(observed$deaths_50_59,model_deaths_50_59,kappa_death,exp_noise)
-    ll_deaths_60_69 <- ll_nbinom(observed$deaths_60_69,model_deaths_60_69,kappa_death,exp_noise)
-    ll_deaths_70_plus <- ll_nbinom(observed$deaths_70_plus,model_deaths_70_plus,kappa_death,exp_noise)
-    # ll_deaths_70_79 <- ll_nbinom(observed$deaths_70_79,model_deaths_70_79,kappa_death,exp_noise)
-    # ll_deaths_80_plus <- ll_nbinom(observed$deaths_80_plus,model_deaths_80_plus,kappa_death,exp_noise)
+    hosps_by_age <- matrix(c(observed$hosps_0_39,observed$hosps_40_49,observed$hosps_50_59,observed$hosps_60_69,observed$hosps_70_plus),nrow = 1)
+    model_hosps_by_age <- cbind(model_hosps_0_39,model_hosps_40_49,model_hosps_50_59,model_hosps_60_69,model_hosps_70_plus)
+    ll_hosps <- ll_dirmnom(hosps_by_age,model_hosps_by_age,size_hosp,exp_noise)
     
+    # Log-likelihoods for deaths
+    # ll_deaths <- ll_nbinom(observed$deaths,model_deaths,5*kappa_death,exp_noise)
+    # ll_deaths_0_39 <- ll_nbinom(observed$deaths_0_39,model_deaths_0_39,kappa_death,exp_noise)
+    # ll_deaths_40_49 <- ll_nbinom(observed$deaths_40_49,model_deaths_40_49,kappa_death,exp_noise)
+    # ll_deaths_50_59 <- ll_nbinom(observed$deaths_50_59,model_deaths_50_59,kappa_death,exp_noise)
+    # ll_deaths_60_69 <- ll_nbinom(observed$deaths_60_69,model_deaths_60_69,kappa_death,exp_noise)
+    # ll_deaths_70_plus <- ll_nbinom(observed$deaths_70_plus,model_deaths_70_plus,kappa_death,exp_noise)
+    # # ll_deaths_70_79 <- ll_nbinom(observed$deaths_70_79,model_deaths_70_79,kappa_death,exp_noise)
+    # # ll_deaths_80_plus <- ll_nbinom(observed$deaths_80_plus,model_deaths_80_plus,kappa_death,exp_noise)
+    
+    deaths_by_age <- matrix(c(observed$deaths_0_39,observed$deaths_40_49,observed$deaths_50_59,observed$deaths_60_69,observed$deaths_70_plus),nrow = 1)
+    model_deaths_by_age <- cbind(model_deaths_0_39,model_deaths_40_49,model_deaths_50_59,model_deaths_60_69,model_deaths_70_plus)
+    ll_deaths <- ll_dirmnom(deaths_by_age,model_deaths_by_age,size_death,exp_noise)
+
     # ll_hosps <- ll_pois(observed$hosps,model_hosps,exp_noise)
     # ll_hosps_0_39 <- ll_pois(observed$hosps_0_39,model_hosps_0_39,exp_noise)
     # ll_hosps_40_49 <- ll_pois(observed$hosps_40_49,model_hosps_40_49,exp_noise)
@@ -244,9 +279,13 @@ compare <- function(state, observed, pars = NULL){
     # # ll_deaths_80_plus <- ll_pois(observed$deaths_80_plus,model_deaths_80_plus,exp_noise)
     
     # Calculate total log-likelihood
-    ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
-        ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
+    # ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
+    #     ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
+    # ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
+    #     ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
+    # ll_hosps_0_39 + ll_deaths_0_39
     # ll_hosps_70_plus + ll_deaths_70_plus
+    ll_hosps + ll_deaths
 }
 
 # Add noise to simulated data
@@ -256,6 +295,7 @@ deaths <- true_history[8:12, ,-1]
 par(mfrow = c(1,1))
 days <- seq(1,n_steps*dt)
 matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
+matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")
 
 add_noise <- function(x,f){
     noise <- apply(x,2,function(y) round(rnorm(length(y),0,f*y)))
@@ -263,10 +303,16 @@ add_noise <- function(x,f){
     x <- pmax(x,0)
 }
 
+add_nbinom_noise <- function(x,size){
+    x <- apply(x,2,function(y) rnbinom(length(y),size = size,mu = y))
+}
+
 set.seed(0)
-hosps <- add_noise(hosps,0.2)
+# hosps <- add_noise(hosps,0.2)
+hosps <- add_nbinom_noise(hosps,100)
 rownames(hosps) <- paste0("hosps_",age.limits[c(1,5:length(age.limits))],"_",c(as.character(age.limits[5:length(age.limits)]-1),"plus"))
-deaths <- add_noise(deaths,0.3)
+# deaths <- add_noise(deaths,0.3)
+deaths <- add_nbinom_noise(deaths,10)
 rownames(deaths) <- paste0("deaths_",age.limits[c(1,5:length(age.limits))],"_",c(as.character(age.limits[5:length(age.limits)]-1),"plus"))
 
 matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
@@ -276,8 +322,10 @@ matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")
 data_raw <- data.frame(t(rbind(hosps,deaths)))
 data_raw$day <- days
 # Add empty columns for total cases and deaths
-data_raw$hosps <- NA
-data_raw$deaths <- NA
+# data_raw$hosps <- NA
+# data_raw$deaths <- NA
+data_raw$hosps <- data$hosps_0_39 + data$hosps_40_49 + data$hosps_50_59 + data$hosps_60_69 + data$hosps_70_plus
+data_raw$deaths <- data$deaths_0_39 + data$deaths_40_49 + data$deaths_50_59 + data$deaths_60_69 + data$deaths_70_plus
 # Convert to required format
 data <- particle_filter_data(data_raw,"day",1/dt)
 
@@ -314,6 +362,27 @@ plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
     }
 }
 
+plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, times){
+    par(mfrow = c(2,4), oma=c(2,3,0,0))
+    for (i in 1:5){
+        par(mar = c(3, 4, 2, 0.5))
+        matplot(times, t(incidence_modelled[73+i, ,-1]),
+                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
+                main = paste0("Age ", rownames(incidence_modelled)[73+i]))
+        points(times, incidence_observed[[4+i]],pch=19,col="red")
+        axis(2, las = 2)
+    }
+    par(mfrow = c(2,4), oma=c(2,3,0,0))
+    for (i in 1:5){
+        par(mar = c(3, 4, 2, 0.5))
+        matplot(times, t(incidence_modelled[79+i, ,-1]),
+                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",
+                main = paste0("Age ", rownames(incidence_modelled)[79+i]))
+        points(times, incidence_observed[[9+i]],pch=19,col="red")
+        axis(2, las = 2)
+    }
+}
+
 # Create particle filter object
 n_particles <- 200
 filter <- particle_filter$new(data, gen_seirhd_age, n_particles, 
@@ -323,26 +392,43 @@ filter$run(
     pars = list(dt = dt,n_age = n_age,S_ini = S_ini,E_ini = E_ini,I_ini = I_ini,
                 m = transmission,beta = 0.04,sigma = 0.5,gamma_P = 0.4,gamma_A = 0.2,
                 gamma_C = 0.4,gamma_H = 0.1, gamma_G = 1/3, 
-                p_C = p_C,p_H = p_H,p_G = p_G,p_D = p_D))
+                p_C = p_C,p_H = p_H,p_G = p_G,p_D = p_D,kappa_hosp = 100,kappa_death = 10))
 
 # Check variable names in particle filter history
 dimnames(filter$history())
 
 # Plot filtered trajectories
 plot_particle_filter(filter$history(),true_history,data_raw$day)
+plot_hosps_and_deaths_age(filter$history(),data,data_raw$day)
 
 # Infer parameters by pMCMC
-beta <- pmcmc_parameter("beta",0.2,min = 0,
+beta <- pmcmc_parameter("beta",0.04,min = 0,
                         prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
 gamma <- pmcmc_parameter("gamma",0.5,min = 0,
                          prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
+# p_H_max <- pmcmc_parameter("p_H_max",p_H_max0,min = 0,max = 1,
+#                            prior = function(x) dbeta(x,1,1,log = TRUE))
+# p_D_max <- pmcmc_parameter("p_D_max",p_D_max0,min = 0,max = 1,
+#                            prior = function(x) dbeta(x,1,1,log = TRUE))
+# alpha_H <- pmcmc_parameter("alpha_H",0.01,min = 0,max = 1,
+#                            prior = function(x) dbeta(x,1,1,log = TRUE))
+# alpha_D <- pmcmc_parameter("alpha_D",0.1,min = 0,max = 1,
+#                            prior = function(x) dbeta(x,1,1,log = TRUE))
 
 parameter_transform <- function(pars,dt,n_age,S_ini,E_ini,I_ini,m,sigma,gamma_A,gamma_H,gamma_G,p_C,p_H,p_G,p_D){
     beta <- pars[["beta"]]
     gamma <- pars[["gamma"]]
+    # p_H_max <- pars[["p_H_max"]]
+    # p_D_max <- pars[["p_D_max"]]
+    # alpha_H <- pars[["alpha_H"]]
+    # alpha_D <- pars[["alpha_D"]]
     list(beta = beta,dt = dt,n_age = n_age,S_ini = S_ini,E_ini = E_ini,
          I_ini = I_ini,m = m,sigma = sigma,gamma_P = gamma,gamma_A = gamma_A,gamma_C = gamma,
          gamma_H = gamma_H,gamma_G = gamma_G,p_C = p_C,p_H = p_H,p_G = p_G,p_D = p_D)
+    # list(beta = beta,dt = dt,n_age = n_age,S_ini = S_ini,E_ini = E_ini,
+    #      I_ini = I_ini,m = m,sigma = sigma,gamma_P = gamma,gamma_A = gamma_A,gamma_C = gamma,
+    #      gamma_H = gamma_H,gamma_G = gamma_G,p_C = p_C,p_H = p_H_max*p_H,p_G = p_G,p_D = p_D_max*p_D)#,
+    #      # kappa_hosp = 1/alpha_H,kappa_death = 1/alpha_D)
 }
 
 transform <- function(pars){
@@ -352,8 +438,13 @@ transform <- function(pars){
                         p_C = p_C,p_H = p_H,p_G = p_G,p_D = p_D)
 }
 
-proposal <- matrix(c(0.01^2,0,0,0.01^2),nrow = 2,ncol = 2,byrow = TRUE)
+proposal <- diag(c(1e-6,1e-5),2)
+# proposal <- matrix(c(0.01^2,0,0,0.01^2),nrow = 2,ncol = 2,byrow = TRUE)
+# proposal <- diag(c(1e-6,1e-5,1e-5,1e-5,1e-7,1e-5),6)
+# proposal <- diag(c(1e-6,1e-5,1e-5,1e-5),4)
 mcmc_pars <- pmcmc_parameters$new(list(beta = beta,gamma = gamma),
+                                       # p_H_max = p_H_max, p_D_max = p_D_max),#,
+                                       # alpha_H = alpha_H, alpha_D = alpha_D),
                                   proposal,transform = transform)
 
 # Run MCMC
@@ -364,29 +455,8 @@ control <- pmcmc_control(
     progress = TRUE)
 pmcmc_run <- pmcmc(mcmc_pars,filter,control = control)
 
-plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, times){
-    par(mfrow = c(2,4), oma=c(2,3,0,0))
-    for (i in 1:5){
-        par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[73+i, ,-1]),
-                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
-                main = paste0("Age ", rownames(incidence_modelled)[73+i]))
-        points(times, incidence_observed[,4+i],pch=19)
-        axis(2, las = 2)
-    }
-    par(mfrow = c(2,4), oma=c(2,3,0,0))
-    for (i in 1:5){
-        par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[79+i, ,-1]),
-                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",
-                main = paste0("Age ", rownames(incidence_modelled)[79+i]))
-        points(times, incidence_observed[,9+i],pch=19)
-        axis(2, las = 2)
-    }
-}
-
-plot_particle_filter(pmcmc_run$trajectories$state[,101:1001,],true_history,data_raw$day)
-plot_hosps_and_deaths_age(pmcmc_run$trajectories$state[,101:1001,],data,data_raw$day)
+plot_particle_filter(pmcmc_run$trajectories$state[,301:1000,],true_history,data_raw$day)
+plot_hosps_and_deaths_age(pmcmc_run$trajectories$state[,301:1000,],data,data_raw$day)
 
 # Plot MCMC output
 mcmc_out <- as.mcmc(cbind(pmcmc_run$probabilities, pmcmc_run$pars))
@@ -406,13 +476,19 @@ beta <- pmcmc_parameter("beta",pmcmc_run$pars[nrow(pmcmc_run$pars),1],min = 0,
                         prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
 gamma <- pmcmc_parameter("gamma",pmcmc_run$pars[nrow(pmcmc_run$pars),2],min = 0,
                         prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
-# proposal1 <- cov(pmcmc_run$pars)
-mcmc_pars1 <- pmcmc_parameters$new(list(beta = beta,gamma = gamma),
-                                   proposal,transform = transform)
+# alpha_H <- pmcmc_parameter("alpha_H",pmcmc_run$pars[nrow(pmcmc_run$pars),3],min = 0,max = 1,
+#                            prior = function(x) dbeta(x,1,1,log = TRUE))
+# alpha_D <- pmcmc_parameter("alpha_D",pmcmc_run$pars[nrow(pmcmc_run$pars),4],min = 0,max = 1,
+#                            prior = function(x) dbeta(x,1,1,log = TRUE))
+proposal1 <- cov(pmcmc_run$pars)
+mcmc_pars1 <- pmcmc_parameters$new(list(beta = beta,gamma = gamma,
+                                        alpha_H = alpha_H,alpha_D = alpha_D),
+                                   proposal1,transform = transform)
 
 pmcmc_run1 <- pmcmc(mcmc_pars1,filter,control = control)
 
-plot_hosps_and_deaths_age(pmcmc_run1$trajectories$state[,101:1001,],data,data_raw$day)
+plot_particle_filter(pmcmc_run1$trajectories$state[,101:1000,],data,data_raw$day)
+plot_hosps_and_deaths_age(pmcmc_run1$trajectories$state[,101:1000,],data,data_raw$day)
 
 # Plot MCMC output
 mcmc_out1 <- as.mcmc(cbind(pmcmc_run1$probabilities, pmcmc_run1$pars))
