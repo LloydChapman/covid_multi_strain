@@ -1,10 +1,3 @@
-library(data.table)
-library(ggplot2)
-library(qs)
-library(readxl)
-
-source("R/vaccination.R")
-
 get_min_age = function(x){
     as.numeric(sub("-.*","",sub("\\+|<","-",x)))  
 }
@@ -124,7 +117,7 @@ sero_pos_dt[,age_group := cut(max_ages_sero,c(min_ages,Inf),labels = age_groups)
 sero_pos_dt <- sero_pos_dt[,lapply(.SD,function(x) sum(as.integer(round(x)))),.SDcols = c("n","seropos"),by = .(date,age_group)]
 
 ## Make data table of hospitalisations, deaths and seroprevalence for fitting 
-strt_date <- hosps_dt[,min(date)] - 15
+strt_date <- hosps_dt[,min(date)] - 20
 end_date <- as.Date("2021-11-21")
 dates <- seq.Date(strt_date,end_date,by = 1)
 base_dt <- CJ(date = dates,age_group = age_groups_hosp)
@@ -157,12 +150,14 @@ data_raw[,day := as.integer(date - min(date) + 1L)]
 data_raw[,date := NULL]
 
 # Add empty columns for total hospitalisations and deaths
-data_raw$hosps <- NA
-data_raw$deaths <- NA
-data_raw$sero_pos_1 <- NA
-data_raw$sero_tot_1 <- NA
-data_raw$cases <- NA
-data_raw$cases_non_variant <- NA
+# data_raw$hosps <- NA
+data_raw[,hosps := hosps_0_39 + hosps_40_49 + hosps_50_59 + hosps_60_69 + hosps_70_plus]
+# data_raw$deaths <- NA
+data_raw[,deaths := deaths_0_39 + deaths_40_49 + deaths_50_59 + deaths_60_69 + deaths_70_plus]
+data_raw[,sero_pos_1 := sero_pos_1_20_29 + sero_pos_1_30_39 + sero_pos_1_40_49 + sero_pos_1_50_59 + sero_pos_1_60_69 + sero_pos_1_70_plus]
+data_raw[,sero_tot_1 := sero_tot_1_20_29 + sero_tot_1_30_39 + sero_tot_1_40_49 + sero_tot_1_50_59 + sero_tot_1_60_69 + sero_tot_1_70_plus]
+data_raw[,cases := NA]
+data_raw[,cases_non_variant := NA]
 
 ## Vaccinations
 vax <- fread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/SPC_DF_COVID_VACCINATION_1.0_D.PF.COVIDVACAD1+COVIDVACAD2+COVIDVACADT.csv",)
