@@ -620,7 +620,7 @@ compare <- function(state, observed, pars){
     model_sero_pos_1 <- state["sero_pos_1", ]
     model_sero_pos_1_capped <- pmin(model_sero_pos_1, sum(pars$N_tot))
     model_sero_prob_pos_1 <- test_prob_pos(model_sero_pos_1_capped,
-                                           sum(pars$N_tot),
+                                           sum(pars$N_tot) - model_sero_pos_1_capped,
                                            pars$sero_sensitivity_1,
                                            pars$sero_specificity_1,
                                            exp_noise)
@@ -628,42 +628,42 @@ compare <- function(state, observed, pars){
     model_sero_pos_1_20_29 <- state["sero_pos_1_20_29", ]
     model_sero_pos_1_20_29_capped <- pmin(model_sero_pos_1_20_29, pars$N_tot[3])
     model_sero_prob_pos_1_20_29 <- test_prob_pos(model_sero_pos_1_20_29_capped,
-                                                 pars$N_tot[3],
+                                                 pars$N_tot[3] - model_sero_pos_1_20_29_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_30_39 <- state["sero_pos_1_30_39", ]
     model_sero_pos_1_30_39_capped <- pmin(model_sero_pos_1_30_39, pars$N_tot[4])
     model_sero_prob_pos_1_30_39 <- test_prob_pos(model_sero_pos_1_30_39_capped,
-                                                 pars$N_tot[4],
+                                                 pars$N_tot[4] - model_sero_pos_1_30_39_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_40_49 <- state["sero_pos_1_40_49", ]
     model_sero_pos_1_40_49_capped <- pmin(model_sero_pos_1_40_49, pars$N_tot[5])
     model_sero_prob_pos_1_40_49 <- test_prob_pos(model_sero_pos_1_40_49_capped,
-                                                 pars$N_tot[5],
+                                                 pars$N_tot[5] - model_sero_pos_1_40_49_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_50_59 <- state["sero_pos_1_50_59", ]
     model_sero_pos_1_50_59_capped <- pmin(model_sero_pos_1_50_59, pars$N_tot[6])
     model_sero_prob_pos_1_50_59 <- test_prob_pos(model_sero_pos_1_50_59_capped,
-                                                 pars$N_tot[6],
+                                                 pars$N_tot[6] - model_sero_pos_1_50_59_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_60_69 <- state["sero_pos_1_60_69", ]
     model_sero_pos_1_60_69_capped <- pmin(model_sero_pos_1_60_69, pars$N_tot[7])
     model_sero_prob_pos_1_60_69 <- test_prob_pos(model_sero_pos_1_60_69_capped,
-                                                 pars$N_tot[7],
+                                                 pars$N_tot[7] - model_sero_pos_1_60_69_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_70_plus <- state["sero_pos_1_70_plus", ]
     model_sero_pos_1_70_plus_capped <- pmin(model_sero_pos_1_70_plus, pars$N_tot[8])
     model_sero_prob_pos_1_70_plus <- test_prob_pos(model_sero_pos_1_70_plus_capped,
-                                                   pars$N_tot[8],
+                                                   pars$N_tot[8] - model_sero_pos_1_70_plus_capped,
                                                    pars$sero_sensitivity_1,
                                                    pars$sero_specificity_1,
                                                    exp_noise)
