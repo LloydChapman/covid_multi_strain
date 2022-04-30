@@ -564,6 +564,16 @@ ll_nbinom <- function(data, model, kappa, exp_noise){
 }
 
 
+ll_dirmnom <- function(data, model, size, exp_noise){
+    if(any(is.na(data))){
+        return(numeric(length(model)))
+    }
+    model <- model + rexp(n = length(model), rate = exp_noise)
+    alpha <- size * model/rowSums(model)
+    ddirmnom(data, rowSums(data), alpha, log = TRUE)
+}
+
+
 test_prob_pos <- function(pos, neg, sensitivity, specificity, exp_noise) {
     
     ## We add some exponential noise to the number of positives and negatives
@@ -584,14 +594,24 @@ test_prob_pos <- function(pos, neg, sensitivity, specificity, exp_noise) {
 # Define comparison function for age-stratified data
 compare <- function(state, observed, pars){
     if (is.null(pars$kappa_hosp)){
-        kappa_hosp <- 2
+        kappa_hosp <- 20
     } else {
         kappa_hosp <- pars$kappa_hosp
     }
     if (is.null(pars$kappa_death)){
-        kappa_death <- 2
+        kappa_death <- 20
     } else {
         kappa_death <- pars$kappa_death
+    }
+    if (is.null(pars$size_hosp)){
+        size_hosp <- 10
+    } else {
+        size_hosp <- pars$size_hosp
+    }
+    if (is.null(pars$size_death)){
+        size_death <- 10
+    } else {
+        size_death <- pars$size_death
     }
     if (is.null(pars$exp_noise)){
         exp_noise <- 1e6
@@ -624,7 +644,7 @@ compare <- function(state, observed, pars){
     model_sero_pos_1 <- state["sero_pos_1", ]
     model_sero_pos_1_capped <- pmin(model_sero_pos_1, sum(pars$N_tot))
     model_sero_prob_pos_1 <- test_prob_pos(model_sero_pos_1_capped,
-                                           sum(pars$N_tot),
+                                           sum(pars$N_tot) - model_sero_pos_1_capped,
                                            pars$sero_sensitivity_1,
                                            pars$sero_specificity_1,
                                            exp_noise)
@@ -632,42 +652,42 @@ compare <- function(state, observed, pars){
     model_sero_pos_1_20_29 <- state["sero_pos_1_20_29", ]
     model_sero_pos_1_20_29_capped <- pmin(model_sero_pos_1_20_29, pars$N_tot[3])
     model_sero_prob_pos_1_20_29 <- test_prob_pos(model_sero_pos_1_20_29_capped,
-                                                 pars$N_tot[3],
+                                                 pars$N_tot[3] - model_sero_pos_1_20_29_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_30_39 <- state["sero_pos_1_30_39", ]
     model_sero_pos_1_30_39_capped <- pmin(model_sero_pos_1_30_39, pars$N_tot[4])
     model_sero_prob_pos_1_30_39 <- test_prob_pos(model_sero_pos_1_30_39_capped,
-                                                 pars$N_tot[4],
+                                                 pars$N_tot[4] - model_sero_pos_1_30_39_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_40_49 <- state["sero_pos_1_40_49", ]
     model_sero_pos_1_40_49_capped <- pmin(model_sero_pos_1_40_49, pars$N_tot[5])
     model_sero_prob_pos_1_40_49 <- test_prob_pos(model_sero_pos_1_40_49_capped,
-                                                 pars$N_tot[5],
+                                                 pars$N_tot[5] - model_sero_pos_1_40_49_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_50_59 <- state["sero_pos_1_50_59", ]
     model_sero_pos_1_50_59_capped <- pmin(model_sero_pos_1_50_59, pars$N_tot[6])
     model_sero_prob_pos_1_50_59 <- test_prob_pos(model_sero_pos_1_50_59_capped,
-                                                 pars$N_tot[6],
+                                                 pars$N_tot[6] - model_sero_pos_1_50_59_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_60_69 <- state["sero_pos_1_60_69", ]
     model_sero_pos_1_60_69_capped <- pmin(model_sero_pos_1_60_69, pars$N_tot[7])
     model_sero_prob_pos_1_60_69 <- test_prob_pos(model_sero_pos_1_60_69_capped,
-                                                 pars$N_tot[7],
+                                                 pars$N_tot[7] - model_sero_pos_1_60_69_capped,
                                                  pars$sero_sensitivity_1,
                                                  pars$sero_specificity_1,
                                                  exp_noise)
     model_sero_pos_1_70_plus <- state["sero_pos_1_70_plus", ]
     model_sero_pos_1_70_plus_capped <- pmin(model_sero_pos_1_70_plus, pars$N_tot[8])
     model_sero_prob_pos_1_70_plus <- test_prob_pos(model_sero_pos_1_70_plus_capped,
-                                                   pars$N_tot[8],
+                                                   pars$N_tot[8] - model_sero_pos_1_70_plus_capped,
                                                    pars$sero_sensitivity_1,
                                                    pars$sero_specificity_1,
                                                    exp_noise)
@@ -681,7 +701,7 @@ compare <- function(state, observed, pars){
         1, 1, exp_noise)
     
     # Log-likelihoods for deaths
-    ll_hosps <- ll_nbinom(observed$hosps,model_hosps,kappa_hosp,exp_noise)
+    # ll_hosps <- ll_nbinom(observed$hosps,model_hosps,kappa_hosp,exp_noise)
     ll_hosps_0_39 <- ll_nbinom(observed$hosps_0_39,model_hosps_0_39,kappa_hosp,exp_noise)
     ll_hosps_40_49 <- ll_nbinom(observed$hosps_40_49,model_hosps_40_49,kappa_hosp,exp_noise)
     ll_hosps_50_59 <- ll_nbinom(observed$hosps_50_59,model_hosps_50_59,kappa_hosp,exp_noise)
@@ -690,15 +710,23 @@ compare <- function(state, observed, pars){
     # ll_hosps_70_79 <- ll_nbinom(observed$hosps_70_79,model_hosps_70_79,kappa_hosp,exp_noise)
     # ll_hosps_80_plus <- ll_nbinom(observed$hosps_80_plus,model_hosps_80_plus,kappa_hosp,exp_noise)
     
+    # hosps_by_age <- matrix(c(observed$hosps_0_39,observed$hosps_40_49,observed$hosps_50_59,observed$hosps_60_69,observed$hosps_70_plus),nrow = 1)
+    # model_hosps_by_age <- cbind(model_hosps_0_39,model_hosps_40_49,model_hosps_50_59,model_hosps_60_69,model_hosps_70_plus)
+    # ll_hosps <- ll_dirmnom(hosps_by_age,model_hosps_by_age,size_hosp,exp_noise)
+    
     # Log-likelihoods for deaths
-    ll_deaths <- ll_nbinom(observed$deaths,model_deaths,kappa_death,exp_noise)
+    # ll_deaths <- ll_nbinom(observed$deaths,model_deaths,kappa_death,exp_noise)
     ll_deaths_0_39 <- ll_nbinom(observed$deaths_0_39,model_deaths_0_39,kappa_death,exp_noise)
     ll_deaths_40_49 <- ll_nbinom(observed$deaths_40_49,model_deaths_40_49,kappa_death,exp_noise)
     ll_deaths_50_59 <- ll_nbinom(observed$deaths_50_59,model_deaths_50_59,kappa_death,exp_noise)
     ll_deaths_60_69 <- ll_nbinom(observed$deaths_60_69,model_deaths_60_69,kappa_death,exp_noise)
     ll_deaths_70_plus <- ll_nbinom(observed$deaths_70_plus,model_deaths_70_plus,kappa_death,exp_noise)
-    # ll_deaths_70_79 <- ll_nbinom(observed$deaths_70_79,model_deaths_70_79,kappa_death,exp_noise)
-    # ll_deaths_80_plus <- ll_nbinom(observed$deaths_80_plus,model_deaths_80_plus,kappa_death,exp_noise)
+    # # ll_deaths_70_79 <- ll_nbinom(observed$deaths_70_79,model_deaths_70_79,kappa_death,exp_noise)
+    # # ll_deaths_80_plus <- ll_nbinom(observed$deaths_80_plus,model_deaths_80_plus,kappa_death,exp_noise)
+    
+    # deaths_by_age <- matrix(c(observed$deaths_0_39,observed$deaths_40_49,observed$deaths_50_59,observed$deaths_60_69,observed$deaths_70_plus),nrow = 1)
+    # model_deaths_by_age <- cbind(model_deaths_0_39,model_deaths_40_49,model_deaths_50_59,model_deaths_60_69,model_deaths_70_plus)
+    # ll_deaths <- ll_dirmnom(deaths_by_age,model_deaths_by_age,size_death,exp_noise)
     
     # ll_hosps <- ll_pois(observed$hosps,model_hosps,exp_noise)
     # ll_hosps_0_39 <- ll_pois(observed$hosps_0_39,model_hosps_0_39,exp_noise)
@@ -720,7 +748,7 @@ compare <- function(state, observed, pars){
     # # ll_deaths_80_plus <- ll_pois(observed$deaths_80_plus,model_deaths_80_plus,exp_noise)
     
     # Log-likelihoods for seroprevalence
-    ll_sero_pos_1 <- ll_binom(observed$sero_pos_1,observed$sero_tot_1,model_sero_prob_pos_1)
+    # ll_sero_pos_1 <- ll_binom(observed$sero_pos_1,observed$sero_tot_1,model_sero_prob_pos_1)
     ll_sero_pos_1_20_29 <- ll_binom(observed$sero_pos_1_20_29,observed$sero_tot_1_20_29,model_sero_prob_pos_1_20_29)
     ll_sero_pos_1_30_39 <- ll_binom(observed$sero_pos_1_30_39,observed$sero_tot_1_30_39,model_sero_prob_pos_1_30_39)
     ll_sero_pos_1_40_49 <- ll_binom(observed$sero_pos_1_40_49,observed$sero_tot_1_40_49,model_sero_prob_pos_1_40_49)
@@ -732,13 +760,14 @@ compare <- function(state, observed, pars){
     ll_strain <- ll_binom(observed$cases_non_variant,observed$cases,model_strain_prob_pos)
     
     # Calculate total log-likelihood
+    # ll_hosps + ll_deaths
     # ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
     # ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
     # ll_hosps_70_plus + ll_deaths_70_plus
-    ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus +
-        ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus +
-        ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus +
-        ll_strain
+    # ll_hosps + ll_deaths + ll_sero_pos_1 + ll_strain +
+    0.1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
+        0.1*(ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus) + 
+        ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus
 }
 
 
@@ -834,6 +863,8 @@ make_transform <- function(dt,
         start_date <- pars[["start_date"]]
         rel_strain_transmission <- pars[["rel_strain_transmission"]]
         strain_seed_date <- pars[["strain_seed_date"]]
+        p_H_max <- pars[["p_H_max"]]
+        p_D_max <- pars[["p_D_max"]]
         
         # Parameters for 1st epoch
         p <- parameters(dt,
@@ -853,9 +884,11 @@ make_transform <- function(dt,
                         gamma_P_1,
                         theta_A,
                         p_C,
-                        p_H,
+                        # p_H,
+                        p_H_max*p_H,
                         p_G,
-                        p_D,
+                        # p_D,
+                        p_D_max*p_D,
                         p_P_1,
                         population,
                         start_date = start_date,
@@ -1062,9 +1095,10 @@ plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, ti
     nms <- dimnames(incidence_modelled)[[1]]
     idx_hosps <- grep("hosps_",nms)
     idx_deaths <- grep("deaths_",nms)
+    idx_plot <- seq(10,ncol(incidence_modelled),by=10)
     for (i in seq_along(idx_hosps)){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[idx_hosps[1]-1+i, ,-1]),
+        matplot(times, t(incidence_modelled[idx_hosps[1]-1+i,idx_plot,-1]),
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",yaxt = "n",
                 ylim = c(0,max(max(incidence_observed[,5:9]),max(incidence_modelled[idx_hosps,,-1]))),
                 main = paste0("Age ", rownames(incidence_modelled)[idx_hosps[1]-1+i]))
@@ -1074,7 +1108,7 @@ plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, ti
     par(mfrow = c(2,4), oma=c(2,3,0,0))
     for (i in seq_along(idx_deaths)){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[idx_deaths[1]-1+i, ,-1]),
+        matplot(times, t(incidence_modelled[idx_deaths[1]-1+i,idx_plot,-1]),
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",yaxt = "n",
                 ylim = c(0,max(max(incidence_observed[,10:14]),max(incidence_modelled[idx_deaths,,-1]))),
                 main = paste0("Age ", rownames(incidence_modelled)[idx_deaths[1]-1+i]))
@@ -1089,11 +1123,13 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, times, population){
     nms <- dimnames(seroprev_modelled)[[1]]
     idx_sero <- grep("sero_pos_1_",nms)
     idx_sero_obs <- grep("sero_pos_1_",names(seroprev_observed))
-    idx_sero_tot_obs <- grep("sero_tot_1",names(seroprev_observed))
+    idx_sero_tot_obs <- grep("sero_tot_1_",names(seroprev_observed))
+    idx_plot <- seq(10,ncol(seroprev_modelled),by=10)
     for (i in 1:6){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(seroprev_modelled[idx_sero[1]-1+i, ,-1]/population[i]),
+        matplot(times, t(seroprev_modelled[idx_sero[1]-1+i,idx_plot,-1]/population[i]),
                 type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Seroprevalence", yaxt = "n",
+                ylim = c(0,max(max(seroprev_modelled[idx_sero,idx_plot,-1]/population),max(seroprev_observed[,idx_sero_obs]/seroprev_observed[,idx_sero_tot_obs],na.rm = T))),
                 main = paste0("Age ",rownames(seroprev_modelled)[idx_sero[1]-1+i]))
         points(times, seroprev_observed[[idx_sero_obs[1]-1+i]]/seroprev_observed[[idx_sero_tot_obs[1]-1+i]], pch = 19, col = "red")
         axis(2, las = 2)
@@ -1106,9 +1142,10 @@ plot_cases <- function(cases_modelled, cases_observed, times){
     nms <- dimnames(cases_modelled)[[1]]
     idx_cases <- grep("cases",nms)
     idx_cases_obs <- grep("cases",names(cases_observed))
+    idx_plot <- seq(10,ncol(cases_modelled),by=10)
     for (i in 1:2){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(cases_modelled[idx_cases[1]-1+i, ,-1]),
+        matplot(times, t(cases_modelled[idx_cases[1]-1+i,idx_plot,-1]),
                 type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Cases", yaxt = "n",
                 main = rownames(cases_modelled)[idx_cases[1]-1+i])
         points(times, cases_observed[[idx_cases_obs[1]-1+i]], pch = 19, col = "red")

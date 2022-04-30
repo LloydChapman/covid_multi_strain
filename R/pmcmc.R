@@ -85,8 +85,7 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_f
         } else {
             log_acc_prob <- -Inf
         }
-        tmp <- scaling_factor[iter] * exp(delta*(exp(log_acc_prob) - a)/(iter_start + iter))
-        scaling_factor[iter + 1] <- 1 #tmp
+        scaling_factor[iter + 1] <- max(1,scaling_factor[iter] * exp(delta*(exp(log_acc_prob) - a)/(iter_start + iter))) #1 #
         if (abs(log(scaling_factor[iter + 1]) - log(scaling_factor_start)) > log(3)){
             scaling_factor_start <- scaling_factor[iter + 1]
             iter_start <- 5/(a*(1 - a)) - iter
@@ -104,7 +103,7 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_f
         pars_mean <- tmp$mean_new
         proposal_matrix <- tmp$cov_new
         
-        if (iter %% 10 == 0){
+        if (iter %% 100 == 0){
             print(iter)
         }
     }

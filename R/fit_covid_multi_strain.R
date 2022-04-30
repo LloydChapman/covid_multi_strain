@@ -1,10 +1,10 @@
-fit_covid_multi_strain <- function(n_iters,run){
+fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE){
     #### Set up model and parameters ####
     
     
     # Age-structured SEIR model with deaths and vaccination
     # gen_seirhd_age_vax_multistrain_sero_time_dep_beta <- odin_dust("test_examples/seirhdagevaxmultistrainserotimedepbeta.R")
-    gen_covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
+    covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
     
     # Get age-dependent symptomatic fraction, IHR and IFR
     sympt_frac <- qread("~/covidm/newcovid3/fitting_data/2-linelist_both_fit_fIa0.5-rbzvih.qs")
@@ -26,6 +26,14 @@ fit_covid_multi_strain <- function(n_iters,run){
     p_G <- (ifr - p_D*ihr)/((1-p_D)*ihr + ifr)
     p_H <- ihr/(p_C*(1-p_G))
     p_P_1 <- 0.85
+    
+    # Get max values
+    p_D_max0 <- max(p_D)
+    p_H_max0 <- max(p_H)
+
+    # Normalise
+    p_D <- p_D/max(p_D)
+    p_H <- p_H/max(p_H)
     
     # IFR <- readRDS("~/UCSF/COVIDVaccineModelling/Data/IFR_by_age_ODriscoll.RDS")
     # p_death <- IFR$median_perc[19:27]/100
@@ -102,10 +110,13 @@ fit_covid_multi_strain <- function(n_iters,run){
     n_vax <- 5
     
     # Transmission and natural history parameters
-    intvtn_dates <- as.Date(c(strt_date,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
+    # intvtn_dates <- as.Date(c(strt_date,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
+    # intvtn_dates <- as.Date(c(strt_date,"2020-10-24","2021-06-01","2021-08-12"))
+    intvtn_dates <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12"))
     beta_date <- as.integer(intvtn_dates - min(intvtn_dates))
-    beta_value_sim <- c(0.035,0.025,0.02,0.04,0.02) #7/8*
-    beta_type <- "piecewise-constant"
+    # beta_value_sim <- c(0.035,0.025,0.02,0.04,0.02) #7/8*
+    beta_value_sim <- c(0.025,0.02,0.025,0.02) #7/8*
+    beta_type <- "piecewise-constant" #"piecewise-linear" #
     gamma_E <- 0.5
     gamma_P <- 0.4
     gamma_A <- 0.2
@@ -179,9 +190,11 @@ fit_covid_multi_strain <- function(n_iters,run){
                     gamma_P_1,
                     theta_A,
                     p_C,
-                    p_H,
+                    # p_H,
+                    p_H_max0*p_H,
                     p_G,
-                    p_D,
+                    # p_D,
+                    p_D_max0*p_D,
                     p_P_1,
                     population,
                     start_date = 1L,
@@ -210,8 +223,9 @@ fit_covid_multi_strain <- function(n_iters,run){
                     sero_sensitivity_1,
                     sero_specificity_1)
     
-    # Plot p.w. linear beta to check it looks right
+    # Plot p.w. constant beta to check it looks right
     beta_t <- seq(0, beta_date[length(beta_date)], by = dt)
+    pdf(paste0("output/plots",run,".pdf")) # save all plots into one pdf
     par(mfrow = c(1,1))
     plot(beta_t, p$beta_step, type="o", cex = 0.25)
     points(beta_date, beta_value_sim, pch = 19, col = "red")
@@ -280,7 +294,7 @@ fit_covid_multi_strain <- function(n_iters,run){
     
     
     # out <- simulate_data(gen_seirhd_age_vax_multistrain_sero_time_dep_beta, p, n_steps)
-    out <- simulate_data(gen_covid_multi_strain, p, n_steps)
+    out <- simulate_data(covid_multi_strain, p, n_steps)
     
     # # Drop time row
     # x <- out$x
@@ -320,12 +334,24 @@ fit_covid_multi_strain <- function(n_iters,run){
     # Convert raw data to required format for particle filter
     data <- particle_filter_data(data_raw,"day",1/dt)
     
+    # data_raw1 <- data_raw
+    # data1 <- data
+    # data_raw <- data_raw[1:250,]
+    # data <- data[1:250,]
+    
     # Create particle filter object
-    n_particles <- 200
     # filter <- particle_filter$new(data, gen_seirhd_age_vax_multistrain_sero_time_dep_beta, n_particles, 
     #                               compare, index, initial)
-    filter <- particle_filter$new(data, gen_covid_multi_strain, n_particles, 
-                                  compare, index, initial)
+    if (deterministic){
+        n_particles <- 1
+        filter <- particle_deterministic$new(data, covid_multi_strain, 
+                                             compare, index, initial)
+    } else {
+        n_particles <- 200
+        filter <- particle_filter$new(data, covid_multi_strain, n_particles,
+                                      compare, index, initial)
+    }
+    
     # tstart <- Sys.time()
     filter$run(
         pars = p,
@@ -333,25 +359,42 @@ fit_covid_multi_strain <- function(n_iters,run){
     # tend <- Sys.time()
     # print(tend - tstart)
     
-    # Plot filtered trajectories
-    # plot_particle_filter(filter$history(),true_history,data_raw$day,idx)
-    plot_hosps_and_deaths_age(filter$history(),data,data_raw$day,n_age,n_vax,n_strains)
-    plot_sero(filter$history(),data,data_raw$day,population[3:length(population)])
-    plot_cases(filter$history(),data,data_raw$day)
+    # # Plot filtered trajectories
+    # # plot_particle_filter(filter$history(),true_history,data_raw$day,idx)
+    # plot_hosps_and_deaths_age(filter$history(),data,data_raw$day,n_age,n_vax,n_strains)
+    # plot_sero(filter$history(),data,data_raw$day,population[3:length(population)])
+    # plot_cases(filter$history(),data,data_raw$day)
     
     # Infer parameters by pMCMC
-    beta_value_list <- list(name = c("beta1","beta2","beta3","beta4","beta5"), initial = c(0.035,0.025,0.02,0.04,0.02),
-                            min = rep(0,5), max = rep(Inf,5), discrete = rep(F,5),
-                            prior = replicate(5,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE)))
+    # beta_value_list <- list(name = c("beta1","beta2","beta3","beta4","beta5"), initial = c(0.035,0.025,0.02,0.04,0.02),
+    #                         min = rep(0,5), max = rep(Inf,5), discrete = rep(F,5),
+    #                         prior = replicate(5,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE)))
+    beta_value_list <- list(
+        name = c("beta1","beta2","beta3","beta4"), initial = c(0.025,0.02,0.025,0.02),
+        min = rep(0,4), max = rep(Inf,4), discrete = rep(F,4),
+        prior = #replicate(4,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE))
+            list(function(x) dgamma(x, shape = 4, scale = 0.028/4, log = TRUE),
+                 function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
+                 function(x) dgamma(x, shape = 4, scale = 0.028/4, log = TRUE),
+                 function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE)
+            )
+    )
     beta_value <- Map(pmcmc_parameter,beta_value_list$name,beta_value_list$initial,
                       beta_value_list$min,beta_value_list$max,
                       beta_value_list$discrete,beta_value_list$prior)
     # R0 <- pmcmc_parameter("R0",2,min = 0)
     # gamma <- pmcmc_parameter("gamma",0.4,min = 0,
     #                          prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
-    rel_strain_transmission <- pmcmc_parameter("rel_strain_transmission",2,min = 0, max = 4)
+    rel_strain_transmission <- pmcmc_parameter("rel_strain_transmission",2.5,min = 0, max = 4)
     start_date <- pmcmc_parameter("start_date",1L,min = 1L,max = 10L,discrete = TRUE)
     strain_seed_date <- pmcmc_parameter("strain_seed_date",330L,min = 305L,max = 345L,discrete = TRUE)
+    p_H_max <- pmcmc_parameter("p_H_max",p_H_max0/2,min = 0,max = 1,discrete = TRUE,
+                               prior = function(x) dbeta(x, 1, 1, log = TRUE)
+                               # prior = function(x) dbeta(x, 10, 30, log = TRUE),
+                               # prior = function(x) dbeta(x, 6, 30, log = TRUE)
+                               )
+    p_D_max <- pmcmc_parameter("p_D_max",p_D_max0,min = 0,max = 1,discrete = TRUE,
+                               prior = function(x) dbeta(x, 1, 1, log = TRUE))
     # strain_seed_date1 <- pmcmc_parameter("strain_seed_date1",200L,min = 200L,max = 250L,discrete = TRUE)
     
     # proposal <- matrix(c(0.01^2,0,0,0.01^2),nrow = 2,ncol = 2,byrow = TRUE)
@@ -365,7 +408,8 @@ fit_covid_multi_strain <- function(n_iters,run){
     #                      0,0,2,0,0,
     #                      0,0,0,2,0,
     #                      0,0,0,0,2),nrow = 5,ncol = 5,byrow = TRUE)
-    proposal <- diag(c(rep(0.0001^2,5),0.1^2,rep(2^2,2)))
+    # proposal <- diag(c(rep(1e-7,length(beta_value)),0.1^2,rep(2^2,2)))
+    proposal <- 0.1*diag(c(rep(1e-7,length(beta_value)),0.1^2,rep(2^2,2),rep(1e-5,2)))
     transform <- make_transform(dt,
                                 n_age,
                                 n_vax,
@@ -495,18 +539,26 @@ fit_covid_multi_strain <- function(n_iters,run){
     # plot(mcmc_out)
     
     # Using custom accelerated adaptive MCMC algorithm
-    init_pars <- c(beta_value_list$initial,rel_strain_transmission$initial,start_date$initial,strain_seed_date$initial)
-    priors <- c(beta_value_list$prior,rel_strain_transmission$prior,replicate(2,function(x) 0))
+    # init_pars <- c(beta_value_list$initial,rel_strain_transmission$initial,start_date$initial,strain_seed_date$initial)
+    # priors <- c(beta_value_list$prior,rel_strain_transmission$prior,replicate(2,function(x) 0))
+    init_pars <- c(beta_value_list$initial,rel_strain_transmission$initial,start_date$initial,strain_seed_date$initial,p_H_max$initial,p_D_max$initial)
+    priors <- c(beta_value_list$prior,rel_strain_transmission$prior,replicate(2,function(x) 0),p_H_max$prior,p_D_max$prior)
     # n_iters <- 100 #100
     scaling_factor_start <- 1
-    pars_min <- c(beta_value_list$min,rel_strain_transmission$min,start_date$min,strain_seed_date$min)
-    pars_max <- c(beta_value_list$max,rel_strain_transmission$max,start_date$max,strain_seed_date$max)
+    # pars_min <- c(beta_value_list$min,rel_strain_transmission$min,start_date$min,strain_seed_date$min)
+    # pars_max <- c(beta_value_list$max,rel_strain_transmission$max,start_date$max,strain_seed_date$max)
+    pars_min <- c(beta_value_list$min,rel_strain_transmission$min,start_date$min,strain_seed_date$min,p_H_max$min,p_D_max$min)
+    pars_max <- c(beta_value_list$max,rel_strain_transmission$max,start_date$max,strain_seed_date$max,p_H_max$max,p_D_max$max)
     iter0 <- 100 #10
-    discrete <- c(rep(F,6),rep(T,2))
-    names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date")
+    # discrete <- c(rep(F,length(beta_value)+1),rep(T,2))
+    discrete <- c(rep(F,length(beta_value)+1),rep(T,2),rep(F,2))
+    # names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date")
+    names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date","p_H_max","p_D_max")
     
     tstart <- Sys.time()
-    u <- 1:5 # only update beta parameters
+    # u <- 1:8 # all parameters 1:5 # only update beta parameters
+    # u <- 1:7 # all parameters 1:5 # only update beta parameters
+    # u <- c(1,6:7) #c(1:4,6:8) #c(1:4,6:9) #1:9 # all parameters 1:5 # only update beta parameters
     res <- mcmc(transform,filter,init_pars,priors,n_particles,n_iters,scaling_factor_start,proposal,pars_min,pars_max,iter0,discrete,u)
     tend <- Sys.time()
     print(tend - tstart)
@@ -516,8 +568,12 @@ fit_covid_multi_strain <- function(n_iters,run){
     save(list = ls(all.names = T), file = paste0("output/MCMCoutput",run,".RData"), envir = environment())
     
     # Trace plots
-    par(mfrow = c(4,2))
+    par(mfrow = c(ceiling(length(init_pars)/2),2))
     for (i in seq_along(init_pars)){
+        plot(res$pars[,i],type = "l",xlab = "Iteration",ylab = names(init_pars)[i])
+    }
+    par(mfrow = c(ceiling(length(u)/2),2))
+    for (i in u){
         plot(res$pars[,i],type = "l",xlab = "Iteration",ylab = names(init_pars)[i])
     }
     
@@ -525,10 +581,17 @@ fit_covid_multi_strain <- function(n_iters,run){
     par(mfrow = c(1,1))
     plot(res$scaling_factor,type="l")
     
+    par(mfrow = c(1,1))
+    pairs(res$pars[seq(round(n_iters/10),n_iters,by=10), ])
+    pairs(res$pars[seq(round(n_iters/10),n_iters,by=10),u])
     
     dimnames(res$states) <- list(names(idx$state)) #dimnames(pmcmc_run$trajectories$state)
     
     # Plot fitted hospitalisations and deaths against data
     plot_hosps_and_deaths_age(res$states,data,data_raw$day,n_age,n_vax,n_strains)
+    plot_sero(res$states,data,data_raw$day,population[3:length(population)])
+    plot_cases(res$states,data,data_raw$day)
+    
+    dev.off()
     
 }
