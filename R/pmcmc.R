@@ -1,13 +1,7 @@
-# 
-# 
-# pmcmc <- function(log_likelihood = NULL) {
-#     if (is.null(log_likelihood)) {
-#         log_likelihood <- calc_loglikelihood
-#     }
-# }
-# 
-
-mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0,discrete = rep(FALSE,length(curr_pars)),u = seq_along(curr_pars)){
+mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,
+                 scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0,
+                 discrete = rep(FALSE,length(curr_pars)),u = seq_along(curr_pars),
+                 thinning = 1){
     # Get number of parameters being fitted
     n_pars <- length(curr_pars)
     n_u <- length(u)
@@ -29,14 +23,17 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_f
     curr_ss <- filter$history(particle_idx)[, , ,drop=T]
     
     # Create arrays for storing output
-    pars <- matrix(nrow = n_iters + 1,ncol = n_pars)
-    ll <- numeric(n_iters + 1)
-    lprior <- numeric(n_iters + 1)
-    lpost <- numeric(n_iters + 1)
-    states <- array(dim = c(nrow(curr_ss),n_iters + 1,ncol(curr_ss)))
+    n_smpls <- round(n_iters/thinning)
+    pars_full <- matrix(nrow = n_iters + 1,ncol = n_pars)
+    pars <- matrix(nrow = n_smpls + 1,ncol = n_pars)
+    ll <- numeric(n_smpls + 1)
+    lprior <- numeric(n_smpls + 1)
+    lpost <- numeric(n_smpls + 1)
+    states <- array(dim = c(nrow(curr_ss),n_smpls + 1,ncol(curr_ss)))
     scaling_factor <- numeric(n_iters + 1)
     
     # Record initial parameter values and log-likelihood 
+    pars_full[1, ] <- curr_pars
     pars[1, ] <- curr_pars
     ll[1] <- curr_ll
     lprior[1] <- curr_lprior
@@ -91,15 +88,20 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_f
             iter_start <- 5/(a*(1 - a)) - iter
         }
         
+        pars_full[iter+1,] <- curr_pars
+        
         # Save samples
-        pars[iter+1,] <- curr_pars
-        ll[iter+1] <- curr_ll
-        lprior[iter+1] <- curr_lprior
-        lpost[iter+1] <- curr_lpost
-        states[,iter+1, ] <- curr_ss
+        if (iter %% thinning == 0){
+            smpl = iter/thinning
+            pars[smpl+1,] <- curr_pars
+            ll[smpl+1] <- curr_ll
+            lprior[smpl+1] <- curr_lprior
+            lpost[smpl+1] <- curr_lpost
+            states[,smpl+1, ] <- curr_ss            
+        }
         
         # Update empirical covariance matrix
-        tmp <- update_mean_and_cov_Spencer(mean_pars,proposal_matrix,pars,iter,iter0,ncol(pars))
+        tmp <- update_mean_and_cov_Spencer(mean_pars,proposal_matrix,pars_full,iter,iter0,ncol(pars))
         pars_mean <- tmp$mean_new
         proposal_matrix <- tmp$cov_new
         
@@ -108,7 +110,8 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,scaling_f
         }
     }
     
-    res <- list(pars = pars,
+    res <- list(pars_full = pars_full,
+                pars = pars,
                 ll = ll,
                 lprior = lprior,
                 lpost = lpost,

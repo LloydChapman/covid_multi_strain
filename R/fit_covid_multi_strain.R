@@ -1,4 +1,4 @@
-fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE){
+fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,thinning = 1){
     #### Set up model and parameters ####
     
     
@@ -559,7 +559,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE){
     # u <- 1:8 # all parameters 1:5 # only update beta parameters
     # u <- 1:7 # all parameters 1:5 # only update beta parameters
     # u <- c(1,6:7) #c(1:4,6:8) #c(1:4,6:9) #1:9 # all parameters 1:5 # only update beta parameters
-    res <- mcmc(transform,filter,init_pars,priors,n_particles,n_iters,scaling_factor_start,proposal,pars_min,pars_max,iter0,discrete,u)
+    res <- mcmc(transform,filter,init_pars,priors,n_particles,n_iters,scaling_factor_start,proposal,pars_min,pars_max,iter0,discrete,u,thinning)
     tend <- Sys.time()
     print(tend - tstart)
     ## Time difference of 26.56045 mins (R 4.0.5)
@@ -582,8 +582,9 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE){
     plot(res$scaling_factor,type="l")
     
     par(mfrow = c(1,1))
-    pairs(res$pars[seq(round(n_iters/10),n_iters,by=10), ])
-    pairs(res$pars[seq(round(n_iters/10),n_iters,by=10),u])
+    n_smpls <- round(n_iters/thinning)
+    pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10), ],labels = names(init_pars))
+    pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10),u],labels = names(init_pars)[u])
     
     dimnames(res$states) <- list(names(idx$state)) #dimnames(pmcmc_run$trajectories$state)
     
