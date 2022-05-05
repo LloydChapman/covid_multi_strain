@@ -12,7 +12,7 @@ min_ages <- get_min_age(age_groups)
 n_age <- length(age_groups)
 
 # Population
-pop <- qread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/comix/data/unwpp_data.qs")
+pop <- qread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/unwpp_data.qs")
 pop <- pop[country == "French Polynesia" & year == 2020]
 pop[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
 agg_pop <- pop[,.(population = sum(total)),by = .(age_group)]
@@ -160,7 +160,7 @@ data_raw[,cases := NA]
 data_raw[,cases_non_variant := NA]
 
 ## Vaccinations
-vax <- fread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/SPC_DF_COVID_VACCINATION_1.0_D.PF.COVIDVACAD1+COVIDVACAD2+COVIDVACADT.csv",)
+vax <- fread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/SPC_DF_COVID_VACCINATION_1.0_D.PF.COVIDVACAD1+COVIDVACAD2+COVIDVACADT.csv")
 
 # Remove bits before : in column names
 names(vax) <- sub(".*: ","",names(vax))
@@ -204,7 +204,7 @@ vax_dt[,date := as.IDate(date)]
 # Make vaccination schedule
 pop_mat <- matrix(rep(population,1),nrow = length(population))
 
-# Rough number of daily booster doses from eyeballing Fig. 5 plot in BEH health bulletin
+# Rough number of daily booster doses from eyeballing Fig. 5 plot in BEH health bulletin No. 84
 booster_daily_doses <- c(rep(0,40*7),rep(5000/7,125))
 
 # priority_population <- vaccine_priority_population(population, uptake = c(0.55,0.55,0.80,0.80,0.80,0.80,0.8,0.8))
