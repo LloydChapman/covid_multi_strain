@@ -20,7 +20,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,thinning =
     p_C <- unname(colMeans(sympt_frac[,13:20]))
     prob_death_given_hosp <- fread("data/prob_death_given_hosp_salje.csv")
     p_D <- prob_death_given_hosp[,median_perc_mean/100]
-    IHR <- fread("../covid_remaining_burden/data/ihr_salje.csv")
+    IHR <- fread("data/ihr_salje.csv")
     ihr <- IHR[,median_perc_mean/100]
     IFR_salje <- fread("data/ifr_salje.csv")
     ifr_salje <- IFR_salje[,median_perc_mean/100]
