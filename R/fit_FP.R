@@ -26,8 +26,9 @@ source("R/process_FP_data.R")
 # u <- c(1:4,6:9) # beta parameters, seed date, strain seed date, IHR scaling, IFR scaling
 u <- c(1:4,6:8) # beta parameters, seed date, strain seed date, IHR scaling
 # u <- 1:4 # only beta parameters
-n_iters <- 5e4 #1e3 #2e4
+n_iters <- 1e3 #1e3 #2e4
 run <- 37
 deterministic <- T # flag for whether to use "deterministic particle filter" or not
 thinning <- 10
 fit_covid_multi_strain(u,n_iters,run,deterministic,thinning)
+

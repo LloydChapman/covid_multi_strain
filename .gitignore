@@ -2,3 +2,4 @@
 .Rproj.user/
 *.Rproj
 installation.R
+.DS_Store
