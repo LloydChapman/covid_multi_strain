@@ -7,11 +7,20 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,thinning =
     covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
     
     # Get age-dependent symptomatic fraction, IHR and IFR
-    sympt_frac <- qread("~/covidm/newcovid3/fitting_data/2-linelist_both_fit_fIa0.5-rbzvih.qs")
+    
+    
+    if(Sys.info()["user"]=="akucharski") {
+        filepath <- "~/Documents/COVID_data/ILM_data/OneDrive_surveillance/"
+    } else {
+        filepath <- "~/covidm/newcovid3/fitting_data/"
+    }
+    
+    sympt_frac <- qread(paste0(filepath,"2-linelist_both_fit_fIa0.5-rbzvih.qs"))
+    
     p_C <- unname(colMeans(sympt_frac[,13:20]))
     prob_death_given_hosp <- fread("data/prob_death_given_hosp_salje.csv")
     p_D <- prob_death_given_hosp[,median_perc_mean/100]
-    IHR <- fread("../covid_remaining_burden/data/ihr_salje.csv")
+    IHR <- fread("data/ihr_salje.csv")
     ihr <- IHR[,median_perc_mean/100]
     IFR_salje <- fread("data/ifr_salje.csv")
     ifr_salje <- IFR_salje[,median_perc_mean/100]

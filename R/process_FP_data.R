@@ -1,3 +1,36 @@
+# - - - - - - - - - - - - - - - - - - - - - - - 
+# Load and process FP data
+# - - - - - - - - - - - - - - - - - - - - - - - 
+
+# Set file path
+
+if(Sys.info()["user"]=="akucharski") {
+ filepath <- "~/Documents/COVID_data/ILM_data/OneDrive_surveillance/"
+} else {
+ filepath <- "~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/"
+}
+
+# Load data files ---------------------------------------------------------
+
+# Population
+pop <- qread(paste0(filepath,"unwpp_data.qs")) 
+
+# Contact matrix
+contact_matrices <- fread(paste0(filepath,"synthetic_contacts_2020.csv")) 
+setnames(contact_matrices,"age_cotactee","age_contactee")
+
+# Hopsitalisations in 1st and 2nd wave
+hosps_dt1 <- fread(paste0(filepath,"Hospi from  09-08-20 tot 22-06-2021 (wave 1).csv"))
+hosps_dt2 <- fread(paste0(filepath,"Hospi from 23-06-2021 to nov 21 (wave 2).csv"))
+
+# Serology Feb 21
+sero_pos_dt <- as.data.table(read_xlsx(paste0(filepath,"Serop_feb21.xlsx")))
+
+# Vaccinations
+vax <- fread(paste0(filepath,"SPC_DF_COVID_VACCINATION_1.0_D.PF.COVIDVACAD1+COVIDVACAD2+COVIDVACADT.csv"))
+
+
+# Process data ---------------------------------------------------------
 get_min_age = function(x){
     as.numeric(sub("-.*","",sub("\\+|<","-",x)))  
 }
@@ -12,15 +45,10 @@ min_ages <- get_min_age(age_groups)
 n_age <- length(age_groups)
 
 # Population
-pop <- qread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/unwpp_data.qs")
 pop <- pop[country == "French Polynesia" & year == 2020]
 pop[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
 agg_pop <- pop[,.(population = sum(total)),by = .(age_group)]
 population <- agg_pop[,population]
-
-# Contact matrix
-contact_matrices <- fread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/synthetic_contacts_2020.csv")
-setnames(contact_matrices,"age_cotactee","age_contactee")
 
 # FOR NOW: use contact matrix for France (is Fiji an alternative as a Pacific island?)
 contact <- contact_matrices[iso3c == "FRA" & setting == "overall" & location_contact == "all"]
@@ -51,16 +79,10 @@ contact_matrix <- matrix(contact2[,contacts],nrow = n_age,ncol = n_age, byrow = 
 transmission <- contact_matrix/rep(population, each = ncol(contact_matrix))
 
 ## Hospitalisations
-# 1st wave
-hosps_dt1 <- fread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/Hospi from  09-08-20 tot 22-06-2021 (wave 1).csv")
-names(hosps_dt1) <- c("entry_date","age","sex","death","death_date")
 
+names(hosps_dt1) <- c("entry_date","age","sex","death","death_date")
 hosps_dt1[,`:=`(sex = fifelse(sex == "Masculin",1,0),
                death = fifelse(death == "Oui",1,0))]
-
-
-# 2nd wave
-hosps_dt2 <- fread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/Hospi from 23-06-2021 to nov 21 (wave 2).csv")
 
 # Drop empty columns
 hosps_dt2[,(names(hosps_dt2)[ncol(hosps_dt2)-(0:2)]):=NULL]
@@ -105,7 +127,6 @@ deaths <- deaths_dt[,.(deaths=.N),by=.(age_group,date)]
 ggplot(deaths,aes(x = date,y = deaths,group = age_group,color = age_group)) + geom_line()
 
 ## Seroprevalence
-sero_pos_dt <- as.data.table(read_xlsx("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/Serop_feb21.xlsx"))
 setnames(sero_pos_dt,"age_group","age_group_sero")
 
 sero_pos_dt[,date := as.Date("2021-02-14")] # FOR NOW: use middle of February 2021 as sample collection was done in February 2021
@@ -160,7 +181,6 @@ data_raw[,cases := NA]
 data_raw[,cases_non_variant := NA]
 
 ## Vaccinations
-vax <- fread("~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/SPC_DF_COVID_VACCINATION_1.0_D.PF.COVIDVACAD1+COVIDVACAD2+COVIDVACADT.csv")
 
 # Remove bits before : in column names
 names(vax) <- sub(".*: ","",names(vax))
