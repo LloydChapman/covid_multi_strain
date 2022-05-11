@@ -110,10 +110,10 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,thinning =
     n_vax <- 5
     
     # Transmission and natural history parameters
-    # intvtn_dates <- as.Date(c(strt_date,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
-    # intvtn_dates <- as.Date(c(strt_date,"2020-10-24","2021-06-01","2021-08-12"))
-    intvtn_dates <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12"))
-    beta_date <- as.integer(intvtn_dates - min(intvtn_dates))
+    # intvtn_date <- as.Date(c(strt_date,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
+    # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-01","2021-08-12"))
+    intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12"))
+    beta_date <- as.integer(intvtn_date - min(intvtn_date))
     # beta_value_sim <- c(0.035,0.025,0.02,0.04,0.02) #7/8*
     beta_value_sim <- c(0.025,0.02,0.025,0.02) #7/8*
     beta_type <- "piecewise-constant" #"piecewise-linear" #
