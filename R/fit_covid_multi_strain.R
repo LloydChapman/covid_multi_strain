@@ -589,9 +589,10 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,thinning =
     dimnames(res$states) <- list(names(idx$state)) #dimnames(pmcmc_run$trajectories$state)
     
     # Plot fitted hospitalisations and deaths against data
-    plot_hosps_and_deaths_age(res$states,data,data_raw$day,n_age,n_vax,n_strains)
-    plot_sero(res$states,data,data_raw$day,population[3:length(population)])
-    plot_cases(res$states,data,data_raw$day)
+    plot_hosps_age(res$states,data,strt_date+data_raw$day-1,n_age,n_vax,n_strains)
+    plot_deaths_age(res$states,data,strt_date+data_raw$day-1,n_age,n_vax,n_strains)
+    plot_sero(res$states,data,strt_date+data_raw$day-1,population[3:length(population)])
+    plot_cases(res$states,data,strt_date+data_raw$day-1)
     
     dev.off()
     

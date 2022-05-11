@@ -226,6 +226,25 @@ parameters_piecewise_constant <- function(date, value, dt) {
 }
 
 
+##' Expand `value_step` based on a series of `step`s.  Use this to
+##' convert between the values passed to
+##' [parameters_piecewise_linear()] and the actual values
+##' for a given set of steps.
+##'
+##' @title Expand beta steps
+##'
+##' @param step A vector of steps
+##'
+##' @param value_step A vector of values
+##'
+##' @return A numeric vector the same length as `step`
+##'
+##' @export
+parameters_expand_step <- function(step, value_step) {
+    value_step[pmin(step, length(value_step) - 1L) + 1L]
+}
+
+
 process_strain_rel_p <- function(p, n_strains, n_real_strains) {
     if (length(p) < n_strains) {
         p <- recycle(p, n_real_strains)
@@ -413,10 +432,12 @@ seed_over_steps <- function(start_step, weights) {
 }
 
 
-simulate_data <- function(gen_mod, p, n_steps, p1 = NULL, n_steps1 = NULL, 
-                          transform = NULL){
+simulate_data <- function(gen_mod, p, n_steps, deterministic = FALSE, 
+                          keep_all_states = TRUE, p1 = NULL, 
+                          n_steps1 = NULL, transform = NULL){
     # Create instance of model
-    mod <- gen_mod$new(p,step = 0,n_particles = 1,n_threads = 1,seed = 1)
+    mod <- gen_mod$new(p,step = 0,n_particles = 1,n_threads = 1,seed = 1,
+                       deterministic = deterministic)
     
     info <- mod$info()
     initial_state <- initial(info, NULL, p)
@@ -452,6 +473,11 @@ simulate_data <- function(gen_mod, p, n_steps, p1 = NULL, n_steps1 = NULL,
         
         # Join with first epoch
         x <- array_bind(x,x1)        
+    }
+    
+    if (!keep_all_states){
+        idx <- index(info)
+        x <- x[idx$state, , ,drop = FALSE]
     }
     
     return(list(x = x, info = info))
@@ -1090,66 +1116,82 @@ make_transform_multistage <- function(dt,
 }
 
 
-plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, times, n_age, n_vax, n_strains){
-    par(mfrow = c(2,4), oma=c(2,3,0,0))
+plot_hosps_age <- function(incidence_modelled, incidence_observed, times, n_age, n_vax, n_strains){
     nms <- dimnames(incidence_modelled)[[1]]
     idx_hosps <- grep("hosps_",nms)
     idx_deaths <- grep("deaths_",nms)
     idx_plot <- seq(10,ncol(incidence_modelled),by=10)
+    dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
+    par(mfrow = c(5,1), oma=c(2,3,0,0))
     for (i in seq_along(idx_hosps)){
         par(mar = c(3, 4, 2, 0.5))
         matplot(times, t(incidence_modelled[idx_hosps[1]-1+i,idx_plot,-1]),
-                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",yaxt = "n",
+                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",xaxt = "n",#yaxt = "n",
                 ylim = c(0,max(max(incidence_observed[,5:9]),max(incidence_modelled[idx_hosps,,-1]))),
-                main = paste0("Age ", rownames(incidence_modelled)[idx_hosps[1]-1+i]))
-        points(times, incidence_observed[[4+i]],pch=19,col="red")
-        axis(2, las = 2)
+                main = paste0("Age ", sub("_","-",sub("hosps_","",rownames(incidence_modelled)[idx_hosps[1]-1+i]))))
+        points(times, incidence_observed[[4+i]],pch=19,col="red",cex=0.5)
+        axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
     }
-    par(mfrow = c(2,4), oma=c(2,3,0,0))
+
+}
+
+
+plot_deaths_age <- function(incidence_modelled, incidence_observed, times, n_age, n_vax, n_strains){
+    nms <- dimnames(incidence_modelled)[[1]]
+    idx_hosps <- grep("hosps_",nms)
+    idx_deaths <- grep("deaths_",nms)
+    idx_plot <- seq(10,ncol(incidence_modelled),by=10)
+    dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
+    par(mfrow = c(5,1), oma=c(2,3,0,0))
     for (i in seq_along(idx_deaths)){
         par(mar = c(3, 4, 2, 0.5))
         matplot(times, t(incidence_modelled[idx_deaths[1]-1+i,idx_plot,-1]),
-                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",yaxt = "n",
+                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",xaxt = "n",#yaxt = "n",
                 ylim = c(0,max(max(incidence_observed[,10:14]),max(incidence_modelled[idx_deaths,,-1]))),
-                main = paste0("Age ", rownames(incidence_modelled)[idx_deaths[1]-1+i]))
-        matpoints(times, incidence_observed[[9+i]],pch=19,col="red")
-        axis(2, las = 2)
+                main = paste0("Age ", sub("_","-",sub("deaths_","",rownames(incidence_modelled)[idx_deaths[1]-1+i]))))
+        points(times, incidence_observed[[9+i]],pch=19,col="red",cex=0.5)
+        axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
     }
 }
 
 
 plot_sero <- function(seroprev_modelled, seroprev_observed, times, population){
-    par(mfrow = c(2,4), oma = c(2,3,0,0))
+    par(mfrow = c(6,1), oma = c(2,3,0,0))
     nms <- dimnames(seroprev_modelled)[[1]]
     idx_sero <- grep("sero_pos_1_",nms)
     idx_sero_obs <- grep("sero_pos_1_",names(seroprev_observed))
     idx_sero_tot_obs <- grep("sero_tot_1_",names(seroprev_observed))
     idx_plot <- seq(10,ncol(seroprev_modelled),by=10)
+    dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
     for (i in 1:6){
         par(mar = c(3, 4, 2, 0.5))
         matplot(times, t(seroprev_modelled[idx_sero[1]-1+i,idx_plot,-1]/population[i]),
-                type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Seroprevalence", yaxt = "n",
+                type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Seroprevalence", xaxt = "n", #yaxt = "n",
                 ylim = c(0,max(max(seroprev_modelled[idx_sero,idx_plot,-1]/population),max(seroprev_observed[,idx_sero_obs]/seroprev_observed[,idx_sero_tot_obs],na.rm = T))),
-                main = paste0("Age ",rownames(seroprev_modelled)[idx_sero[1]-1+i]))
+                main = paste0("Age ",sub("_","-",sub("sero_pos_1_","",rownames(seroprev_modelled)[idx_sero[1]-1+i]))))
         points(times, seroprev_observed[[idx_sero_obs[1]-1+i]]/seroprev_observed[[idx_sero_tot_obs[1]-1+i]], pch = 19, col = "red")
-        axis(2, las = 2)
+        axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
     }
 }
 
 
 plot_cases <- function(cases_modelled, cases_observed, times){
-    par(mfrow = c(2,1), oma = c(2,3,0,0))
+    # par(mfrow = c(2,1), oma = c(2,3,0,0))
+    par(mfrow = c(1,1))
     nms <- dimnames(cases_modelled)[[1]]
     idx_cases <- grep("cases",nms)
     idx_cases_obs <- grep("cases",names(cases_observed))
     idx_plot <- seq(10,ncol(cases_modelled),by=10)
-    for (i in 1:2){
+    dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
+    for (i in 1){#1:2){
         par(mar = c(3, 4, 2, 0.5))
         matplot(times, t(cases_modelled[idx_cases[1]-1+i,idx_plot,-1]),
-                type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Cases", yaxt = "n",
-                main = rownames(cases_modelled)[idx_cases[1]-1+i])
+                type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Cases", xaxt = "n"
+                # , #yaxt = "n",
+                # main = rownames(cases_modelled)[idx_cases[1]-1+i]
+                )
         points(times, cases_observed[[idx_cases_obs[1]-1+i]], pch = 19, col = "red")
-        axis(2, las = 2)
+        axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
     }
 }
 
@@ -1244,6 +1286,36 @@ rotate_strain_compartments <- c(
     ## those with dimension c(n_groups, n_strains, n_vacc_classes):
     "E", "I_A", "I_P", "I_C", "R", "G", "H", "D")
 
+
 transform_state <- function(state, model, model_new){
     rotate_strains(state,model$info())
+}
+
+
+combine_steps_groups <- function(step, n_groups, n_time_steps, n_strains,
+                                 n_vacc_classes, p_step, rel_p,
+                                 strain_rel_p) {
+    
+    ret <- vapply(
+        seq_len(n_groups),
+        function(i) {
+            if (!is.null(dim(p_step))){
+                outer(
+                    parameters_expand_step(step, p_step[, i]),
+                    rel_p[i, , ] * strain_rel_p
+                )                
+            } else {
+                outer(
+                    parameters_expand_step(step, p_step),
+                    rel_p[i, , ] * strain_rel_p
+                ) 
+            }
+        },
+        array(0, c(n_time_steps, n_strains, n_vacc_classes))
+    )
+    
+    ret <- pmin(ret, 1)
+    ret <- aperm(ret, c(4, 2, 3, 1))
+    
+    ret
 }
