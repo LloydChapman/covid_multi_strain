@@ -15,6 +15,7 @@ library(abind)
 source("R/utils.R")
 source("R/vaccination.R")
 source("R/covid_multi_strain.R")
+source("R/simulate.R")
 source("R/fit_covid_multi_strain.R")
 source("R/pmcmc.R")
 

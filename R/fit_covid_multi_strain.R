@@ -302,8 +302,8 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,thinning =
     #### Try simulating some data to see if the parameters give the right general pattern ####
     
     
-    # out <- simulate_data(gen_seirhd_age_vax_multistrain_sero_time_dep_beta, p, n_steps)
-    out <- simulate_data(covid_multi_strain, p, n_steps)
+    # out <- simulate(gen_seirhd_age_vax_multistrain_sero_time_dep_beta, p, n_steps)
+    out <- simulate(covid_multi_strain, p, n_steps)
     
     # # Drop time row
     # x <- out$x

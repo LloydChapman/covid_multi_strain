@@ -1,3 +1,81 @@
+simulate <- function(gen_mod, p, n_steps, deterministic = FALSE, 
+                     keep_all_states = TRUE, p1 = NULL, 
+                     n_steps1 = NULL, transform = NULL){
+    # Create instance of model
+    mod <- gen_mod$new(p,step = 0,n_particles = 1,n_threads = 1,seed = 1,
+                       deterministic = deterministic)
+    
+    info <- mod$info()
+    initial_state <- initial(info, NULL, p)
+    
+    mod$update_state(state = initial_state)
+    
+    # Create an array to contain outputs after looping the model.
+    x <- array(NA, dim = c(info$len, 1, n_steps+1))
+    
+    # For loop to run the model iteratively
+    x[ , ,1] <- mod$state()
+    for (t in seq_len(n_steps)) {
+        x[ , ,t+1] <- mod$run(t)
+    }
+    
+    if (!is.null(p1)){
+        # Apply transform function to model state
+        state <- mod$state()
+        state1 <- transform(state,info)
+        
+        # Update model parameters and state
+        mod$update_state(pars = p1,state = state1)
+        
+        # Create data to be fitted to
+        x1 <- array(NA, dim = c(info$len, 1, n_steps1-n_steps+1))
+        
+        # For loop to run the model iteratively
+        x1[ , ,1] <- mod$state()
+        for (t in seq_len(n_steps1-n_steps)) {
+            # print(t)
+            x1[ , ,t+1] <- mod$run(n_steps+t)
+        }
+        
+        # Join with first epoch
+        x <- array_bind(x,x1)        
+    }
+    
+    if (!keep_all_states){
+        idx <- index(info)
+        x <- x[idx$state, , ,drop = FALSE]
+    }
+    
+    return(list(x = x, info = info))
+}
+
+
+plot_trajectories <- function(time,x,n_age,n_strains,n_vax){
+    # Plot trajectories
+    for (k in 1:n_vax){
+        for (j in 1:n_strains) {
+            par(mfrow = c(2,4), oma=c(2,3,0,0))
+            for (i in 1:n_age) {
+                par(mar = c(3, 4, 2, 0.5))
+                cols <- c(S = "#8c8cd9", E = "#ffff00", I_P = "#cc0044", I_A = "green", I_C = "blue", R = "#999966", D = "#000000")
+                matplot(time, x[29 + i + (k-1)*n_age, ,-1], type = "l", # Offset to access numbers in age compartment
+                        xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
+                        col = cols[["S"]], lty = 1, ylim=range(x[-(1:29),,]))
+                matlines(time, x[93 + i + (j-1)*n_age + (k-1)*n_age*n_strains, ,-1], col = cols[["E"]], lty = 1)
+                matlines(time, x[93 + i + (j-1)*n_age + (k-1)*n_age*n_strains + n_age*n_strains*n_vax, ,-1], col = cols[["I_P"]], lty = 1)
+                matlines(time, x[93 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 2*n_age*n_strains*n_vax, ,-1], col = cols[["I_A"]], lty = 1)
+                matlines(time, x[93 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 3*n_age*n_strains*n_vax, ,-1], col = cols[["I_C"]], lty = 1)
+                matlines(time, x[93 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 4*n_age*n_strains*n_vax, ,-1], col = cols[["R"]], lty = 1)
+                matlines(time, x[93 + i + (j-1)*n_age + (k-1)*n_age*n_strains + 7*n_age*n_strains*n_vax, ,-1], col = cols[["D"]], lty = 1)
+                legend("right", lwd = 1, col = cols, legend = names(cols), bty = "n")
+                axis(2, las = 2)
+            }
+            mtext("Number of individuals", side=2, line=1, outer=T, las=0)
+            mtext("Time", side = 1, line = 0, outer =T)    
+        }    
+    }
+}
+
 ## Run counterfactual simulations
 simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cntfctl,burnin = NULL,seed = 1){
     # Load MCMC output
