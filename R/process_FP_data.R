@@ -24,7 +24,10 @@ hosps_dt1 <- fread(paste0(filepath,"Hospi from  09-08-20 tot 22-06-2021 (wave 1)
 hosps_dt2 <- fread(paste0(filepath,"Hospi from 23-06-2021 to nov 21 (wave 2).csv"))
 
 # Serology Feb 21
-sero_pos_dt <- as.data.table(read_xlsx(paste0(filepath,"Serop_feb21.xlsx")))
+sero_pos_dt1 <- as.data.table(read_xlsx(paste0(filepath,"Serop_feb21.xlsx")))
+
+# Serology Nov 21
+sero_pos_dt2 <- fread(paste0(filepath,"Serop_nov21.csv"))
 
 # Vaccinations
 vax <- fread(paste0(filepath,"SPC_DF_COVID_VACCINATION_1.0_D.PF.COVIDVACAD1+COVIDVACAD2+COVIDVACADT.csv"))
@@ -127,15 +130,26 @@ deaths <- deaths_dt[,.(deaths=.N),by=.(age_group,date)]
 ggplot(deaths,aes(x = date,y = deaths,group = age_group,color = age_group)) + geom_line()
 
 ## Seroprevalence
-setnames(sero_pos_dt,"age_group","age_group_sero")
+process_sero_data <- function(sero_dt,sample_date,age_groups,min_ages){
+    x <- copy(sero_dt)
+    
+    setnames(x,"age_group","age_group_sero")
+    
+    x[,date := sample_date]
+    
+    max_ages <- x[,get_max_age(age_group_sero)]
+    max_ages[is.na(max_ages)] <- Inf
+    
+    x[,age_group := cut(max_ages,c(min_ages,Inf),labels = age_groups)]
+    x <- x[,lapply(.SD, function(y) sum(as.integer(round(y)))),.SDcols = c("n","seropos"),by = .(date,age_group)]
+    
+    return(x)
+}
 
-sero_pos_dt[,date := as.Date("2021-02-14")] # FOR NOW: use middle of February 2021 as sample collection was done in February 2021
+sero_pos_dt1 <- process_sero_data(sero_pos_dt1, as.Date("2021-02-14"), age_groups, min_ages)
+sero_pos_dt2 <- process_sero_data(sero_pos_dt2, as.Date("2021-11-21"), age_groups, min_ages)
 
-max_ages_sero <- sero_pos_dt[,get_max_age(age_group_sero)]
-max_ages_sero[is.na(max_ages_sero)] <- Inf
-
-sero_pos_dt[,age_group := cut(max_ages_sero,c(min_ages,Inf),labels = age_groups)]
-sero_pos_dt <- sero_pos_dt[,lapply(.SD,function(x) sum(as.integer(round(x)))),.SDcols = c("n","seropos"),by = .(date,age_group)]
+sero_pos_dt <- rbind(sero_pos_dt1,sero_pos_dt2)
 
 ## Make data table of hospitalisations, deaths and seroprevalence for fitting 
 strt_date <- hosps_dt[,min(date)] - 20
