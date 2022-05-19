@@ -72,7 +72,8 @@ seirhd_age <- gen_seirhd_age$new(
     list(dt = dt,n_age = n_age,S_ini = S_ini,E_ini = E_ini,I_ini = I_ini,
          m = transmission,beta = 0.04,sigma = 0.5,gamma_P = 0.4,gamma_A = 0.2,
          gamma_C = 0.4,gamma_H = 0.1, gamma_G = 1/3, 
-         p_C = p_C,p_H = p_H_max*p_H,p_G = p_G,p_D = p_D_max*p_D),
+         p_C = p_C,p_H = p_H,p_G = p_G,p_D = p_D),
+         # p_C = p_C,p_H = p_H_max*p_H,p_G = p_G,p_D = p_D_max*p_D),
     step = 0,n_particles = 1,n_threads = 1,seed = 1)
 
 seirhd_age$info()
@@ -481,13 +482,13 @@ gamma <- pmcmc_parameter("gamma",pmcmc_run$pars[nrow(pmcmc_run$pars),2],min = 0,
 # alpha_D <- pmcmc_parameter("alpha_D",pmcmc_run$pars[nrow(pmcmc_run$pars),4],min = 0,max = 1,
 #                            prior = function(x) dbeta(x,1,1,log = TRUE))
 proposal1 <- cov(pmcmc_run$pars)
-mcmc_pars1 <- pmcmc_parameters$new(list(beta = beta,gamma = gamma,
-                                        alpha_H = alpha_H,alpha_D = alpha_D),
+mcmc_pars1 <- pmcmc_parameters$new(list(beta = beta,gamma = gamma),
+                                        # alpha_H = alpha_H,alpha_D = alpha_D),
                                    proposal1,transform = transform)
 
 pmcmc_run1 <- pmcmc(mcmc_pars1,filter,control = control)
 
-plot_particle_filter(pmcmc_run1$trajectories$state[,101:1000,],data,data_raw$day)
+plot_particle_filter(pmcmc_run1$trajectories$state[,101:1000,],true_history,data_raw$day)
 plot_hosps_and_deaths_age(pmcmc_run1$trajectories$state[,101:1000,],data,data_raw$day)
 
 # Plot MCMC output
@@ -502,3 +503,6 @@ effectiveSize(mcmc_out1)
 # Pairwise correlation plot
 par(mfrow = c(1,1))
 pairs(pmcmc_run1$pars[])
+
+# Save workspace
+save.image("output/MCMC_output_seirhd_age_dirmnom_lklhd.RData")
