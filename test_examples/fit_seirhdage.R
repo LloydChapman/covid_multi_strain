@@ -22,7 +22,7 @@ contact <- socialmixr::contact_matrix(survey = polymod,countries = "United Kingd
 ## rather than the contact matrix. This transmission matrix is
 ## weighted by the population in each age band.
 # population <- contact$demography$population
-population <- round(contact$demography$population/10000)
+population <- round(contact$demography$population/1e3) #1e4) #100
 transmission <- contact$matrix/rep(population, each = ncol(contact$matrix))
 # for (i in 1:nrow(transmission)){
 #   transmission[i,i] <- transmission[2,2]  
@@ -79,7 +79,7 @@ seirhd_age <- gen_seirhd_age$new(
 seirhd_age$info()
 
 # Run epidemic forward
-n_steps <- 400
+n_steps <- 640 #400 #1000
 
 # Create data to be fitted to
 # Create an array to contain outputs after looping the model.
@@ -190,12 +190,12 @@ ll_dirmnom <- function(data, model, size, exp_noise){
 # Define comparison function for age-stratified data
 compare <- function(state, observed, pars = NULL){
     if (is.null(pars$kappa_hosp)){
-        kappa_hosp <- 2
+        kappa_hosp <- 100
     } else {
         kappa_hosp <- pars$kappa_hosp
     }
     if (is.null(pars$kappa_death)){
-        kappa_death <- 2
+        kappa_death <- 10
     } else {
         kappa_death <- pars$kappa_death
     }
@@ -233,32 +233,32 @@ compare <- function(state, observed, pars = NULL){
     # model_deaths_80_plus <- state["deaths_80_plus", ]
     
     # Log-likelihoods for hospitalisations
-    # ll_hosps <- ll_nbinom(observed$hosps,model_hosps,5*kappa_hosp,exp_noise)
-    # ll_hosps_0_39 <- ll_nbinom(observed$hosps_0_39,model_hosps_0_39,kappa_hosp,exp_noise)
-    # ll_hosps_40_49 <- ll_nbinom(observed$hosps_40_49,model_hosps_40_49,kappa_hosp,exp_noise)
-    # ll_hosps_50_59 <- ll_nbinom(observed$hosps_50_59,model_hosps_50_59,kappa_hosp,exp_noise)
-    # ll_hosps_60_69 <- ll_nbinom(observed$hosps_60_69,model_hosps_60_69,kappa_hosp,exp_noise)
-    # ll_hosps_70_plus <- ll_nbinom(observed$hosps_70_plus,model_hosps_70_plus,kappa_hosp,exp_noise)
+    # ll_hosps <- ll_nbinom(observed$hosps,model_hosps,kappa_hosp,exp_noise)
+    ll_hosps_0_39 <- ll_nbinom(observed$hosps_0_39,model_hosps_0_39,kappa_hosp,exp_noise)
+    ll_hosps_40_49 <- ll_nbinom(observed$hosps_40_49,model_hosps_40_49,kappa_hosp,exp_noise)
+    ll_hosps_50_59 <- ll_nbinom(observed$hosps_50_59,model_hosps_50_59,kappa_hosp,exp_noise)
+    ll_hosps_60_69 <- ll_nbinom(observed$hosps_60_69,model_hosps_60_69,kappa_hosp,exp_noise)
+    ll_hosps_70_plus <- ll_nbinom(observed$hosps_70_plus,model_hosps_70_plus,kappa_hosp,exp_noise)
     # # ll_hosps_70_79 <- ll_nbinom(observed$hosps_70_79,model_hosps_70_79,kappa_hosp,exp_noise)
     # # ll_hosps_80_plus <- ll_nbinom(observed$hosps_80_plus,model_hosps_80_plus,kappa_hosp,exp_noise)
 
-    hosps_by_age <- matrix(c(observed$hosps_0_39,observed$hosps_40_49,observed$hosps_50_59,observed$hosps_60_69,observed$hosps_70_plus),nrow = 1)
-    model_hosps_by_age <- cbind(model_hosps_0_39,model_hosps_40_49,model_hosps_50_59,model_hosps_60_69,model_hosps_70_plus)
-    ll_hosps <- ll_dirmnom(hosps_by_age,model_hosps_by_age,size_hosp,exp_noise)
-    
-    # Log-likelihoods for deaths
-    # ll_deaths <- ll_nbinom(observed$deaths,model_deaths,5*kappa_death,exp_noise)
-    # ll_deaths_0_39 <- ll_nbinom(observed$deaths_0_39,model_deaths_0_39,kappa_death,exp_noise)
-    # ll_deaths_40_49 <- ll_nbinom(observed$deaths_40_49,model_deaths_40_49,kappa_death,exp_noise)
-    # ll_deaths_50_59 <- ll_nbinom(observed$deaths_50_59,model_deaths_50_59,kappa_death,exp_noise)
-    # ll_deaths_60_69 <- ll_nbinom(observed$deaths_60_69,model_deaths_60_69,kappa_death,exp_noise)
-    # ll_deaths_70_plus <- ll_nbinom(observed$deaths_70_plus,model_deaths_70_plus,kappa_death,exp_noise)
+    # hosps_by_age <- matrix(c(observed$hosps_0_39,observed$hosps_40_49,observed$hosps_50_59,observed$hosps_60_69,observed$hosps_70_plus),nrow = 1)
+    # model_hosps_by_age <- cbind(model_hosps_0_39,model_hosps_40_49,model_hosps_50_59,model_hosps_60_69,model_hosps_70_plus)
+    # ll_hosps <- ll_dirmnom(hosps_by_age,model_hosps_by_age,size_hosp,exp_noise)
+
+    # # Log-likelihoods for deaths
+    # ll_deaths <- ll_nbinom(observed$deaths,model_deaths,kappa_death,exp_noise)
+    ll_deaths_0_39 <- ll_nbinom(observed$deaths_0_39,model_deaths_0_39,kappa_death,exp_noise)
+    ll_deaths_40_49 <- ll_nbinom(observed$deaths_40_49,model_deaths_40_49,kappa_death,exp_noise)
+    ll_deaths_50_59 <- ll_nbinom(observed$deaths_50_59,model_deaths_50_59,kappa_death,exp_noise)
+    ll_deaths_60_69 <- ll_nbinom(observed$deaths_60_69,model_deaths_60_69,kappa_death,exp_noise)
+    ll_deaths_70_plus <- ll_nbinom(observed$deaths_70_plus,model_deaths_70_plus,kappa_death,exp_noise)
     # # ll_deaths_70_79 <- ll_nbinom(observed$deaths_70_79,model_deaths_70_79,kappa_death,exp_noise)
     # # ll_deaths_80_plus <- ll_nbinom(observed$deaths_80_plus,model_deaths_80_plus,kappa_death,exp_noise)
     
-    deaths_by_age <- matrix(c(observed$deaths_0_39,observed$deaths_40_49,observed$deaths_50_59,observed$deaths_60_69,observed$deaths_70_plus),nrow = 1)
-    model_deaths_by_age <- cbind(model_deaths_0_39,model_deaths_40_49,model_deaths_50_59,model_deaths_60_69,model_deaths_70_plus)
-    ll_deaths <- ll_dirmnom(deaths_by_age,model_deaths_by_age,size_death,exp_noise)
+    # deaths_by_age <- matrix(c(observed$deaths_0_39,observed$deaths_40_49,observed$deaths_50_59,observed$deaths_60_69,observed$deaths_70_plus),nrow = 1)
+    # model_deaths_by_age <- cbind(model_deaths_0_39,model_deaths_40_49,model_deaths_50_59,model_deaths_60_69,model_deaths_70_plus)
+    # ll_deaths <- ll_dirmnom(deaths_by_age,model_deaths_by_age,size_death,exp_noise)
 
     # ll_hosps <- ll_pois(observed$hosps,model_hosps,exp_noise)
     # ll_hosps_0_39 <- ll_pois(observed$hosps_0_39,model_hosps_0_39,exp_noise)
@@ -282,11 +282,11 @@ compare <- function(state, observed, pars = NULL){
     # Calculate total log-likelihood
     # ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
     #     ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
-    # ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
-    #     ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
+    ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
+        ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
     # ll_hosps_0_39 + ll_deaths_0_39
     # ll_hosps_70_plus + ll_deaths_70_plus
-    ll_hosps + ll_deaths
+    # ll_hosps + ll_deaths
 }
 
 # Add noise to simulated data
@@ -308,16 +308,20 @@ add_nbinom_noise <- function(x,size){
     x <- apply(x,2,function(y) rnbinom(length(y),size = size,mu = y))
 }
 
-set.seed(0)
-# hosps <- add_noise(hosps,0.2)
-hosps <- add_nbinom_noise(hosps,100)
+noise <- F #T
+if (noise){
+    set.seed(0)
+    # hosps <- add_noise(hosps,0.2)
+    hosps <- add_nbinom_noise(hosps,100)
+    
+    # deaths <- add_noise(deaths,0.3)
+    deaths <- add_nbinom_noise(deaths,10)
+    
+    matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
+    matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")    
+}
 rownames(hosps) <- paste0("hosps_",age.limits[c(1,5:length(age.limits))],"_",c(as.character(age.limits[5:length(age.limits)]-1),"plus"))
-# deaths <- add_noise(deaths,0.3)
-deaths <- add_nbinom_noise(deaths,10)
 rownames(deaths) <- paste0("deaths_",age.limits[c(1,5:length(age.limits))],"_",c(as.character(age.limits[5:length(age.limits)]-1),"plus"))
-
-matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
-matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")
 
 # Create "observed" data
 data_raw <- data.frame(t(rbind(hosps,deaths)))
@@ -325,8 +329,8 @@ data_raw$day <- days
 # Add empty columns for total cases and deaths
 # data_raw$hosps <- NA
 # data_raw$deaths <- NA
-data_raw$hosps <- data$hosps_0_39 + data$hosps_40_49 + data$hosps_50_59 + data$hosps_60_69 + data$hosps_70_plus
-data_raw$deaths <- data$deaths_0_39 + data$deaths_40_49 + data$deaths_50_59 + data$deaths_60_69 + data$deaths_70_plus
+data_raw$hosps <- data_raw$hosps_0_39 + data_raw$hosps_40_49 + data_raw$hosps_50_59 + data_raw$hosps_60_69 + data_raw$hosps_70_plus
+data_raw$deaths <- data_raw$deaths_0_39 + data_raw$deaths_40_49 + data_raw$deaths_50_59 + data_raw$deaths_60_69 + data_raw$deaths_70_plus
 # Convert to required format
 data <- particle_filter_data(data_raw,"day",1/dt)
 
@@ -505,4 +509,13 @@ par(mfrow = c(1,1))
 pairs(pmcmc_run1$pars[])
 
 # Save workspace
-save.image("output/MCMC_output_seirhd_age_dirmnom_lklhd.RData")
+# save.image("output/MCMC_output_seirhd_age_dirmnom_lklhd.RData")
+# save.image("output/MCMC_output_seirhd_age_nbinom_lklhd_large_pop.RData")
+# save.image("output/MCMC_output_seirhd_age_poiss_lklhd_large_pop.RData")
+# save.image("output/MCMC_output_seirhd_age_dirmnom_lklhd_large_pop.RData")
+# save.image("output/MCMC_output_seirhd_age_dirmnom_lklhd2.RData")
+# save.image("output/MCMC_output_seirhd_age_dirmnom_lklhd_medium_pop.RData")
+# save.image("output/MCMC_output_seirhd_age_non_age_strat_nbinom_lklhd_large_pop.RData")
+# save.image("output/MCMC_output_seirhd_age_non_age_strat_nbinom_lklhd.RData")
+# save.image("output/MCMC_output_seirhd_age_nbinom_lklhd.RData")
+save.image("output/MCMC_output_seirhd_age_nbinom_lklhd_no_noise.RData")
