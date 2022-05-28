@@ -2,7 +2,9 @@ library(odin)
 library(odin.dust)
 library(dust)
 library(socialmixr)
+library(qs)
 library(data.table)
+library(readxl)
 library(ggplot2)
 library(cowplot)
 library(abind)
@@ -16,12 +18,12 @@ source("R/simulate.R")
 source("R/process_FP_data.R")
 
 ## Set MCMC output
-output <- "output/MCMCoutput37.RData"
+output <- "output/MCMCoutput40.RData"
 
 ## Run counterfactual simulations
 # Set number of parameter samples and burn-in to remove
 n_smpls <- 500
-burnin <- 500
+burnin <- 2000
 seed <- 1
 
 # Set probabilities for quantiles for outcomes
@@ -113,17 +115,17 @@ tbl <- total_outcomes[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                          Deaths = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "signif"))]
 tbl[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
 tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Hospitalisations","Deaths"))
-write.csv(tbl,"output/table1.csv",row.names = F)
+write.csv(tbl,"output/table1_1.csv",row.names = F)
 
 # Plot counterfactuals
 
 # Hospitalisations
 idx <- 1:6
 p_hosps <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
-ggsave("output/cntfctl_hosps.pdf",p_hosps,width = 8,height = 7)
+ggsave("output/cntfctl_hosps1.pdf",p_hosps,width = 8,height = 7)
 # Deaths in hospital
 p_deaths <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Deaths",ttls[names(ttls) %in% idx])
-ggsave("output/cntfctl_deaths.pdf",p_deaths,width = 8,height = 7)
+ggsave("output/cntfctl_deaths1.pdf",p_deaths,width = 8,height = 7)
 
 idx <- 7
 p_hosps_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfctl[cntfctl == idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
@@ -133,7 +135,7 @@ p_deaths_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfc
 pp <- plot_grid(p_hosps_vax + theme(legend.position = "none"),
                 p_deaths_vax + theme(legend.position = "none"))
 l <- get_legend(p_deaths_vax)
-ggsave("output/cntfctl_hosps_and_deaths_vax.pdf",plot_grid(pp,l,nrow = 2,rel_heights = c(1,0.1)),width = 6,height = 4)
+ggsave("output/cntfctl_hosps_and_deaths_vax1.pdf",plot_grid(pp,l,nrow = 2,rel_heights = c(1,0.1)),width = 6,height = 4)
 
 # save.image("../covid_multistrain_wip3.RData")
 

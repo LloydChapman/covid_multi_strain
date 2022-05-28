@@ -24,11 +24,9 @@ update(S[, ]) <- S[i,j] + sum(n_RS[i, ,j]) - sum(n_SE[i, ,j]) - n_SV[i,j] +
 update(E[, , ]) <- E[i,j,k] + n_SE[i,j,k] + (if (j > 2) n_RE[i,j-2,k] else 0) - 
     n_EI[i,j,k] - n_EV[i,j,k] + 
     (if (k == 1) n_EV[i,j,n_vax] else n_EV[i,j,k-1])
-update(I_P[, , ]) <- I_P[i,j,k] + n_EI_P[i,j,k] - n_I_PI_C[i,j,k] - n_I_PV[i,j,k] +
-    (if (k == 1) n_I_PV[i,j,n_vax] else n_I_PV[i,j,k-1])
-update(I_A[, , ]) <- I_A[i,j,k] + n_EI_A[i,j,k] - n_I_AR[i,j,k] - n_I_AV[i,j,k] + 
-    (if (k == 1) n_I_AV[i,j,n_vax] else n_I_AV[i,j,k-1])
-update(I_C[, , ]) <- I_C[i,j,k] + n_I_PI_C[i,j,k] - n_I_Cx[i,j,k]
+update(I_P[, , ]) <- new_I_P[i,j,k]
+update(I_A[, , ]) <- new_I_A[i,j,k]
+update(I_C[, , ]) <- new_I_C[i,j,k]
 update(R[, , ]) <- R[i,j,k] + n_I_AR[i,j,k] + n_I_CR[i,j,k] + n_HR[i,j,k] - 
     n_Rx[i,j,k] - n_RV[i,j,k] + 
     (if (k == 1) n_RV[i,j,n_vax] else n_RV[i,j,k-1])
@@ -200,6 +198,17 @@ n_T_pre_1x[, , ] <- rbinom(T_pre_1[i,j,k], p_T_pre_1x)
 n_T_pre_1T_P_1[, , ] <- rbinom(n_T_pre_1x[i,j,k], p_P_1)
 n_T_P_1T_N_1[, , ] <- rbinom(T_P_1[i,j,k], p_T_P_1T_N_1)
 
+# number of new I_A
+new_I_A[, , ] <- I_A[i,j,k] + n_EI_A[i,j,k] - n_I_AR[i,j,k] - n_I_AV[i,j,k] + 
+    (if (k == 1) n_I_AV[i,j,n_vax] else n_I_AV[i,j,k-1])
+
+# number of new I_P
+new_I_P[, , ] <- I_P[i,j,k] + n_EI_P[i,j,k] - n_I_PI_C[i,j,k] - n_I_PV[i,j,k] +
+    (if (k == 1) n_I_PV[i,j,n_vax] else n_I_PV[i,j,k-1])
+
+# number of new I_C
+new_I_C[, , ] <- I_C[i,j,k] + n_I_PI_C[i,j,k] - n_I_Cx[i,j,k]
+
 ## Initial conditions 
 initial(S[, ]) <- 0
 initial(E[, , ]) <- 0
@@ -318,7 +327,7 @@ rel_susceptibility[, , ] <- user() # infectiousness by age group and vaccine str
 cross_immunity[] <- user() # cross-immunity between 1st and 2nd strain
 
 # Seeding
-seed_age <- user(4) # 30-49 year band
+seed_age <- user(4) # 30-39 years band
 seed_step_start <- user() # step at which to start seeding
 seed_value[] <- user() # number of infections seeded into seed_age age group over length(seed_value) steps
 strain_seed_step_start <- user() # step at which to start seeding of 2nd strain
@@ -381,6 +390,43 @@ p_V[, ] <- if (index_dose_inverse[j] > 0)
         1 - exp(-vaccine_progression_rate_base[i, j] * dt)
 vaccine_progression_rate_base[, ] <- user()
 
+# Calculation of I_weighted: infectious-weighted number of infectious individuals
+new_I_weighted[, , ] <- 
+    theta_A * new_I_A[i,j,k] +
+    new_I_P[i,j,k] +
+    new_I_C[i,j,k]
+sum_new_I_weighted <- sum(new_I_weighted)
+initial(I_weighted[, , ]) <- 0
+# If there are zero infectious individuals default to putting weight
+# in group 4/strain 1/vaccine stratum 1 to avoid NAs in Rt
+update(I_weighted[, , ]) <- 
+    (if (sum_new_I_weighted == 0)
+        (if (i == seed_age && j == 1 && k == 1) 1 else 0)
+     else new_I_weighted[i,j,k])
+
+# prob_strain is proportion of total I_weighted in each strain
+# If there are zero infectious individuals, default to full weight on strain 1
+# to avoid NAs in Rt
+prob_strain_1 <- if (n_real_strains == 1 || sum_new_I_weighted == 0) 1 else
+    (sum(new_I_weighted[, 1, ]) + sum(new_I_weighted[, 4, ])) /
+    sum_new_I_weighted
+initial(prob_strain[1:n_real_strains]) <- 0
+initial(prob_strain[1]) <- 1
+update(prob_strain[]) <- if (i == 1) prob_strain_1 else 1 - prob_strain_1
+
+# Calculate effective susceptibles to each strain
+# Weight each person in S/R by their relative susceptibility
+# Note that for those in R we further account for cross immunity
+# to strains. Those recovered from strain 3 - j will be (partially)
+# susceptible to strain j
+eff_S[, , ] <- if (n_real_strains == 1)
+    S[i, k] * rel_susceptibility[i, j, k] else
+        (S[i, k] + (1 - cross_immunity[3 - j]) * R[i, 3 - j, k]) *
+    rel_susceptibility[i, j, k]
+
+initial(effective_susceptible[, ]) <- 0
+update(effective_susceptible[, ]) <- sum(eff_S[i, j, ])
+
 ## Array dimensions
 dim(S) <- c(n_age,n_vax)
 dim(E) <- c(n_age,n_strains,n_vax)
@@ -423,6 +469,9 @@ dim(n_T_pre_1x) <- c(n_age,n_strains,n_vax)
 dim(n_T_pre_1T_P_1) <- c(n_age,n_strains,n_vax)
 dim(n_T_P_1T_N_1) <- c(n_age,n_strains,n_vax)
 dim(n_V) <- c(n_age,n_vax)
+dim(new_I_A) <- c(n_age,n_strains,n_vax)
+dim(new_I_P) <- c(n_age,n_strains,n_vax)
+dim(new_I_C) <- c(n_age,n_strains,n_vax)
 dim(p_SE) <- c(n_age,n_vax)
 dim(lambda) <- c(n_age,n_real_strains)
 dim(lambda_sus) <- c(n_age,n_real_strains,n_vax)
@@ -465,3 +514,8 @@ dim(vaccine_attempted_doses) <- c(n_age, n_doses)
 dim(vaccine_probability_doses) <- c(n_age, n_doses)
 dim(total_attempted_doses) <- c(n_age, n_doses)
 dim(vaccine_missed_doses) <- c(n_age, n_doses)
+dim(new_I_weighted) <- c(n_age,n_strains,n_vax)
+dim(I_weighted) <- c(n_age,n_strains,n_vax)
+dim(prob_strain) <- n_real_strains
+dim(eff_S) <- c(n_age, n_real_strains, n_vax)
+dim(effective_susceptible) <- c(n_age, n_real_strains)

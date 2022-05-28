@@ -433,7 +433,7 @@ seed_over_steps <- function(start_step, weights) {
 }
 
 
-index <- function(info){
+index <- function(info, min_ages = seq(0,70,by = 10), Rt = TRUE){
     index <- info$index
     
     index_run <- c(hosps = index[["H_inc"]],
@@ -463,6 +463,36 @@ index <- function(info){
                    cases_non_variant = index[["cases_non_variant_inc"]]
     )
     
+    suffix <- paste0("_",min_ages)
+    
+    n_vacc_classes <- info$dim$S[[2]]
+    n_strains <- info$dim$prob_strain
+    if (n_strains == 2){
+        n_tot_strains <- 4
+    } else {
+        n_tot_strains <- 1
+    }
+    
+    # S states (age x vacc class)
+    index_S <- calculate_index(index, "S", list(n_vacc_classes), suffix)
+    
+    # Strain weights for Rt calculation - relative probability of infection with each strain
+    index_prob_strain <- calculate_index(index, "prob_strain", list(n_strains))
+    
+    # Effective susceptibles (age x strain)
+    index_effective_susceptible <- 
+        calculate_index(index, "effective_susceptible", list(n_strains),
+                        suffix, "effective_susceptible")
+    
+    # R states (age x (total) strain x vacc class)
+    index_R <- calculate_index(index, "R", list(S = n_tot_strains, V = n_vacc_classes), suffix)
+    
+    index_state <- c(index_run, index_effective_susceptible)
+    
+    if (Rt){
+        index_state <- c(index_state, index_S, index_R, index_prob_strain)
+    }
+    
     # list(run = index_run,
     #      state = c(S = index[["S"]],
     #                E = index[["E"]],
@@ -478,7 +508,7 @@ index <- function(info){
     #                T_N_1 = index[["T_N_1"]],
     #                index_run))
     list(run = index_run,
-         state = index_run)
+         state = index_state)
 }
 
 
@@ -1240,4 +1270,30 @@ combine_steps_groups <- function(step, n_groups, n_time_steps, n_strains,
     ret <- aperm(ret, c(4, 2, 3, 1))
     
     ret
+}
+
+## Calculates the index of a given state and adds a suffix corresponding to
+##  how the state is disaggregated (e.g. _V1, _V2 for two vacc classes,
+##  or _S1V2 for strain 1 vaccine 2).
+calculate_index <- function(index, state, suffix_list, suffix0 = NULL,
+                            state_name = state) {
+    if (is.null(suffix0)) {
+        suffixes <- list()
+    } else {
+        suffixes <- list(suffix0)
+    }
+    for (i in seq_along(suffix_list)) {
+        nm <- names(suffix_list)[[i]]
+        if (length(nm) == 0) {
+            nm <- ""
+        }
+        suffixes <- c(suffixes,
+                      list(c("", sprintf("_%s%s", nm,
+                                         seq_len(suffix_list[[i]] - 1L)))))
+    }
+    suffixes <- expand.grid(suffixes)
+    nms <- apply(suffixes, 1,
+                 function(x) sprintf("%s%s",
+                                     state_name, paste0(x, collapse = "")))
+    set_names(index[[state]], nms)
 }

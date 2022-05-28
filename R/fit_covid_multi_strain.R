@@ -1,4 +1,4 @@
-fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,thinning = 1){
+fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,thinning = 1){
     #### Set up model and parameters ####
     
     
@@ -303,7 +303,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,thinning =
     
     
     # out <- simulate(gen_seirhd_age_vax_multistrain_sero_time_dep_beta, p, n_steps)
-    out <- simulate(covid_multi_strain, p, n_steps)
+    out <- simulate(covid_multi_strain, p, n_steps, deterministic)
     
     # # Drop time row
     # x <- out$x
@@ -320,12 +320,12 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,thinning =
     
     # Add noise to simulated data
     info <- out$info
-    idx <- index(info)
-    # hosps <- true_history[idx$run[grep("hosps_",names(idx$run))]-1, ,-1]
-    # deaths <- true_history[idx$run[grep("deaths_",names(idx$run))]-1, ,-1]
-    # sero_pos <- true_history[idx$run[grep("sero_pos_1_",names(idx$run))]-1, ,-1]
-    # cases <- matrix(true_history[idx$run[match("cases",names(idx$run))]-1, ,-1],nrow = 1)
-    # cases_non_variant <- matrix(true_history[idx$run[grep("cases_non_variant",names(idx$run))]-1, ,-1],nrow = 1)
+    idx <- index(info, min_ages, Rt)
+    # hosps <- true_history[idx$state[grep("hosps_",names(idx$state))]-1, ,-1]
+    # deaths <- true_history[idx$state[grep("deaths_",names(idx$state))]-1, ,-1]
+    # sero_pos <- true_history[idx$state[grep("sero_pos_1_",names(idx$state))]-1, ,-1]
+    # cases <- matrix(true_history[idx$state[match("cases",names(idx$state))]-1, ,-1],nrow = 1)
+    # cases_non_variant <- matrix(true_history[idx$state[grep("cases_non_variant",names(idx$state))]-1, ,-1],nrow = 1)
     # 
     # par(mfrow = c(1,1))
     # days <- seq(1,n_steps*dt)
