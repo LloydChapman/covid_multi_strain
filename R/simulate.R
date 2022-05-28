@@ -86,7 +86,7 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
     }
     # Remove burn-in
     pars <- res$pars[-(1:burnin),]
-        
+    
     out <- vector("list", n_smpls)
     set.seed(seed)
     smpl <- sample.int(nrow(pars),n_smpls)
@@ -140,8 +140,8 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
                           cross_immunity,
                           sero_sensitivity_1,
                           sero_specificity_1)
-        out[[i]] <- simulate_data(covid_multi_strain, p_i, n_steps, 
-                                  deterministic, keep_all_states = F)
+        out[[i]] <- simulate(covid_multi_strain, p_i, n_steps, 
+                             deterministic, keep_all_states = F)
         smpl[i] <- j
     }
     
