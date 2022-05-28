@@ -9,6 +9,13 @@ library(qs)
 library(data.table)
 library(extraDistr)
 
+# Flag for whether to run and fit deterministic version of model
+deterministic <- T
+# Flag for whether to add noise to the hospitalisations and deaths the model is fitted to
+noise <- T
+# N.B. noise must be TRUE if deterministic is TRUE
+if (deterministic) noise <- T
+
 #### Age-structured SEIR model with deaths
 gen_seirhd_age <- odin.dust::odin_dust("test_examples/seirhdage.R")
 
@@ -22,7 +29,7 @@ contact <- socialmixr::contact_matrix(survey = polymod,countries = "United Kingd
 ## rather than the contact matrix. This transmission matrix is
 ## weighted by the population in each age band.
 # population <- contact$demography$population
-population <- round(contact$demography$population/1e3) #1e4) #100
+population <- round(contact$demography$population/100) #1e3) #1e4)
 transmission <- contact$matrix/rep(population, each = ncol(contact$matrix))
 # for (i in 1:nrow(transmission)){
 #   transmission[i,i] <- transmission[2,2]  
@@ -68,18 +75,29 @@ dt <- 0.25
 S_ini <- population
 E_ini <- c(0,0,0,0,0,0,0,0)
 I_ini <- c(1,1,2,2,2,1,1,0)
-seirhd_age <- gen_seirhd_age$new(
-    list(dt = dt,n_age = n_age,S_ini = S_ini,E_ini = E_ini,I_ini = I_ini,
-         m = transmission,beta = 0.04,sigma = 0.5,gamma_P = 0.4,gamma_A = 0.2,
-         gamma_C = 0.4,gamma_H = 0.1, gamma_G = 1/3, 
-         p_C = p_C,p_H = p_H,p_G = p_G,p_D = p_D),
-         # p_C = p_C,p_H = p_H_max*p_H,p_G = p_G,p_D = p_D_max*p_D),
-    step = 0,n_particles = 1,n_threads = 1,seed = 1)
+
+if (deterministic){
+    seirhd_age <- gen_seirhd_age$new(
+        list(dt = dt,n_age = n_age,S_ini = S_ini,E_ini = E_ini,I_ini = I_ini,
+             m = transmission,beta = 0.04,sigma = 0.5,gamma_P = 0.4,gamma_A = 0.2,
+             gamma_C = 0.4,gamma_H = 0.1, gamma_G = 1/3, 
+             p_C = p_C,p_H = p_H,p_G = p_G,p_D = p_D),
+        # p_C = p_C,p_H = p_H_max*p_H,p_G = p_G,p_D = p_D_max*p_D),
+        step = 0,n_particles = 1,n_threads = 1,deterministic = T)
+} else {
+    seirhd_age <- gen_seirhd_age$new(
+        list(dt = dt,n_age = n_age,S_ini = S_ini,E_ini = E_ini,I_ini = I_ini,
+             m = transmission,beta = 0.04,sigma = 0.5,gamma_P = 0.4,gamma_A = 0.2,
+             gamma_C = 0.4,gamma_H = 0.1, gamma_G = 1/3,
+             p_C = p_C,p_H = p_H,p_G = p_G,p_D = p_D),
+             # p_C = p_C,p_H = p_H_max*p_H,p_G = p_G,p_D = p_D_max*p_D),
+        step = 0,n_particles = 1,n_threads = 1,seed = 1)
+}
 
 seirhd_age$info()
 
 # Run epidemic forward
-n_steps <- 640 #400 #1000
+n_steps <- 1000 #640 #400 #1000
 
 # Create data to be fitted to
 # Create an array to contain outputs after looping the model.
@@ -299,8 +317,8 @@ matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
 matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")
 
 add_noise <- function(x,f){
-    noise <- apply(x,2,function(y) round(rnorm(length(y),0,f*y)))
-    x <- x + noise
+    x <- apply(x,2,function(y) round(rnorm(length(y),y,f*y)))
+    # x <- x + noise
     x <- pmax(x,0)
 }
 
@@ -308,7 +326,6 @@ add_nbinom_noise <- function(x,size){
     x <- apply(x,2,function(y) rnbinom(length(y),size = size,mu = y))
 }
 
-noise <- F #T
 if (noise){
     set.seed(0)
     # hosps <- add_noise(hosps,0.2)
@@ -335,7 +352,7 @@ data_raw$deaths <- data_raw$deaths_0_39 + data_raw$deaths_40_49 + data_raw$death
 data <- particle_filter_data(data_raw,"day",1/dt)
 
 # Function for plotting fitted trajectories
-plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
+plot_particle_filter <- function(history, true_history, times, obs_end = NULL, deterministic = F) {
     if (is.null(obs_end)) {
         obs_end = max(times)
     }
@@ -348,13 +365,23 @@ plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
         # matplot(times, t(history[i, ,-1]), type = "l", # Offset to access numbers in age compartment
         #         xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
         #         col = alpha(cols[["S"]],0.1), lty = 1, ylim=range(history))
-        matplot(times, t(history[i + n_age, ,-1]), type = "l", # Offset to access numbers in age compartment
-                xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
-                col = alpha(cols[["E"]],0.1), lty = 1, ylim=range(true_history[i + 12 + seq(n_age,4*n_age,by = n_age), ,-1]))
-        # matlines(times, t(history[i + n_age, ,-1]), col = alpha(cols[["E"]],0.1), lty = 1)
-        matlines(times, t(history[i + 2*n_age, ,-1]), col = alpha(cols[["I_P"]],0.1), lty = 1)
-        matlines(times, t(history[i + 3*n_age, ,-1]), col = alpha(cols[["I_A"]],0.1), lty = 1)
-        matlines(times, t(history[i + 4*n_age, ,-1]), col = alpha(cols[["I_C"]],0.1), lty = 1)
+        if (deterministic){
+            matplot(times, history[i + n_age, ,-1], type = "l", # Offset to access numbers in age compartment
+                    xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
+                    col = cols[["E"]], lty = 1, ylim=range(true_history[i + 12 + seq(n_age,4*n_age,by = n_age), ,-1]))
+            # matlines(times, t(history[i + n_age, ,-1]), col = alpha(cols[["E"]],0.1), lty = 1)
+            matlines(times, history[i + 2*n_age, ,-1], col = cols[["I_P"]], lty = 1)
+            matlines(times, history[i + 3*n_age, ,-1], col = cols[["I_A"]], lty = 1)
+            matlines(times, history[i + 4*n_age, ,-1], col = cols[["I_C"]], lty = 1)            
+        } else {
+            matplot(times, t(history[i + n_age, ,-1]), type = "l", # Offset to access numbers in age compartment
+                    xlab = "", ylab = "", yaxt="none", main = paste0("Age ", contact$demography$age.group[i]),
+                    col = alpha(cols[["E"]],0.1), lty = 1, ylim=range(true_history[i + 12 + seq(n_age,4*n_age,by = n_age), ,-1]))
+            # matlines(times, t(history[i + n_age, ,-1]), col = alpha(cols[["E"]],0.1), lty = 1)
+            matlines(times, t(history[i + 2*n_age, ,-1]), col = alpha(cols[["I_P"]],0.1), lty = 1)
+            matlines(times, t(history[i + 3*n_age, ,-1]), col = alpha(cols[["I_A"]],0.1), lty = 1)
+            matlines(times, t(history[i + 4*n_age, ,-1]), col = alpha(cols[["I_C"]],0.1), lty = 1)
+        }
         # matlines(times, t(history[i + 5*n_age, ,-1]), col = alpha(cols[["R"]],0.1), lty = 1)
         # matlines(times, t(history[i + 8*n_age, ,-1]), col = alpha(cols[["D"]],0.1), lty = 1)
         # matpoints(times[1:obs_end], t(true_history[seq(i+12,i+12+8*n_age,by = n_age), ,-1]), pch = 19,
@@ -367,22 +394,38 @@ plot_particle_filter <- function(history, true_history, times, obs_end = NULL) {
     }
 }
 
-plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, times){
+plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, times, deterministic = F){
     par(mfrow = c(2,4), oma=c(2,3,0,0))
     for (i in 1:5){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[73+i, ,-1]),
-                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
-                main = paste0("Age ", rownames(incidence_modelled)[73+i]))
+        if (deterministic){
+            matplot(times, incidence_modelled[73+i, ,-1],
+                    type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
+                    main = paste0("Age ", rownames(incidence_modelled)[73+i]), 
+                    ylim = c(0,max(incidence_modelled[73+i, ,-1],incidence_observed[[4+i]])))
+        } else {
+            matplot(times, t(incidence_modelled[73+i, ,-1]),
+                    type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
+                    main = paste0("Age ", rownames(incidence_modelled)[73+i]), 
+                    ylim = c(0,max(incidence_modelled[73+i, ,-1],incidence_observed[[4+i]])))
+        }
         points(times, incidence_observed[[4+i]],pch=19,col="red")
         axis(2, las = 2)
     }
     par(mfrow = c(2,4), oma=c(2,3,0,0))
     for (i in 1:5){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[79+i, ,-1]),
-                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",
-                main = paste0("Age ", rownames(incidence_modelled)[79+i]))
+        if (deterministic){
+            matplot(times, incidence_modelled[79+i, ,-1],
+                    type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
+                    main = paste0("Age ", rownames(incidence_modelled)[79+i]), 
+                    ylim = c(0,max(incidence_modelled[79+i, ,-1],incidence_observed[[9+i]])))
+        } else {
+            matplot(times, t(incidence_modelled[79+i, ,-1]),
+                    type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
+                    main = paste0("Age ", rownames(incidence_modelled)[79+i]), 
+                    ylim = c(0,max(incidence_modelled[79+i, ,-1],incidence_observed[[9+i]])))
+        }
         points(times, incidence_observed[[9+i]],pch=19,col="red")
         axis(2, las = 2)
     }
@@ -390,8 +433,14 @@ plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, ti
 
 # Create particle filter object
 n_particles <- 200
-filter <- particle_filter$new(data, gen_seirhd_age, n_particles, 
-                              compare, index, seed = 1)
+if (deterministic){
+    filter <- particle_deterministic$new(data, gen_seirhd_age, 
+                                         compare, index)    
+} else {
+    filter <- particle_filter$new(data, gen_seirhd_age, n_particles,
+                                  compare, index, seed = 1)
+}
+
 filter$run(
     save_history = TRUE,
     pars = list(dt = dt,n_age = n_age,S_ini = S_ini,E_ini = E_ini,I_ini = I_ini,
@@ -403,8 +452,8 @@ filter$run(
 dimnames(filter$history())
 
 # Plot filtered trajectories
-plot_particle_filter(filter$history(),true_history,data_raw$day)
-plot_hosps_and_deaths_age(filter$history(),data,data_raw$day)
+plot_particle_filter(filter$history(),true_history,data_raw$day,deterministic = deterministic)
+plot_hosps_and_deaths_age(filter$history(),data,data_raw$day,deterministic = deterministic)
 
 # Infer parameters by pMCMC
 beta <- pmcmc_parameter("beta",0.04,min = 0,
@@ -476,37 +525,41 @@ effectiveSize(mcmc_out)
 par(mfrow = c(1,1))
 pairs(pmcmc_run$pars[])
 
-# Tune MCMC
-beta <- pmcmc_parameter("beta",pmcmc_run$pars[nrow(pmcmc_run$pars),1],min = 0,
-                        prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
-gamma <- pmcmc_parameter("gamma",pmcmc_run$pars[nrow(pmcmc_run$pars),2],min = 0,
-                        prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
-# alpha_H <- pmcmc_parameter("alpha_H",pmcmc_run$pars[nrow(pmcmc_run$pars),3],min = 0,max = 1,
-#                            prior = function(x) dbeta(x,1,1,log = TRUE))
-# alpha_D <- pmcmc_parameter("alpha_D",pmcmc_run$pars[nrow(pmcmc_run$pars),4],min = 0,max = 1,
-#                            prior = function(x) dbeta(x,1,1,log = TRUE))
-proposal1 <- cov(pmcmc_run$pars)
-mcmc_pars1 <- pmcmc_parameters$new(list(beta = beta,gamma = gamma),
-                                        # alpha_H = alpha_H,alpha_D = alpha_D),
-                                   proposal1,transform = transform)
-
-pmcmc_run1 <- pmcmc(mcmc_pars1,filter,control = control)
-
-plot_particle_filter(pmcmc_run1$trajectories$state[,101:1000,],true_history,data_raw$day)
-plot_hosps_and_deaths_age(pmcmc_run1$trajectories$state[,101:1000,],data,data_raw$day)
-
-# Plot MCMC output
-mcmc_out1 <- as.mcmc(cbind(pmcmc_run1$probabilities, pmcmc_run1$pars))
-summary(mcmc_out1)
-plot(mcmc_out1)
-
-# Calculate effective sample size
-effectiveSize(mcmc_out1)
-1 - rejectionRate(mcmc_out1)
-
-# Pairwise correlation plot
-par(mfrow = c(1,1))
-pairs(pmcmc_run1$pars[])
+# # Tune MCMC
+# beta <- pmcmc_parameter("beta",pmcmc_run$pars[nrow(pmcmc_run$pars),1],min = 0,
+#                         prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
+# gamma <- pmcmc_parameter("gamma",pmcmc_run$pars[nrow(pmcmc_run$pars),2],min = 0,
+#                         prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
+# # alpha_H <- pmcmc_parameter("alpha_H",pmcmc_run$pars[nrow(pmcmc_run$pars),3],min = 0,max = 1,
+# #                            prior = function(x) dbeta(x,1,1,log = TRUE))
+# # alpha_D <- pmcmc_parameter("alpha_D",pmcmc_run$pars[nrow(pmcmc_run$pars),4],min = 0,max = 1,
+# #                            prior = function(x) dbeta(x,1,1,log = TRUE))
+# proposal1 <- cov(pmcmc_run$pars)
+# mcmc_pars1 <- pmcmc_parameters$new(list(beta = beta,gamma = gamma),
+#                                         # alpha_H = alpha_H,alpha_D = alpha_D),
+#                                    proposal1,transform = transform)
+# control1 <- pmcmc_control(
+#     1e4,
+#     save_state = TRUE,
+#     save_trajectories = TRUE,
+#     progress = TRUE)
+# pmcmc_run1 <- pmcmc(mcmc_pars1,filter,control = control1)
+# 
+# plot_particle_filter(pmcmc_run1$trajectories$state[,101:1000,],true_history,data_raw$day)
+# plot_hosps_and_deaths_age(pmcmc_run1$trajectories$state[,101:1000,],data,data_raw$day)
+# 
+# # Plot MCMC output
+# mcmc_out1 <- as.mcmc(cbind(pmcmc_run1$probabilities, pmcmc_run1$pars))
+# summary(mcmc_out1)
+# plot(mcmc_out1)
+# 
+# # Calculate effective sample size
+# effectiveSize(mcmc_out1)
+# 1 - rejectionRate(mcmc_out1)
+# 
+# # Pairwise correlation plot
+# par(mfrow = c(1,1))
+# pairs(pmcmc_run1$pars[])
 
 # Save workspace
 # save.image("output/MCMC_output_seirhd_age_dirmnom_lklhd.RData")
@@ -518,4 +571,6 @@ pairs(pmcmc_run1$pars[])
 # save.image("output/MCMC_output_seirhd_age_non_age_strat_nbinom_lklhd_large_pop.RData")
 # save.image("output/MCMC_output_seirhd_age_non_age_strat_nbinom_lklhd.RData")
 # save.image("output/MCMC_output_seirhd_age_nbinom_lklhd.RData")
-save.image("output/MCMC_output_seirhd_age_nbinom_lklhd_no_noise.RData")
+# save.image("output/MCMC_output_seirhd_age_nbinom_lklhd_no_noise.RData")
+# save.image("output/MCMC_output_seirhd_age_nbinom_lklhd_deterministic.RData")
+save.image("output/MCMC_output_seirhd_age_nbinom_lklhd_large_pop2.RData")

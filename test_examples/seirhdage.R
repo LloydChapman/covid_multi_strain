@@ -22,6 +22,8 @@ update(H[]) <- H[i] + n_I_CH[i] - n_HR[i] - n_HD[i]
 update(G[]) <- G[i] + n_I_CG[i] - n_GD[i]
 update(D[]) <- D[i] + n_HD[i] + n_GD[i]
 
+update(N_tot[]) <- S[i] + E[i] + I_P[i] + I_A[i] + I_C[i] + R[i] + H[i] + G[i] + D[i]
+
 # ## To compute cumulative incidence
 # update(cum_inc[]) <- cum_inc[i] + n_SE[i] # THIS MAY ONLY BE OK IF step IS NOT A MULTIPLE OF 1/dt -- CHECK!
 # update(cum_inc_death[]) <- cum_inc_death[i] + n_ID[i]
@@ -86,6 +88,8 @@ initial(G[]) <- 0
 initial(D[]) <- 0
 # initial(cum_inc[]) <- 0
 # initial(cum_inc_death[]) <- 0
+
+initial(N_tot[]) <- S_ini[i] + E_ini[i] + I_ini[i]
 
 ## Store hospitalisation and death incidence
 # initial(I_inc) <- 0
@@ -163,6 +167,7 @@ dim(G) <- n_age
 dim(D) <- n_age
 # dim(cum_inc) <- n_age
 # dim(cum_inc_death) <- n_age
+dim(N_tot) <- n_age
 dim(n_SE) <- n_age
 dim(n_EI) <- n_age
 dim(n_EI_P) <- n_age
