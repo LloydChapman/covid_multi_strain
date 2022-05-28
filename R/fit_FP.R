@@ -18,6 +18,7 @@ source("R/covid_multi_strain.R")
 source("R/simulate.R")
 source("R/fit_covid_multi_strain.R")
 source("R/pmcmc.R")
+source("R/plot_fit.R")
 
 # Process FP data
 source("R/process_FP_data.R")
@@ -33,3 +34,6 @@ deterministic <- T # flag for whether to use "deterministic particle filter" or 
 Rt <- T # flag for whether to return variables needed for calculating Rt in "state"
 thinning <- 10
 fit_covid_multi_strain(u,n_iters,run,deterministic,Rt,thinning)
+
+# Plot fit
+plot_fit(paste0("output/MCMCoutput",run,".RData"))
