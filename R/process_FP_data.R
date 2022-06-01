@@ -66,7 +66,7 @@ min_ages_contact <- contact[,unique(min_age_contactor)]
 age_groups_contact <- contact[,unique(age_contactor)]
 pop_contact <- copy(pop)
 pop_contact[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
-pop_contact <- pop_contact[,.(population = sum(population)),by = .(age_group_contact)]
+pop_contact <- pop_contact[,.(population = sum(total)),by = .(age_group_contact)]
 
 contact1 <- merge(contact1,pop_contact,by.x = "age_contactor",by.y = "age_group_contact")
 contact1[,age_contactor := cut(min_age_contactor,c(min_ages,Inf),labels = age_groups,right = F)]
@@ -152,7 +152,7 @@ sero_pos_dt2 <- process_sero_data(sero_pos_dt2, as.Date("2021-11-21"), age_group
 sero_pos_dt <- rbind(sero_pos_dt1,sero_pos_dt2)
 
 ## Make data table of hospitalisations, deaths and seroprevalence for fitting 
-strt_date <- hosps_dt[,min(date)] - 20
+strt_date <- hosps_dt[,min(date)] - 20 # 2020-07-20
 end_date <- as.Date("2021-11-21")
 dates <- seq.Date(strt_date,end_date,by = 1)
 base_dt <- CJ(date = dates,age_group = age_groups_hosp)
@@ -234,17 +234,19 @@ vax_dt[,sum(number),by = .(dose)][,V1] - vax_dt[date == max(date),value,by = .(d
 # small so ignore FOR NOW
 
 vax_dt[,date := as.IDate(date)]
+vax_dt <- vax_dt[date <= end_date]
 
 # Make vaccination schedule
 pop_mat <- matrix(rep(population,1),nrow = length(population))
 
 # Rough number of daily booster doses from eyeballing Fig. 5 plot in BEH health bulletin No. 84
-booster_daily_doses <- c(rep(0,40*7),rep(5000/7,125))
+booster_daily_doses <- c(rep(0,40*7),rep(5000/7,as.integer(as.IDate(end_date) - vax_dt[,min(date)] - 40*7 + 1)))
 
 # priority_population <- vaccine_priority_population(population, uptake = c(0.55,0.55,0.80,0.80,0.80,0.80,0.8,0.8))
-schedule <- vaccine_schedule_future(as.integer(vax_dt[,min(date)] - hosps_dt[,min(date)]),
+mean_days_between_doses <- 28 # from eye-balling plot of cumulative 1st and 2nd doses
+schedule <- vaccine_schedule_future(as.integer(vax_dt[,min(date)] - strt_date + 1),
                                     vax_dt[,sum(number),by = .(date)][,V1],
-                                    mean_days_between_doses = 28, # from eye-balling plot of cumulative 1st and 2nd doses
+                                    mean_days_between_doses = mean_days_between_doses, 
                                     pop_mat,
                                     booster_daily_doses_value = booster_daily_doses)
 
