@@ -395,16 +395,16 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # gamma <- pmcmc_parameter("gamma",0.4,min = 0,
     #                          prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
     rel_strain_transmission <- pmcmc_parameter("rel_strain_transmission",2.5,min = 0, max = 4)
-    start_date <- pmcmc_parameter("start_date",1L,min = 1L,max = 10L,discrete = TRUE)
-    strain_seed_date <- pmcmc_parameter("strain_seed_date",330L,min = 305L,max = 345L,discrete = TRUE)
-    p_H_max <- pmcmc_parameter("p_H_max",p_H_max0/2,min = 0,max = 1,discrete = TRUE,
+    start_date <- pmcmc_parameter("start_date",1L,min = 1L,max = 10L)
+    strain_seed_date <- pmcmc_parameter("strain_seed_date",330L,min = 305L,max = 345L)
+    p_H_max <- pmcmc_parameter("p_H_max",p_H_max0/2,min = 0,max = 1,
                                prior = function(x) dbeta(x, 1, 1, log = TRUE)
                                # prior = function(x) dbeta(x, 10, 30, log = TRUE),
                                # prior = function(x) dbeta(x, 6, 30, log = TRUE)
                                )
-    p_D_max <- pmcmc_parameter("p_D_max",p_D_max0,min = 0,max = 1,discrete = TRUE,
+    p_D_max <- pmcmc_parameter("p_D_max",p_D_max0,min = 0,max = 1,
                                prior = function(x) dbeta(x, 1, 1, log = TRUE))
-    # strain_seed_date1 <- pmcmc_parameter("strain_seed_date1",200L,min = 200L,max = 250L,discrete = TRUE)
+    # strain_seed_date1 <- pmcmc_parameter("strain_seed_date1",200L,min = 200L,max = 250L)
     
     # proposal <- matrix(c(0.01^2,0,0,0.01^2),nrow = 2,ncol = 2,byrow = TRUE)
     # proposal <- matrix(c(0.01^2,0,0,0,0.01^2,0,0,0,2),nrow = 3,ncol = 3,byrow = TRUE)
@@ -562,13 +562,16 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # discrete <- c(rep(F,length(beta_value)+1),rep(T,2))
     discrete <- c(rep(F,length(beta_value)+1),rep(T,2),rep(F,2))
     # names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date")
-    names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date","p_H_max","p_D_max")
+    names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- 
+        c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date","p_H_max","p_D_max")
     
     tstart <- Sys.time()
     # u <- 1:8 # all parameters 1:5 # only update beta parameters
     # u <- 1:7 # all parameters 1:5 # only update beta parameters
     # u <- c(1,6:7) #c(1:4,6:8) #c(1:4,6:9) #1:9 # all parameters 1:5 # only update beta parameters
-    res <- mcmc(transform,filter,init_pars,priors,n_particles,n_iters,scaling_factor_start,proposal,pars_min,pars_max,iter0,discrete,u,thinning)
+    res <- mcmc(transform,filter,init_pars,priors,n_particles,n_iters,idx,
+                scaling_factor_start,proposal,pars_min,pars_max,iter0,discrete,
+                u,thinning)
     tend <- Sys.time()
     print(tend - tstart)
     ## Time difference of 26.56045 mins (R 4.0.5)
@@ -595,13 +598,11 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10), ],labels = names(init_pars))
     pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10),u],labels = names(init_pars)[u])
     
-    dimnames(res$states) <- list(names(idx$state)) #dimnames(pmcmc_run$trajectories$state)
-    
     # Plot fitted hospitalisations and deaths against data
-    plot_hosps_age(res$states,data,strt_date+data_raw$day-1,n_age,n_vax,n_strains)
-    plot_deaths_age(res$states,data,strt_date+data_raw$day-1,n_age,n_vax,n_strains)
-    plot_sero(res$states,data,strt_date+data_raw$day-1,population[3:length(population)])
-    plot_cases(res$states,data,strt_date+data_raw$day-1)
+    plot_hosps_age(res$trajectories$state,data,strt_date+data_raw$day-1,n_age,n_vax,n_strains)
+    plot_deaths_age(res$trajectories$state,data,strt_date+data_raw$day-1,n_age,n_vax,n_strains)
+    plot_sero(res$trajectories$state,data,strt_date+data_raw$day-1,population[3:length(population)])
+    plot_cases(res$trajectories$state,data,strt_date+data_raw$day-1)
     
     dev.off()
     

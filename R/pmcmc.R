@@ -1,4 +1,4 @@
-mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,
+mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,idx,
                  scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0,
                  discrete = rep(FALSE,length(curr_pars)),u = seq_along(curr_pars),
                  thinning = 1){
@@ -19,17 +19,21 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,
     curr_lpost <- curr_ll + curr_lprior
     
     # Get sample state
-    particle_idx <- sample.int(n_particles,1)
-    curr_ss <- filter$history(particle_idx)[, , ,drop=T]
+    idx_particle <- sample.int(n_particles,1)
+    curr_state <- filter$state()[,idx_particle]
+    curr_trajectories <- filter$history(idx_particle)[, , ,drop=T]
     
     # Create arrays for storing output
     n_smpls <- round(n_iters/thinning)
     pars_full <- matrix(nrow = n_iters + 1,ncol = n_pars)
     pars <- matrix(nrow = n_smpls + 1,ncol = n_pars)
+    colnames(pars_full) <- colnames(pars) <- names(curr_pars)
     ll <- numeric(n_smpls + 1)
     lprior <- numeric(n_smpls + 1)
     lpost <- numeric(n_smpls + 1)
-    states <- array(dim = c(nrow(curr_ss),n_smpls + 1,ncol(curr_ss)))
+    state <- matrix(nrow = length(curr_state),ncol = n_smpls + 1)
+    trajectories_state <- array(dim = c(nrow(curr_trajectories),n_smpls + 1,ncol(curr_trajectories)))
+    dimnames(trajectories_state) <- list(names(idx$state))
     scaling_factor <- numeric(n_iters + 1)
     
     # Record initial parameter values and log-likelihood 
@@ -38,7 +42,8 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,
     ll[1] <- curr_ll
     lprior[1] <- curr_lprior
     lpost[1] <- curr_lpost
-    states[,1, ] <- curr_ss
+    state[,1] <- curr_state
+    trajectories_state[,1, ] <- curr_trajectories
     
     mean_pars <- curr_pars
     
@@ -66,8 +71,9 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,
             prop_ll <- filter$run(pars = transform_pars,save_history = T)
             prop_lprior <- calc_lprior(pars = prop_pars,priors = priors)
             prop_lpost <- prop_ll + prop_lprior
-            particle_idx <- sample.int(n_particles,1)
-            prop_ss <- filter$history(particle_idx)[, , ,drop=T]
+            idx_particle <- sample.int(n_particles,1)
+            prop_state <- filter$state()[,idx_particle]
+            prop_trajectories <- filter$history(idx_particle)[, , ,drop=T]
             
             log_acc_prob <- min(0,prop_lpost - curr_lpost)
             if (log(runif(1)) < log_acc_prob){
@@ -76,7 +82,8 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,
                 curr_lprior <- prop_lprior
                 curr_ll <- prop_ll
                 curr_lpost <- prop_lpost
-                curr_ss <- prop_ss
+                curr_state <- prop_state
+                curr_trajectories <- prop_trajectories
                 acc <- acc + 1
             }
         } else {
@@ -97,7 +104,8 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,
             ll[smpl+1] <- curr_ll
             lprior[smpl+1] <- curr_lprior
             lpost[smpl+1] <- curr_lpost
-            states[,smpl+1, ] <- curr_ss            
+            state[,smpl+1] <- curr_state
+            trajectories_state[,smpl+1, ] <- curr_trajectories            
         }
         
         # Update empirical covariance matrix
@@ -110,17 +118,25 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,
         }
     }
     
-    res <- list(pars_full = pars_full,
+    probabilities <- cbind(log_prior = lprior,
+                           log_likelihood = ll,
+                           log_posterior = lpost)
+    
+    trajectories <- list(
+        step = as.integer((0:(nlayer(trajectories_state)-1))/transform_pars$dt),
+        rate = as.integer(1/transform_pars$dt),
+        state = trajectories_state,
+        predict = rep(F, nlayer(trajectories_state))
+    )
+    
+    return(list(pars_full = pars_full,
                 pars = pars,
-                ll = ll,
-                lprior = lprior,
-                lpost = lpost,
-                states = states,
+                probabilities = probabilities,
+                state = state,
+                trajectories = trajectories,
                 acc = acc,
                 proposal_matrix = proposal_matrix,
-                scaling_factor = scaling_factor)
-    return(res)
-    
+                scaling_factor = scaling_factor))
 }
 
 # placeholder function
