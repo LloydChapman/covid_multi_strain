@@ -2,23 +2,6 @@
 process_fit <- function(samples,init_pars,idx,n_steps,dt,transform,index,filter,date,
                         beta_date,mean_days_between_doses,schedule,data,
                         burnin = NULL, simulate_object = TRUE){
-    # # Temporary: add names to parameters matrix from MCMC
-    # colnames(samples$pars) <- names(init_pars)
-    # # TODO: add parameter names in MCMC code
-    # # Temporary: add dimnames to state array
-    # dimnames(samples$trajectories$state) <- list(names(idx$state))
-    # # TODO: add dimnames in MCMC code
-    # 
-    # samples <- list()
-    # samples$pars <- res$pars
-    # samples$probabilities <- cbind(log_prior = res$lprior,
-    #                                log_likelihood = res$ll,
-    #                                log_posterior = res$lpost)
-    # samples$state <- rbind(rep(n_steps * dt,ncol(res$states)),res$states[,,nlayer(res$states)])
-    # samples$trajectories <- list(step = as.integer((0:(nlayer(res$states)-1))/dt),
-    #                              rate = as.integer(1/dt),
-    #                              state = res$states,
-    #                              predicted = rep(F,nlayer(res$states)))
     
     info <- covid_multi_strain$new(transform(samples$pars[1,]),step = 0,
                                    n_particles = 1)$info() #filter$model$new(samples$pars[1,],0,1)$info()

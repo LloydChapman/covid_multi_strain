@@ -77,7 +77,5 @@ args <- list(end_date = as.Date(end_date),
              vaccine_booster_daily_doses = vaccine_booster_daily_doses,
              vaccine_booster_eligibility = rep(1,8))
 
-# spim_parameters <- readRDS("~/Downloads/spim_parameters.rds")
-
 # Simulate future scenarios
 ret <- simulate_future_scenario(args,onward1)
