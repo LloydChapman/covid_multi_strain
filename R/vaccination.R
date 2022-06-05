@@ -18,12 +18,58 @@ calculate_rel_param <- function(vax_eff_arr){
     rel_p_hosp_if_sympt[,,1] <- 1
     rel_p_death[,,1] <- 1
     
-    return(list(rel_susceptibility = rel_susceptibility,
-                rel_p_sympt = rel_p_sympt,
-                rel_p_hosp_if_sympt = rel_p_hosp_if_sympt,
-                rel_p_death = rel_p_death,
-                rel_infectivity = rel_infectivity))
+    list(rel_susceptibility = rel_susceptibility, 
+         rel_p_sympt = rel_p_sympt,
+         rel_p_hosp_if_sympt = rel_p_hosp_if_sympt,
+         rel_p_death = rel_p_death,
+         rel_infectivity = rel_infectivity)
 }
+
+
+convert_eff_to_rel_param <- function(vax_eff_long,age_groups){
+    # Convert vaccine efficacy percentage to proportion
+    vax_eff_long[,value := value/100]
+
+    outcomes <- vax_eff_long[,unique(outcome)]
+    vaccines <- vax_eff_long[,unique(vaccine)]
+    doses <- vax_eff_long[,unique(dose)]
+    variants <- vax_eff_long[,unique(variant)]
+    
+    vax_eff_by_age <- CJ(age_group = age_groups, outcome = outcomes, vaccine = vaccines, dose = doses, variant = variants, sorted = F)
+    vax_eff_by_age <- merge(vax_eff_by_age, vax_eff_long, by = c("outcome","vaccine","dose","variant"), all.x = T, sort = F)
+    
+    prop_vax_type <- CJ(vaccine = vaccines,age_group = age_groups)
+    # FOR NOW: Assume all Pfizer based on Mai's comment that most vaccinations were
+    # Pfizer with some Janssen
+    prop_vax_type[,prop := fcase(vaccine == "AZ",0,
+                                 vaccine == "PF/MD",1)]
+    
+    vax_eff_by_age <- merge(vax_eff_by_age, prop_vax_type, by = c("vaccine","age_group"), all.x = T, sort = F)
+    # Average effectiveness according to proportions of vaccine types by age
+    vax_eff_by_age <- vax_eff_by_age[,.(value = sum(value * prop)), by = .(age_group, outcome, dose, variant)]
+    
+    vax_eff_arr <- array(vax_eff_by_age[,value], dim = c(length(variants),length(doses),length(outcomes),length(age_groups)),
+                         dimnames = list(variant = variants, dose = doses, outcome = outcomes, age_group = age_groups))
+    # vax_eff_arr <- array(vax_eff_long$value, dim = vax_eff_long[,sapply(.SD,function(x) length(unique(x))),.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],
+    #                      dimnames = lapply(vax_eff_long[,.SD,.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],function(x) unique(x)))
+    
+    
+    vax_eff_arr <- aperm(vax_eff_arr, c(4,1,2,3))
+    
+    # Calculate relative susceptibility and infectiousness, and conditional 
+    # probabilities of symptoms, hospitalisation and death in different vaccination 
+    # groups according to average vaccine effectiveness for different age groups and 
+    # variants
+    rel_params <- calculate_rel_param(vax_eff_arr)
+    
+    # Mirror parameters for pseudo-strains
+    # strain 3: strain 1 -> strain 2
+    # strain 4: strain 2 -> strain 1
+    rel_params <- lapply(rel_params, mirror_strain)
+    
+    rel_params
+}
+
 
 # build_rel_param <- function(rel_param, n_groups, n_vacc_classes, name_param) {
 #     if (length(rel_param) == 1) {
@@ -451,6 +497,151 @@ vaccine_schedule <- function(date, doses, n_doses = 2L) {
     ret <- list(date = date, doses = doses, n_doses = n_doses)
     class(ret) <- "vaccine_schedule"
     ret
+}
+
+
+##' Create a historical vaccine schedule from data
+##'
+##' @title Create historical vaccine schedule
+##'
+##' @param data A data.frame with columns `date`, `age_band_min`,
+##'   and numbered doses columns, e.g. if there are three doses
+##'   these should be `dose1`, `dose2` and `dose3`. Values of
+##'   `age_band_min` should be either multiples of 10 or NA - the
+##'   latter means those doses are not age-specific and will be
+##'   distributed across all ages according to priority after
+##'   all age-specific doses have already been dealt with
+##'
+##' @param region Region to use to get total population numbers
+##'
+##' @param uptake A matrix of 8 rows, and number of columns equal to
+##'   number of doses. The (i,j)th entry gives the fractional uptake
+##'   of dose j for group i. Should be non-increasing across rows
+##'
+##' @return A [vaccine_schedule] object
+##' @export
+vaccine_schedule_from_data <- function(data, age_start, pop, uptake) {
+    # assert_is(data, "data.frame")
+    dose_cols <- grep("dose[0-9]", names(data), value = TRUE)
+    n_doses <- length(dose_cols)
+    
+    required <- c("age_band_min", "date")
+    msg <- setdiff(required, names(data))
+    if (length(msg) > 0) {
+        stop("Required columns missing from 'data': ",
+             paste(squote(msg), collapse = ", "))
+    }
+    
+    dose_expected <- paste0("dose", seq_len(n_doses))
+    dose_msg <- setdiff(dose_expected, names(data))
+    if (length(dose_msg) > 0) {
+        stop(sprintf("There are %s dose columns so expected dose column names: %s)",
+                     n_doses, paste(squote(dose_expected), collapse = ", ")))
+    }
+    
+    err <- data$age_band_min[!is.na(data$age_band_min)] %% 10 != 0
+    if (any(err)) {
+        stop("Invalid values for data$age_band_min: ",
+             paste(unique(data$age_band_min[err]), collapse = ", "))
+    }
+    
+    if (nrow(uptake) != length(age_start)) {
+        stop(sprintf("Expected uptake to have %s rows as there are %s groups",
+                     length(age_start), length(age_start)))
+    }
+    if (ncol(uptake) != n_doses) {
+        stop(sprintf("Data has %s dose columns so expected uptake to have %s
+                 columns", n_doses, n_doses))
+    }
+    
+    # assert_proportion(uptake)
+    if (any(apply(uptake, 1, diff) > 0)) {
+        stop("Uptake should not increase with dose number for any group")
+    }
+    
+    ## TODO: tidy up later:
+    stopifnot(!is.na(data$date),
+              all(data[, dose_cols] >= 0 | is.na(data[, dose_cols])),
+              all(data[, dose_cols] >= 0 | is.na(data[, dose_cols])))
+    
+    # ## First aggregate all the 70+ into one group
+    data$date <- as_sircovid_date(data$date)
+    data$age_band_min <- pmin(data$age_band_min, 70)
+    data$age_band_min[is.na(data$age_band_min)] <- Inf
+    data <- stats::aggregate(data[dose_cols],
+                             data[c("age_band_min", "date")],
+                             sum)
+    
+    dates <- seq(min(data$date), max(data$date), by = 1)
+    
+    doses <- lapply(dose_cols, function(i)
+        stats::reshape(data[c("date", "age_band_min", i)],
+                       direction = "wide", timevar = "date",
+                       idvar = "age_band_min"))
+    print(sum(doses[[1]][,-1])+sum(doses[[2]][,-1])+sum(doses[[3]][,-1]))
+    for (i in seq_len(n_doses)) {
+        stopifnot(identical(dim(doses[[1]]), dim(doses[[i]])))
+    }
+    
+    i_agg <- which(doses[[1]]$age_band_min == Inf)
+    j <- match(dates, sub("^dose[12]\\.", "", names(doses[[1]])))
+    
+    agg_doses <- array(
+        unlist(lapply(doses, function(d) unname(as.matrix(d)[i_agg, j]))),
+        c(length(dates), n_doses))
+    agg_doses <- aperm(agg_doses, c(2, 1))
+    agg_doses[is.na(agg_doses)] <- 0
+    
+    ## TODO: add a test for missing days
+    i <- match(age_start, doses[[1]]$age_band_min)
+    
+    doses <- array(
+        unlist(lapply(doses, function(d) unname(as.matrix(d)[i, j]))),
+        c(length(age_start), length(dates), n_doses))
+    doses <- aperm(doses, c(1, 3, 2))
+    doses[is.na(doses)] <- 0
+    print(sum(doses))
+    
+    ## We have 19 groups, 12 priority groups
+    priority_population <-
+        vapply(seq_len(n_doses),
+               function(j) vaccine_priority_population(pop, uptake[, j]),
+               array(0, c(8, 4)))
+    
+    ## Now distribute age-aggregated doses (if any) and add in
+    if (any(agg_doses > 0)) {
+        population_left <- priority_population
+        doses_given <- apply(doses, c(1, 2), sum)
+        
+        for (j in seq_len(dim(priority_population)[2])) {
+            vaccinated <- pmin(population_left[, j, ], doses_given)
+            population_left[, j, ] <- population_left[, j, ] - vaccinated
+            doses_given <- doses_given - vaccinated
+        }
+        
+        n_groups <- dim(population_left)[1]
+        n_priority_groups <- dim(population_left)[2]
+        n_doses <- dim(population_left)[3]
+        n_days <- dim(agg_doses)[2]
+        
+        population_to_vaccinate_mat <- array(0, c(n_groups, n_priority_groups,
+                                                  n_doses, n_days))
+        daily_doses_tt <- array(0, dim(agg_doses))
+        
+        f <- function(dose) {
+            vaccination_schedule_exec(daily_doses_tt, agg_doses[dose, ],
+                                      population_left,
+                                      population_to_vaccinate_mat,
+                                      Inf,
+                                      0L, dose)
+        }
+        
+        doses <- doses +
+            apply(Reduce("+", lapply(seq_len(n_doses), f)), c(1, 3, 4), sum)
+    }
+    
+    
+    vaccine_schedule(dates[[1]], doses, n_doses)
 }
 
 
