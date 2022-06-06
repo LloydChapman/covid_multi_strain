@@ -110,7 +110,7 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,idx,
         
         # Update empirical covariance matrix
         tmp <- update_mean_and_cov_Spencer(mean_pars,proposal_matrix,pars_full,iter,iter0,ncol(pars))
-        pars_mean <- tmp$mean_new
+        mean_pars <- tmp$mean_new
         proposal_matrix <- tmp$cov_new
         
         if (iter %% 100 == 0){
