@@ -55,56 +55,66 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     vax_eff_long <- melt(vax_eff,measure.vars = c("alpha","delta","omicron"),variable.name = "variant")
     
     # FOR NOW: Drop Omicron vax effectiveness
+    vax_eff_long1 <- vax_eff_long[variant != "alpha"]
     vax_eff_long <- vax_eff_long[variant != "omicron"]
     
-    # Convert vaccine efficacy to proportion
-    vax_eff_long[,value := value/100]
-    # vax_eff_long[,class := fcase(dose == 1, 1,
-    #                              dose == 2, 2,
-    #                              dose == "Waned",3,
-    #                              dose == "Booster",4)]
-    # vax_eff_long[,strain := fcase(variant == "alpha", 1,
-    #                               variant == "delta", 2)]
+    # # Convert vaccine efficacy to proportion
+    # vax_eff_long[,value := value/100]
+    # # vax_eff_long[,class := fcase(dose == 1, 1,
+    # #                              dose == 2, 2,
+    # #                              dose == "Waned",3,
+    # #                              dose == "Booster",4)]
+    # # vax_eff_long[,strain := fcase(variant == "alpha", 1,
+    # #                               variant == "delta", 2)]
+    # # 
+    # # # Cast to wide format
+    # # vax_eff_wide <- dcast(vax_eff_long[outcome=="infection" & vaccine=="AZ"],strain ~ class,value.var = "value")
     # 
-    # # Cast to wide format
-    # vax_eff_wide <- dcast(vax_eff_long[outcome=="infection" & vaccine=="AZ"],strain ~ class,value.var = "value")
-    
-    outcomes <- vax_eff_long[,unique(outcome)]
-    vaccines <- vax_eff_long[,unique(vaccine)]
-    doses <- vax_eff_long[,unique(dose)]
-    variants <- vax_eff_long[,unique(variant)]
-    
-    vax_eff_by_age <- CJ(age_group = age_groups, outcome = outcomes, vaccine = vaccines, dose = doses, variant = variants, sorted = F)
-    vax_eff_by_age <- merge(vax_eff_by_age, vax_eff_long, by = c("outcome","vaccine","dose","variant"), all.x = T, sort = F)
-    
-    prop_vax_type <- CJ(vaccine = vaccines,age_group = age_groups)
-    # FOR NOW: Assume all Pfizer based on Mai's comment that most vaccinations were
-    # Pfizer with some Janssen
-    prop_vax_type[,prop := fcase(vaccine == "AZ",0,
-                                 vaccine == "PF/MD",1)]
-    
-    vax_eff_by_age <- merge(vax_eff_by_age, prop_vax_type, by = c("vaccine","age_group"), all.x = T, sort = F)
-    # Average effectiveness according to proportions of vaccine types by age
-    vax_eff_by_age <- vax_eff_by_age[,.(value = sum(value * prop)), by = .(age_group, outcome, dose, variant)]
-    
-    vax_eff_arr <- array(vax_eff_by_age[,value], dim = c(length(variants),length(doses),length(outcomes),length(age_groups)),
-                         dimnames = list(variant = variants, dose = doses, outcome = outcomes, age_group = age_groups))
-    # vax_eff_arr <- array(vax_eff_long$value, dim = vax_eff_long[,sapply(.SD,function(x) length(unique(x))),.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],
-    #                      dimnames = lapply(vax_eff_long[,.SD,.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],function(x) unique(x)))
-    
-    
-    vax_eff_arr <- aperm(vax_eff_arr, c(4,1,2,3))
+    # outcomes <- vax_eff_long[,unique(outcome)]
+    # vaccines <- vax_eff_long[,unique(vaccine)]
+    # doses <- vax_eff_long[,unique(dose)]
+    # variants <- vax_eff_long[,unique(variant)]
+    # 
+    # vax_eff_by_age <- CJ(age_group = age_groups, outcome = outcomes, vaccine = vaccines, dose = doses, variant = variants, sorted = F)
+    # vax_eff_by_age <- merge(vax_eff_by_age, vax_eff_long, by = c("outcome","vaccine","dose","variant"), all.x = T, sort = F)
+    # 
+    # prop_vax_type <- CJ(vaccine = vaccines,age_group = age_groups)
+    # # FOR NOW: Assume all Pfizer based on Mai's comment that most vaccinations were
+    # # Pfizer with some Janssen
+    # prop_vax_type[,prop := fcase(vaccine == "AZ",0,
+    #                              vaccine == "PF/MD",1)]
+    # 
+    # vax_eff_by_age <- merge(vax_eff_by_age, prop_vax_type, by = c("vaccine","age_group"), all.x = T, sort = F)
+    # # Average effectiveness according to proportions of vaccine types by age
+    # vax_eff_by_age <- vax_eff_by_age[,.(value = sum(value * prop)), by = .(age_group, outcome, dose, variant)]
+    # 
+    # vax_eff_arr <- array(vax_eff_by_age[,value], dim = c(length(variants),length(doses),length(outcomes),length(age_groups)),
+    #                      dimnames = list(variant = variants, dose = doses, outcome = outcomes, age_group = age_groups))
+    # # vax_eff_arr <- array(vax_eff_long$value, dim = vax_eff_long[,sapply(.SD,function(x) length(unique(x))),.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],
+    # #                      dimnames = lapply(vax_eff_long[,.SD,.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],function(x) unique(x)))
+    # 
+    # 
+    # vax_eff_arr <- aperm(vax_eff_arr, c(4,1,2,3))
+    # 
+    # # Calculate relative susceptibility and infectiousness, and conditional 
+    # # probabilities of symptoms, hospitalisation and death in different vaccination 
+    # # groups according to average vaccine effectiveness for different age groups and 
+    # # variants
+    # rel_params <- calculate_rel_param(vax_eff_arr)
+    # 
+    # # Mirror parameters for pseudo-strains
+    # # strain 3: strain 1 -> strain 2
+    # # strain 4: strain 2 -> strain 1
+    # rel_params <- lapply(rel_params, mirror_strain)
     
     # Calculate relative susceptibility and infectiousness, and conditional 
     # probabilities of symptoms, hospitalisation and death in different vaccination 
     # groups according to average vaccine effectiveness for different age groups and 
     # variants
-    rel_params <- calculate_rel_param(vax_eff_arr)
-    
-    # Mirror parameters for pseudo-strains
-    # strain 3: strain 1 -> strain 2
-    # strain 4: strain 2 -> strain 1
-    rel_params <- lapply(rel_params, mirror_strain)
+    # Delta relative to WT/Alpha
+    rel_params <- convert_eff_to_rel_param(vax_eff_long,age_groups)
+    # Omicron relative to Delta
+    rel_params1 <- convert_eff_to_rel_param(vax_eff_long1,age_groups)
     
     # Extract individual parameters
     rel_susceptibility <- rel_params$rel_susceptibility
@@ -112,6 +122,12 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     rel_p_hosp_if_sympt <- rel_params$rel_p_hosp_if_sympt
     rel_p_death <- rel_params$rel_p_death
     rel_infectivity <- rel_params$rel_infectivity
+    
+    rel_susceptibility1 <- rel_params1$rel_susceptibility
+    rel_p_sympt1 <- rel_params1$rel_p_sympt
+    rel_p_hosp_if_sympt1 <- rel_params1$rel_p_hosp_if_sympt
+    rel_p_death1 <- rel_params1$rel_p_death
+    rel_infectivity1 <- rel_params1$rel_infectivity
     
     # Generate model
     dt <- 0.25
@@ -161,8 +177,12 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     
     # Relative probabilities of symptoms, hospitalisation and death for different strains
     strain_rel_p_sympt <- 1
-    strain_rel_p_hosp_if_sympt <- 1
+    strain_rel_p_hosp_if_sympt <- c(1,1.85) #1 #
     strain_rel_p_death <- 1
+    
+    strain_rel_p_sympt1 <- 1
+    strain_rel_p_hosp_if_sympt1 <- c(1,strain_rel_p_hosp_if_sympt[2]*0.3) #c(1,1.85*0.3) #
+    strain_rel_p_death1 <- 1
     
     # # Parameters for impact of vaccination on susceptibility and infectiousness
     # rel_susceptibility <- c(1,0.8,0.5,0.8,0.5) # relative susceptibility to infection in each vaccine stratum
@@ -240,62 +260,67 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     points(beta_date, beta_value_sim, pch = 19, col = "red")
     
     # Number of steps in 1st epoch
-    n_steps <- max(data_raw$day)/dt
+    n_steps <- 500/dt
     
-    # # Parameters for 2nd epoch (in which new strain is introduced)
-    # # relative transmissibility of strain 3 is 4 times that of strain 1
-    # strain_transmission1 <- c(1,4)
-    # # lower cross-immunity from previous infection with strains 1 or 2, but can't be
-    # # infected with strains 1 or 2 after being infected with strain 3
-    # cross_immunity1 <- c(0.2,1) 
-    # p1 <- parameters(dt,
-    #                  n_age,
-    #                  n_vax,
-    #                  transmission,
-    #                  beta_date,
-    #                  beta_value = beta_value_sim,
-    #                  beta_type,
-    #                  gamma_E,
-    #                  gamma_P = 0.4,
-    #                  gamma_A,
-    #                  gamma_C = 0.4,
-    #                  gamma_H,
-    #                  gamma_G,
-    #                  gamma_pre_1,
-    #                  gamma_P_1,
-    #                  theta_A,
-    #                  p_C,
-    #                  p_H,
-    #                  p_G,
-    #                  p_D,
-    #                  population,
-    #                  start_date = n_steps*dt,
-    #                  initial_seed_size = 0,
-    #                  initial_seed_pattern,
-    #                  strain_transmission1,
-    #                  strain_seed_date = 210L,
-    #                  strain_seed_size,
-    #                  strain_seed_pattern,
-    #                  strain_rel_p_sympt,
-    #                  strain_rel_p_hosp_if_sympt,
-    #                  strain_rel_p_death,
-    #                  rel_susceptibility,
-    #                  rel_p_sympt,
-    #                  rel_p_hosp_if_sympt,
-    #                  rel_p_death,
-    #                  rel_infectivity,
-    #                  vaccine_progression_rate,
-    #                  schedule,
-    #                  vaccine_index_dose2,
-    #                  vaccine_index_booster,
-    #                  vaccine_catchup_fraction,
-    #                  n_doses,
-    #                  waning_rate,
-    #                  cross_immunity,
-    #                  sero_sensitivity_1,
-    #                  sero_specificity_1)
-    # 
-    # n_steps1 <- 1200 # number of steps to run model up to
+    # Parameters for 2nd epoch (in which new strain is introduced)
+    # relative transmissibility of strain 3 is 4 times that of strain 1 
+    # (which is combined with strain 2 in model in 2nd epoch as strain 1, and 
+    # strain 3 becomes strain 2)
+    # rel_strain_transmission1 <- 4
+    # lower cross-immunity from previous infection with strains 1 or 2, but can't be
+    # infected with strains 1 or 2 after being infected with strain 3
+    cross_immunity1 <- c(0.55,1) #c(0.2,1) #
+    p1 <- parameters(dt,
+                     n_age,
+                     n_vax,
+                     transmission,
+                     beta_date,
+                     beta_value = beta_value_sim,
+                     beta_type,
+                     gamma_E,
+                     gamma_P,
+                     gamma_A,
+                     gamma_C,
+                     gamma_H,
+                     gamma_G,
+                     gamma_pre_1,
+                     gamma_P_1,
+                     theta_A,
+                     p_C,
+                     # p_H,
+                     p_H_max0*p_H,
+                     p_G,
+                     # p_D,
+                     p_D_max0*p_D,
+                     p_P_1,
+                     population,
+                     start_date = n_steps*dt,
+                     initial_seed_size = 0,
+                     initial_seed_pattern,
+                     c(2,4),
+                     strain_seed_date = 510L,
+                     strain_seed_size,
+                     strain_seed_pattern,
+                     strain_rel_p_sympt1,
+                     strain_rel_p_hosp_if_sympt1,
+                     strain_rel_p_death1,
+                     rel_susceptibility1,
+                     rel_p_sympt1,
+                     rel_p_hosp_if_sympt1,
+                     rel_p_death1,
+                     rel_infectivity1,
+                     vaccine_progression_rate,
+                     schedule,
+                     vaccine_index_dose2,
+                     vaccine_index_booster,
+                     vaccine_catchup_fraction,
+                     n_doses,
+                     waning_rate,
+                     cross_immunity1,
+                     sero_sensitivity_1,
+                     sero_specificity_1)
+
+    n_steps1 <- max(data_raw$day)/dt # number of steps to run model up to
     
     
     
@@ -303,7 +328,8 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     
     
     # out <- simulate(gen_seirhd_age_vax_multistrain_sero_time_dep_beta, p, n_steps)
-    out <- simulate(covid_multi_strain, p, n_steps, deterministic)
+    out <- simulate(covid_multi_strain, p, n_steps, deterministic,
+                    p1 = p1, n_steps1 = n_steps1, transform = rotate_strains)
     
     # # Drop time row
     # x <- out$x
@@ -312,11 +338,11 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # 
     # n_strains <- 4
     # 
-    # # Plot trajectories
-    # plot_trajectories(time,x,n_age,n_strains,n_vax)
+    # # # Plot trajectories
+    # # plot_trajectories(time,x,n_age,n_strains,n_vax)
     # 
     # # Extract true history of model states
-    # true_history <- x[ , ,seq(0,n_steps+1,by=1/dt)+1,drop=F]
+    # true_history <- x[ , ,seq(0,n_steps1+1,by=1/dt)+1,drop=F]
     
     # Add noise to simulated data
     info <- out$info
@@ -328,7 +354,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # cases_non_variant <- matrix(true_history[idx$state[grep("cases_non_variant",names(idx$state))]-1, ,-1],nrow = 1)
     # 
     # par(mfrow = c(1,1))
-    # days <- seq(1,n_steps*dt)
+    # days <- seq(1,n_steps1*dt)
     # matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
     # matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")
     # matplot(days,t(sero_pos),type="l",xlab="Day",ylab="Seropositive")
@@ -348,6 +374,11 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # data_raw <- data_raw[1:250,]
     # data <- data[1:250,]
     
+    # Create multistage parameters object
+    epochs <- list(
+        multistage_epoch(n_steps*dt, pars = p1, transform_state = transform_state))
+    pars <- multistage_parameters(p,epochs)
+    
     # Create particle filter object
     # filter <- particle_filter$new(data, gen_seirhd_age_vax_multistrain_sero_time_dep_beta, n_particles, 
     #                               compare, index, initial)
@@ -363,16 +394,18 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     
     # tstart <- Sys.time()
     filter$run(
-        pars = p,
+        pars = pars,
         save_history = TRUE)
     # tend <- Sys.time()
     # print(tend - tstart)
     
     # # Plot filtered trajectories
+    # dates <- sircovid_date_as_date(data_raw$day)
     # # plot_particle_filter(filter$history(),true_history,data_raw$day,idx)
-    # plot_hosps_and_deaths_age(filter$history(),data,data_raw$day,n_age,n_vax,n_strains)
-    # plot_sero(filter$history(),data,data_raw$day,population[3:length(population)])
-    # plot_cases(filter$history(),data,data_raw$day)
+    # plot_hosps_age(filter$history(),data,dates,n_age,n_vax,n_strains)
+    # plot_deaths_age(filter$history(),data,dates,n_age,n_vax,n_strains)
+    # plot_sero(filter$history(),data,dates,population[3:length(population)])
+    # plot_cases(filter$history(),data,dates)
     
     # Infer parameters by pMCMC
     # beta_value_list <- list(name = c("beta1","beta2","beta3","beta4","beta5"), initial = c(0.035,0.025,0.02,0.04,0.02),
@@ -394,9 +427,9 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # R0 <- pmcmc_parameter("R0",2,min = 0)
     # gamma <- pmcmc_parameter("gamma",0.4,min = 0,
     #                          prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
-    rel_strain_transmission <- pmcmc_parameter("rel_strain_transmission",2.5,min = 0, max = 4)
-    start_date <- pmcmc_parameter("start_date",1L,min = 1L,max = 10L)
-    strain_seed_date <- pmcmc_parameter("strain_seed_date",330L,min = 305L,max = 345L)
+    rel_strain_transmission <- pmcmc_parameter("rel_strain_transmission",2.5,min = 0.25, max = 4)
+    start_date <- pmcmc_parameter("start_date",1,min = 1,max = 10)
+    strain_seed_date <- pmcmc_parameter("strain_seed_date",330,min = 305,max = 345)
     p_H_max <- pmcmc_parameter("p_H_max",p_H_max0/2,min = 0,max = 1,
                                prior = function(x) dbeta(x, 1, 1, log = TRUE)
                                # prior = function(x) dbeta(x, 10, 30, log = TRUE),
@@ -404,7 +437,8 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
                                )
     p_D_max <- pmcmc_parameter("p_D_max",p_D_max0,min = 0,max = 1,
                                prior = function(x) dbeta(x, 1, 1, log = TRUE))
-    # strain_seed_date1 <- pmcmc_parameter("strain_seed_date1",200L,min = 200L,max = 250L)
+    rel_strain_transmission1 <- pmcmc_parameter("rel_strain_transmission1",5,min = 2, max = 6)
+    strain_seed_date1 <- pmcmc_parameter("strain_seed_date1",505,min = 500,max = 512)
     
     # proposal <- matrix(c(0.01^2,0,0,0.01^2),nrow = 2,ncol = 2,byrow = TRUE)
     # proposal <- matrix(c(0.01^2,0,0,0,0.01^2,0,0,0,2),nrow = 3,ncol = 3,byrow = TRUE)
@@ -418,103 +452,113 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     #                      0,0,0,2,0,
     #                      0,0,0,0,2),nrow = 5,ncol = 5,byrow = TRUE)
     # proposal <- diag(c(rep(1e-7,length(beta_value)),0.1^2,rep(2^2,2)))
-    proposal <- 0.1*diag(c(rep(1e-7,length(beta_value)),0.1^2,rep(2^2,2),rep(1e-5,2)))
-    transform <- make_transform(dt,
-                                n_age,
-                                n_vax,
-                                transmission,
-                                beta_date,
-                                beta_type,
-                                gamma_E,
-                                gamma_P,
-                                gamma_A,
-                                gamma_C,
-                                gamma_H,
-                                gamma_G,
-                                gamma_pre_1,
-                                gamma_P_1,
-                                theta_A,
-                                p_C,
-                                p_H,
-                                p_G,
-                                p_D,
-                                p_P_1,
-                                population,
-                                # start_date,
-                                initial_seed_size,
-                                initial_seed_pattern,
-                                # strain_transmission,
-                                # strain_seed_date,
-                                strain_seed_size,
-                                strain_seed_pattern,
-                                strain_rel_p_sympt,
-                                strain_rel_p_hosp_if_sympt,
-                                strain_rel_p_death,
-                                rel_susceptibility,
-                                rel_p_sympt,
-                                rel_p_hosp_if_sympt,
-                                rel_p_death,
-                                rel_infectivity,
-                                vaccine_progression_rate,
-                                schedule,
-                                vaccine_index_dose2,
-                                vaccine_index_booster,
-                                vaccine_catchup_fraction,
-                                n_doses,
-                                waning_rate,
-                                cross_immunity,
-                                sero_sensitivity_1,
-                                sero_specificity_1)
+    proposal <- 0.1*diag(c(rep(1e-7,length(beta_value)),0.1^2,rep(2^2,2),rep(1e-5,2),0.1^2,2^2))
+    # transform <- make_transform(dt,
+    #                             n_age,
+    #                             n_vax,
+    #                             transmission,
+    #                             beta_date,
+    #                             beta_type,
+    #                             gamma_E,
+    #                             gamma_P,
+    #                             gamma_A,
+    #                             gamma_C,
+    #                             gamma_H,
+    #                             gamma_G,
+    #                             gamma_pre_1,
+    #                             gamma_P_1,
+    #                             theta_A,
+    #                             p_C,
+    #                             p_H,
+    #                             p_G,
+    #                             p_D,
+    #                             p_P_1,
+    #                             population,
+    #                             # start_date,
+    #                             initial_seed_size,
+    #                             initial_seed_pattern,
+    #                             # strain_transmission,
+    #                             # strain_seed_date,
+    #                             strain_seed_size,
+    #                             strain_seed_pattern,
+    #                             strain_rel_p_sympt,
+    #                             strain_rel_p_hosp_if_sympt,
+    #                             strain_rel_p_death,
+    #                             rel_susceptibility,
+    #                             rel_p_sympt,
+    #                             rel_p_hosp_if_sympt,
+    #                             rel_p_death,
+    #                             rel_infectivity,
+    #                             vaccine_progression_rate,
+    #                             schedule,
+    #                             vaccine_index_dose2,
+    #                             vaccine_index_booster,
+    #                             vaccine_catchup_fraction,
+    #                             n_doses,
+    #                             waning_rate,
+    #                             cross_immunity,
+    #                             sero_sensitivity_1,
+    #                             sero_specificity_1)
     # pars_mcmc <- c(beta_value,
     #                list(rel_strain_transmission = rel_strain_transmission,
     #                     start_date = start_date,
     #                     strain_seed_date = strain_seed_date))
-    # # transform <- make_transform_multistage(dt,
-    # #                                        n_age,
-    # #                                        n_vax,
-    # #                                        transmission,
-    # #                                        beta_date,
-    # #                                        beta_type,
-    # #                                        gamma_E,
-    # #                                        gamma_A,
-    # #                                        gamma_H,
-    # #                                        gamma_G,
-    # #                                        gamma_pre_1,
-    # #                                        gamma_P_1,
-    # #                                        theta_A,
-    # #                                        p_C,
-    # #                                        p_H,
-    # #                                        p_G,
-    # #                                        p_D,
-    # #                                        population,
-    # #                                        # start_date,
-    # #                                        initial_seed_size,
-    # #                                        initial_seed_pattern,
-    # #                                        # strain_transmission,
-    # #                                        # strain_seed_date,
-    # #                                        strain_seed_size,
-    # #                                        strain_seed_pattern,
-    # #                                        strain_rel_p_sympt,
-    # #                                        strain_rel_p_hosp_if_sympt,
-    # #                                        strain_rel_p_death,
-    # #                                        rel_susceptibility,
-    # #                                        rel_p_sympt,
-    # #                                        rel_p_hosp_if_sympt,
-    # #                                        rel_p_death,
-    # #                                        rel_infectivity,
-    # #                                        vaccine_progression_rate,
-    # #                                        schedule,
-    # #                                        vaccine_index_dose2,
-    # #                                        vaccine_index_booster,
-    # #                                        vaccine_catchup_fraction,
-    # #                                        n_doses,
-    # #                                        waning_rate,
-    # #                                        cross_immunity,
-    # #                                        start_date1 = n_steps * dt,
-    # #                                        strain_transmission1,
-    # #                                        cross_immunity1,
-    # #                                        sero_sensitivity_1,
-    # #                                        sero_specificity_1)
+    transform <- make_transform_multistage(dt,
+                                           n_age,
+                                           n_vax,
+                                           transmission,
+                                           beta_date,
+                                           beta_type,
+                                           gamma_E,
+                                           gamma_P,
+                                           gamma_A,
+                                           gamma_C,
+                                           gamma_H,
+                                           gamma_G,
+                                           gamma_pre_1,
+                                           gamma_P_1,
+                                           theta_A,
+                                           p_C,
+                                           p_H,
+                                           p_G,
+                                           p_D,
+                                           p_P_1,
+                                           population,
+                                           # start_date,
+                                           initial_seed_size,
+                                           initial_seed_pattern,
+                                           # strain_transmission,
+                                           # strain_seed_date,
+                                           strain_seed_size,
+                                           strain_seed_pattern,
+                                           strain_rel_p_sympt,
+                                           strain_rel_p_hosp_if_sympt,
+                                           strain_rel_p_death,
+                                           rel_susceptibility,
+                                           rel_p_sympt,
+                                           rel_p_hosp_if_sympt,
+                                           rel_p_death,
+                                           rel_infectivity,
+                                           vaccine_progression_rate,
+                                           schedule,
+                                           vaccine_index_dose2,
+                                           vaccine_index_booster,
+                                           vaccine_catchup_fraction,
+                                           n_doses,
+                                           waning_rate,
+                                           cross_immunity,
+                                           start_date1 = n_steps * dt,
+                                           strain_rel_p_sympt1,
+                                           strain_rel_p_hosp_if_sympt1,
+                                           strain_rel_p_death1,
+                                           rel_susceptibility1,
+                                           rel_p_sympt1,
+                                           rel_p_hosp_if_sympt1,
+                                           rel_p_death1,
+                                           rel_infectivity1,
+                                           cross_immunity1,
+                                           sero_sensitivity_1,
+                                           sero_specificity_1)
     # # pars_mcmc <- c(beta_value,
     # #                list(gamma = gamma,
     # #                     start_date = start_date,
@@ -550,20 +594,21 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # Using custom accelerated adaptive MCMC algorithm
     # init_pars <- c(beta_value_list$initial,rel_strain_transmission$initial,start_date$initial,strain_seed_date$initial)
     # priors <- c(beta_value_list$prior,rel_strain_transmission$prior,replicate(2,function(x) 0))
-    init_pars <- c(beta_value_list$initial,rel_strain_transmission$initial,start_date$initial,strain_seed_date$initial,p_H_max$initial,p_D_max$initial)
-    priors <- c(beta_value_list$prior,rel_strain_transmission$prior,replicate(2,function(x) 0),p_H_max$prior,p_D_max$prior)
+    init_pars <- c(beta_value_list$initial,rel_strain_transmission$initial,start_date$initial,strain_seed_date$initial,p_H_max$initial,p_D_max$initial,rel_strain_transmission1$initial,strain_seed_date1$initial)
+    priors <- c(beta_value_list$prior,rel_strain_transmission$prior,start_date$prior,strain_seed_date$prior,p_H_max$prior,p_D_max$prior,rel_strain_transmission1$prior,strain_seed_date1$prior)
     # n_iters <- 100 #100
     scaling_factor_start <- 1
     # pars_min <- c(beta_value_list$min,rel_strain_transmission$min,start_date$min,strain_seed_date$min)
     # pars_max <- c(beta_value_list$max,rel_strain_transmission$max,start_date$max,strain_seed_date$max)
-    pars_min <- c(beta_value_list$min,rel_strain_transmission$min,start_date$min,strain_seed_date$min,p_H_max$min,p_D_max$min)
-    pars_max <- c(beta_value_list$max,rel_strain_transmission$max,start_date$max,strain_seed_date$max,p_H_max$max,p_D_max$max)
+    pars_min <- c(beta_value_list$min,rel_strain_transmission$min,start_date$min,strain_seed_date$min,p_H_max$min,p_D_max$min,rel_strain_transmission1$min,strain_seed_date1$min)
+    pars_max <- c(beta_value_list$max,rel_strain_transmission$max,start_date$max,strain_seed_date$max,p_H_max$max,p_D_max$max,rel_strain_transmission1$max,strain_seed_date1$max)
     iter0 <- 100 #10
     # discrete <- c(rep(F,length(beta_value)+1),rep(T,2))
-    discrete <- c(rep(F,length(beta_value)+1),rep(T,2),rep(F,2))
+    # discrete <- c(rep(F,length(beta_value)+1),rep(T,2),rep(F,2))
+    discrete <- c(rep(F,length(init_pars)))
     # names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date")
     names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- 
-        c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date","p_H_max","p_D_max")
+        c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date","p_H_max","p_D_max","rel_strain_transmission1","strain_seed_date1")
     
     tstart <- Sys.time()
     # u <- 1:8 # all parameters 1:5 # only update beta parameters
@@ -580,10 +625,10 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     save(list = ls(all.names = T), file = paste0("output/MCMCoutput",run,".RData"), envir = environment())
     
     # Trace plots
-    par(mfrow = c(ceiling(length(init_pars)/2),2))
-    for (i in seq_along(init_pars)){
-        plot(res$pars[,i],type = "l",xlab = "Iteration",ylab = names(init_pars)[i])
-    }
+    # par(mfrow = c(ceiling(length(init_pars)/2),2))
+    # for (i in seq_along(init_pars)){
+    #     plot(res$pars[,i],type = "l",xlab = "Iteration",ylab = names(init_pars)[i])
+    # }
     par(mfrow = c(ceiling(length(u)/2),2))
     for (i in u){
         plot(res$pars[,i],type = "l",xlab = "Iteration",ylab = names(init_pars)[i])
@@ -595,14 +640,14 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     
     par(mfrow = c(1,1))
     n_smpls <- round(n_iters/thinning)
-    pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10), ],labels = names(init_pars))
+    # pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10), ],labels = names(init_pars))
     pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10),u],labels = names(init_pars)[u])
     
     # Plot fitted hospitalisations and deaths against data
-    plot_hosps_age(res$trajectories$state,data,strt_date+data_raw$day-1,n_age,n_vax,n_strains)
-    plot_deaths_age(res$trajectories$state,data,strt_date+data_raw$day-1,n_age,n_vax,n_strains)
-    plot_sero(res$trajectories$state,data,strt_date+data_raw$day-1,population[3:length(population)])
-    plot_cases(res$trajectories$state,data,strt_date+data_raw$day-1)
+    plot_hosps_age(res$trajectories$state,data,dates,n_age,n_vax,n_strains)
+    plot_deaths_age(res$trajectories$state,data,dates,n_age,n_vax,n_strains)
+    plot_sero(res$trajectories$state,data,dates,population[3:length(population)])
+    plot_cases(res$trajectories$state,data,dates)
     
     dev.off()
     

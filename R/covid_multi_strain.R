@@ -743,8 +743,8 @@ compare <- function(state, observed, pars){
     # ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
     # ll_hosps_70_plus + ll_deaths_70_plus
     # ll_hosps + ll_deaths + ll_sero_pos_1 + ll_strain +
-    0.1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
-        0.1*(ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus) + 
+    1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
+        1*(ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus) + 
         ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus
 }
 
@@ -945,7 +945,14 @@ make_transform_multistage <- function(dt,
                                       waning_rate,
                                       cross_immunity,
                                       start_date1,
-                                      strain_transmission1,
+                                      strain_rel_p_sympt1,
+                                      strain_rel_p_hosp_if_sympt1,
+                                      strain_rel_p_death1,
+                                      rel_susceptibility1,
+                                      rel_p_sympt1,
+                                      rel_p_hosp_if_sympt1,
+                                      rel_p_death1,
+                                      rel_infectivity1,
                                       cross_immunity1,
                                       sero_sensitivity_1,
                                       sero_specificity_1){
@@ -958,6 +965,9 @@ make_transform_multistage <- function(dt,
         start_date <- pars[["start_date"]]
         rel_strain_transmission <- pars[["rel_strain_transmission"]]
         strain_seed_date <- pars[["strain_seed_date"]]
+        p_H_max <- pars[["p_H_max"]]
+        p_D_max <- pars[["p_D_max"]]
+        rel_strain_transmission1 <- pars[["rel_strain_transmission1"]]
         strain_seed_date1 <- pars[["strain_seed_date1"]]
         
         # Parameters for 1st epoch
@@ -978,9 +988,11 @@ make_transform_multistage <- function(dt,
                         gamma_P_1,
                         theta_A,
                         p_C,
-                        p_H,
+                        # p_H,
+                        p_H_max*p_H,
                         p_G,
-                        p_D,
+                        # p_D,
+                        p_D_max*p_D,
                         p_P_1,
                         population,
                         start_date = start_date,
@@ -1027,26 +1039,28 @@ make_transform_multistage <- function(dt,
                          gamma_P_1,
                          theta_A,
                          p_C,
-                         p_H,
+                         # p_H,
+                         p_H_max*p_H,
                          p_G,
-                         p_D,
+                         # p_D,
+                         p_D_max*p_D,
                          p_P_1,
                          population,
                          start_date = start_date1,
                          initial_seed_size = 0,
                          initial_seed_pattern,
-                         strain_transmission = strain_transmission1,
+                         strain_transmission = c(rel_strain_transmission,rel_strain_transmission1),
                          strain_seed_date = strain_seed_date1,
                          strain_seed_size,
                          strain_seed_pattern,
-                         strain_rel_p_sympt,
-                         strain_rel_p_hosp_if_sympt,
-                         strain_rel_p_death,
-                         rel_susceptibility,
-                         rel_p_sympt,
-                         rel_p_hosp_if_sympt,
-                         rel_p_death,
-                         rel_infectivity,
+                         strain_rel_p_sympt1,
+                         strain_rel_p_hosp_if_sympt1,
+                         strain_rel_p_death1,
+                         rel_susceptibility1,
+                         rel_p_sympt1,
+                         rel_p_hosp_if_sympt1,
+                         rel_p_death1,
+                         rel_infectivity1,
                          vaccine_progression_rate,
                          schedule,
                          vaccine_index_dose2,
@@ -1054,7 +1068,7 @@ make_transform_multistage <- function(dt,
                          vaccine_catchup_fraction,
                          n_doses,
                          waning_rate,
-                         cross_immunity,
+                         cross_immunity1,
                          sero_sensitivity_1,
                          sero_specificity_1)
         
@@ -1071,33 +1085,48 @@ make_transform_multistage <- function(dt,
 plot_hosps_age <- function(incidence_modelled, incidence_observed, times, n_age, n_vax, n_strains){
     nms <- dimnames(incidence_modelled)[[1]]
     idx_hosps <- grep("hosps_",nms)
-    idx_deaths <- grep("deaths_",nms)
-    idx_plot <- seq(10,ncol(incidence_modelled),by=10)
+    if (ncol(incidence_modelled)>1){
+        idx_plot <- seq(10,ncol(incidence_modelled),by=10)    
+    } else {
+        idx_plot <- 1
+    }
     dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
     par(mfrow = c(5,1), oma=c(2,3,0,0))
     for (i in seq_along(idx_hosps)){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[idx_hosps[1]-1+i,idx_plot,-1]),
+        if (ncol(incidence_modelled)>1){
+            y <- t(incidence_modelled[idx_hosps[1]-1+i,idx_plot,-1])
+        } else {
+            y <- incidence_modelled[idx_hosps[1]-1+i,idx_plot,-1]
+        }
+        matplot(times, y,
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",xaxt = "n",#yaxt = "n",
                 ylim = c(0,max(max(incidence_observed[,5:9]),max(incidence_modelled[idx_hosps,,-1]))),
-                main = paste0("Age ", sub("_","-",sub("hosps_","",rownames(incidence_modelled)[idx_hosps[1]-1+i]))))
+                main = paste0("Age ", sub("_","-",sub("hosps_","",rownames(incidence_modelled)[idx_hosps[1]-1+i]))))  
         points(times, incidence_observed[[4+i]],pch=19,col="red",cex=0.5)
         axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
     }
-
 }
 
 
 plot_deaths_age <- function(incidence_modelled, incidence_observed, times, n_age, n_vax, n_strains){
     nms <- dimnames(incidence_modelled)[[1]]
-    idx_hosps <- grep("hosps_",nms)
     idx_deaths <- grep("deaths_",nms)
-    idx_plot <- seq(10,ncol(incidence_modelled),by=10)
+    if (ncol(incidence_modelled)>1){
+        idx_plot <- seq(10,ncol(incidence_modelled),by=10)    
+    } else {
+        idx_plot <- 1
+    }
     dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
     par(mfrow = c(5,1), oma=c(2,3,0,0))
     for (i in seq_along(idx_deaths)){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(incidence_modelled[idx_deaths[1]-1+i,idx_plot,-1]),
+        if (ncol(incidence_modelled)>1){
+            y <- t(incidence_modelled[idx_deaths[1]-1+i,idx_plot,-1])
+        } else {
+            y <- incidence_modelled[idx_deaths[1]-1+i,idx_plot,-1]
+        }
+        matplot(times, y,
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",xaxt = "n",#yaxt = "n",
                 ylim = c(0,max(max(incidence_observed[,10:14]),max(incidence_modelled[idx_deaths,,-1]))),
                 main = paste0("Age ", sub("_","-",sub("deaths_","",rownames(incidence_modelled)[idx_deaths[1]-1+i]))))
@@ -1113,11 +1142,20 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, times, population){
     idx_sero <- grep("sero_pos_1_",nms)
     idx_sero_obs <- grep("sero_pos_1_",names(seroprev_observed))
     idx_sero_tot_obs <- grep("sero_tot_1_",names(seroprev_observed))
-    idx_plot <- seq(10,ncol(seroprev_modelled),by=10)
+    if (ncol(seroprev_modelled)>1){
+        idx_plot <- seq(10,ncol(seroprev_modelled),by=10)    
+    } else {
+        idx_plot <- 1
+    }
     dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
     for (i in 1:6){
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(seroprev_modelled[idx_sero[1]-1+i,idx_plot,-1]/population[i]),
+        if (ncol(seroprev_modelled)>1){
+            y <- t(seroprev_modelled[idx_sero[1]-1+i,idx_plot,-1]/population[i])
+        } else {
+            y <- seroprev_modelled[idx_sero[1]-1+i,idx_plot,-1]/population[i]
+        }
+        matplot(times, y,
                 type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Seroprevalence", xaxt = "n", #yaxt = "n",
                 ylim = c(0,max(max(seroprev_modelled[idx_sero,idx_plot,-1]/population),max(seroprev_observed[,idx_sero_obs]/seroprev_observed[,idx_sero_tot_obs],na.rm = T))),
                 main = paste0("Age ",sub("_","-",sub("sero_pos_1_","",rownames(seroprev_modelled)[idx_sero[1]-1+i]))))
@@ -1133,11 +1171,20 @@ plot_cases <- function(cases_modelled, cases_observed, times){
     nms <- dimnames(cases_modelled)[[1]]
     idx_cases <- grep("cases",nms)
     idx_cases_obs <- grep("cases",names(cases_observed))
-    idx_plot <- seq(10,ncol(cases_modelled),by=10)
+    if (ncol(cases_modelled)>1){
+        idx_plot <- seq(10,ncol(cases_modelled),by=10)    
+    } else {
+        idx_plot <- 1
+    }
     dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
-    for (i in 1){#1:2){
+    for (i in 1){#1:2){#
         par(mar = c(3, 4, 2, 0.5))
-        matplot(times, t(cases_modelled[idx_cases[1]-1+i,idx_plot,-1]),
+        if (ncol(cases_modelled)>1){
+            y <- t(cases_modelled[idx_cases[1]-1+i,idx_plot,-1])
+        } else {
+            y <- cases_modelled[idx_cases[1]-1+i,idx_plot,-1]
+        }
+        matplot(times, y,
                 type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Cases", xaxt = "n"
                 # , #yaxt = "n",
                 # main = rownames(cases_modelled)[idx_cases[1]-1+i]
@@ -1239,8 +1286,8 @@ rotate_strain_compartments <- c(
     "E", "I_A", "I_P", "I_C", "R", "G", "H", "D")
 
 
-transform_state <- function(state, model, model_new){
-    rotate_strains(state,model$info())
+transform_state <- function(state, info_old, info_new){
+    rotate_strains(state,info_old)
 }
 
 
