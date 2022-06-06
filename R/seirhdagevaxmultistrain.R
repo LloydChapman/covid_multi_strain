@@ -764,7 +764,7 @@ plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, ti
         matplot(times, t(incidence_modelled[idx1+i, ,-1]),
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",
                 main = paste0("Age ", rownames(incidence_modelled)[idx1+i]))
-        points(times, incidence_observed[,4+i],pch=19,col="red")
+        points(times, incidence_observed[[4+i]],pch=19,col="red")
         axis(2, las = 2)
     }
     par(mfrow = c(2,4), oma=c(2,3,0,0))
@@ -773,7 +773,7 @@ plot_hosps_and_deaths_age <- function(incidence_modelled, incidence_observed, ti
         matplot(times, t(incidence_modelled[idx1+6+i, ,-1]),
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",
                 main = paste0("Age ", rownames(incidence_modelled)[idx1+6+i]))
-        points(times, incidence_observed[,9+i],pch=19,col="red")
+        points(times, incidence_observed[[9+i]],pch=19,col="red")
         axis(2, las = 2)
     }
 }
@@ -868,6 +868,6 @@ rotate_strain_compartments <- c(
     ## those with dimension c(n_groups, n_strains, n_vacc_classes):
     "E", "I_A", "I_P", "I_C", "R", "G", "H", "D")
 
-transform_state <- function(state, model, model_new){
-    rotate_strains(state,model$info())
+transform_state <- function(state, info_old, info_new){
+    rotate_strains(state,info_old)
 }

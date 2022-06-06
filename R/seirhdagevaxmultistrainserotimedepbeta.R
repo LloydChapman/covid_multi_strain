@@ -1188,6 +1188,6 @@ rotate_strain_compartments <- c(
     ## those with dimension c(n_groups, n_strains, n_vacc_classes):
     "E", "I_A", "I_P", "I_C", "R", "G", "H", "D")
 
-transform_state <- function(state, model, model_new){
-    rotate_strains(state,model$info())
+transform_state <- function(state, info_old, info_new){
+    rotate_strains(state,info_old)
 }
