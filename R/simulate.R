@@ -76,6 +76,46 @@ plot_trajectories <- function(time,x,n_age,n_strains,n_vax){
     }
 }
 
+
+change_beta_date <- function(p,pars,beta_type,beta_date_cntfctl){
+    beta_value <- pars[sprintf("beta%s", seq_along(beta_date_cntfctl))]
+    # Construct time-varying transmission coefficient
+    if (beta_type == "piecewise-linear") {
+        beta_step <- parameters_piecewise_linear(beta_date_cntfctl, 
+                                                 beta_value, p$dt)
+    } else {
+        beta_step <- parameters_piecewise_constant(beta_date_cntfctl, 
+                                                   beta_value, p$dt)
+    }
+    p$beta_step <- beta_step
+    return(p)
+}
+
+
+change_vaccine_schedule <- function(p,schedule_cntfctl){
+    # Construct vaccination parameters
+    vaccination <- vaccination_parameters(p$N_tot,
+                                          p$dt,
+                                          p$rel_susceptibility,
+                                          p$rel_p_sympt,
+                                          p$rel_p_hosp_if_sympt,
+                                          p$rel_p_death,
+                                          p$rel_infectivity,
+                                          p$vaccine_progression_rate_base,
+                                          vaccine_schedule = schedule_cntfctl,
+                                          p$index_dose[2],
+                                          p$index_dose[3],
+                                          p$n_strains, # now up to 2 strains
+                                          p$vaccine_catchup_fraction,
+                                          p$n_doses)
+    
+    # Overwrite vaccine_dose_step with value for counterfactual schedule
+    p$vaccine_dose_step <- vaccination$vaccine_dose_step
+    
+    return(p)
+}
+
+
 ## Run counterfactual simulations
 simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cntfctl,burnin = NULL,seed = 1){
     # Load MCMC output
@@ -93,56 +133,31 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
     for (i in seq_len(n_smpls)){
         j <- smpl[i] #sample.int(nrow(pars),1)
         pars_i <- pars[j,]
-        p_i <- parameters(dt,
-                          n_age,
-                          n_vax,
-                          transmission,
-                          beta_date = beta_date_cntfctl,
-                          beta_value = pars_i[1:4],
-                          beta_type,
-                          gamma_E,
-                          gamma_P,
-                          gamma_A,
-                          gamma_C,
-                          gamma_H,
-                          gamma_G,
-                          gamma_pre_1,
-                          gamma_P_1,
-                          theta_A,
-                          p_C,
-                          pars_i[8]*p_H,
-                          p_G,
-                          pars_i[9]*p_D,
-                          p_P_1,
-                          population,
-                          start_date = pars_i[6],
-                          initial_seed_size,
-                          initial_seed_pattern,
-                          strain_transmission = c(1,pars_i[5]),
-                          strain_seed_date = pars_i[7],
-                          strain_seed_size,
-                          strain_seed_pattern,
-                          strain_rel_p_sympt,
-                          strain_rel_p_hosp_if_sympt,
-                          strain_rel_p_death,
-                          rel_susceptibility,
-                          rel_p_sympt,
-                          rel_p_hosp_if_sympt,
-                          rel_p_death,
-                          rel_infectivity,
-                          vaccine_progression_rate,
-                          vaccine_schedule = schedule_cntfctl,
-                          vaccine_index_dose2,
-                          vaccine_index_booster,
-                          vaccine_catchup_fraction,
-                          n_doses,
-                          waning_rate,
-                          cross_immunity,
-                          sero_sensitivity_1,
-                          sero_specificity_1)
+        if (is.null(names(pars_i))){
+            names(pars_i) <- names(init_pars)
+        }
+        transform_pars <- transform(pars_i)
+        if (class(transform_pars) == "multistage_parameters"){
+            # TODO: Make this work with one list for p rather than separate 
+            # objects for each epoch, so it works for an arbitrary number of epochs
+            p_i <- transform_pars[[1]]$pars
+            p_i <- change_beta_date(p_i, pars_i, beta_type, beta_date_cntfctl)
+            p_i <- change_vaccine_schedule(p_i, schedule_cntfctl)
+            p1_i <- transform_pars[[2]]$pars
+            p1_i <- change_beta_date(p1_i, pars_i, beta_type, beta_date_cntfctl)
+            p1_i <- change_vaccine_schedule(p1_i, schedule_cntfctl)
+        } else {
+            p_i <- transform_pars
+            p_i <- change_beta_date(p_i, pars_i, beta_type, beta_date_cntfctl)
+            p_i <- change_vaccine_schedule(p_i, schedule_cntfctl)
+            p1_i <- NULL
+            n_steps1 <- NULL
+            transform_state <- NULL
+        }
         out[[i]] <- simulate(covid_multi_strain, p_i, n_steps, 
-                             deterministic, keep_all_states = F)
-        smpl[i] <- j
+                             deterministic, keep_all_states = F,
+                             p1 = p1_i, n_steps1 = n_steps1, 
+                             transform = transform_state)
     }
     
     info <- out[[1]]$info
@@ -154,7 +169,7 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
     states_cntfctl <- abind(states_cntfctl,along = 2)
     
     # Extract corresponding posterior samples of trajectories
-    states <- res$states[,burnin + smpl,]
+    states <- res$trajectories$state[,burnin + smpl,]
     
     return(list(states_cntfctl = states_cntfctl,states = states,smpl = smpl,info = info))
 }
