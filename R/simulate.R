@@ -116,6 +116,21 @@ change_vaccine_schedule <- function(p,schedule_cntfctl){
 }
 
 
+change_booster_timing <- function(schedule, days_earlier){
+    # date_booster_start <- min(which(schedule$doses[,3,] != 0,arr.ind = T)[,2])
+    schedule_cntfctl <- schedule
+    doses <- schedule$doses
+    if (days_earlier >= 0){
+        schedule_cntfctl$doses[,3,] <- doses[,3,c((days_earlier+1):nlayer(doses),rep(nlayer(doses),days_earlier))]    
+    } else {
+        days_later <- -days_earlier
+        # FOR NOW: Copy first day's doses for days_later days (N.B. assumes 0 booster doses on first day)
+        schedule_cntfctl$doses[,3,] <- doses[,3,c(rep(1,days_later),1:(nlayer(doses)-days_later))]
+    }
+    return(schedule_cntfctl)
+}
+
+
 ## Run counterfactual simulations
 simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cntfctl,burnin = NULL,seed = 1){
     # Load MCMC output
