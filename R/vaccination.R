@@ -8,9 +8,9 @@ calculate_rel_param <- function(vax_eff_arr){
     
     # Calculate relative parameters
     rel_susceptibility <- 1 - e[,,,"infection"]
-    rel_p_sympt <- (e[,,,"symptoms"] - e[,,,"infection"])/(1 - e[,,,"infection"])
-    rel_p_hosp_if_sympt <- (e[,,,"hospitalisation"] - e[,,,"symptoms"])/(1 - e[,,,"symptoms"])
-    rel_p_death <- (e[,,,"death"] - e[,,,"hospitalisation"])/(1 - e[,,,"hospitalisation"])
+    rel_p_sympt <- (1 - e[,,,"symptoms"])/(1 - e[,,,"infection"])
+    rel_p_hosp_if_sympt <- (1 - e[,,,"hospitalisation"])/(1 - e[,,,"symptoms"])
+    rel_p_death <- (1 - e[,,,"death"])/(1 - e[,,,"hospitalisation"])
     rel_infectivity <- 1 - e[,,,"infectiousness"]
     
     # Ensure first layers for unvaccinated individuals are 1 (as parameters are relative)
@@ -26,7 +26,10 @@ calculate_rel_param <- function(vax_eff_arr){
 }
 
 
-convert_eff_to_rel_param <- function(vax_eff_long,age_groups){
+convert_eff_to_rel_param <- function(vax_eff,age_groups){
+    # Copy vaccine efficacy data table
+    vax_eff_long <- copy(vax_eff)
+    
     # Convert vaccine efficacy percentage to proportion
     vax_eff_long[,value := value/100]
 
