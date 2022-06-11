@@ -28,13 +28,13 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
         mod$update_state(pars = p1,state = state1)
         
         # Create data to be fitted to
-        x1 <- array(NA, dim = c(info$len, 1, n_steps1-n_steps+1))
+        x1 <- array(NA, dim = c(info$len, 1, n_steps1-n_steps))
         
         # For loop to run the model iteratively
-        x1[ , ,1] <- mod$state()
+        # x1[ , ,1] <- mod$state()
         for (t in seq_len(n_steps1-n_steps)) {
             # print(t)
-            x1[ , ,t+1] <- mod$run(n_steps+t)
+            x1[ , ,t] <- mod$run(n_steps+t)
         }
         
         # Join with first epoch
