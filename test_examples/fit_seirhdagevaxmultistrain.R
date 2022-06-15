@@ -33,7 +33,7 @@ transmission <- contact$matrix/rep(population, each = ncol(contact$matrix))
 transmission
 
 # Get age-dependent symptomatic fraction, IHR and IFR
-sympt_frac <- qread("~/covidm/newcovid3/fitting_data/2-linelist_both_fit_fIa0.5-rbzvih.qs")
+sympt_frac <- qread("data/2-linelist_both_fit_fIa0.5-rbzvih.qs")
 p_C <- unname(colMeans(sympt_frac[,13:20]))
 prob_death_given_hosp <- fread("data/prob_death_given_hosp_salje.csv")
 p_D <- prob_death_given_hosp[,median_perc_mean/100]
