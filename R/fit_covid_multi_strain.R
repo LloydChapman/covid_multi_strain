@@ -332,35 +332,35 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     out <- simulate(covid_multi_strain, p, n_steps, deterministic,
                     p1 = p1, n_steps1 = n_steps1, transform = rotate_strains)
     
-    # Drop time row
-    x <- out$x
-    time <- x[1,1,-1]
-    x <- x[-1, , ,drop=FALSE]
-
-    n_strains <- 4
-
-    # # Plot trajectories
-    # plot_trajectories(time,x,n_age,n_strains,n_vax)
-
-    # Extract true history of model states
-    true_history <- x[ , ,seq(0,n_steps1+1,by=1/dt)+1,drop=F]
+    # # Drop time row
+    # x <- out$x
+    # time <- x[1,1,-1]
+    # x <- x[-1, , ,drop=FALSE]
+    # 
+    # n_strains <- 4
+    # 
+    # # # Plot trajectories
+    # # plot_trajectories(time,x,n_age,n_strains,n_vax)
+    # 
+    # # Extract true history of model states
+    # true_history <- x[ , ,seq(0,n_steps1+1,by=1/dt)+1,drop=F]
     
     # Add noise to simulated data
     info <- out$info
     idx <- index(info, min_ages, Rt)
-    hosps <- true_history[idx$state[grep("hosps_",names(idx$state))]-1, ,-1]
-    deaths <- true_history[idx$state[grep("deaths_",names(idx$state))]-1, ,-1]
-    sero_pos <- true_history[idx$state[grep("sero_pos_1_",names(idx$state))]-1, ,-1]
-    cases <- matrix(true_history[idx$state[match("cases",names(idx$state))]-1, ,-1],nrow = 1)
-    cases_non_variant <- matrix(true_history[idx$state[grep("cases_non_variant",names(idx$state))]-1, ,-1],nrow = 1)
-
-    par(mfrow = c(1,1))
-    days <- seq(1,n_steps1*dt)
-    matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
-    matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")
-    matplot(days,t(sero_pos),type="l",xlab="Day",ylab="Seropositive")
-    matplot(days,t(cases),type="l",xlab="Day",ylab="Cases")
-    matplot(days,t(cases_non_variant),type="l",xlab="Day",ylab="Non-variant cases")
+    # hosps <- true_history[idx$state[grep("hosps_",names(idx$state))]-1, ,-1]
+    # deaths <- true_history[idx$state[grep("deaths_",names(idx$state))]-1, ,-1]
+    # sero_pos <- true_history[idx$state[grep("sero_pos_1_",names(idx$state))]-1, ,-1]
+    # cases <- matrix(true_history[idx$state[match("cases",names(idx$state))]-1, ,-1],nrow = 1)
+    # cases_non_variant <- matrix(true_history[idx$state[grep("cases_non_variant",names(idx$state))]-1, ,-1],nrow = 1)
+    # 
+    # par(mfrow = c(1,1))
+    # days <- seq(1,n_steps1*dt)
+    # matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
+    # matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")
+    # matplot(days,t(sero_pos),type="l",xlab="Day",ylab="Seropositive")
+    # matplot(days,t(cases),type="l",xlab="Day",ylab="Cases")
+    # matplot(days,t(cases_non_variant),type="l",xlab="Day",ylab="Non-variant cases")
     
     
     
