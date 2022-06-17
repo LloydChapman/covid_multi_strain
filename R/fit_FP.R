@@ -32,7 +32,7 @@ source("R/process_FP_data.R")
 u <- c(1:4,6:8,11) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date
 # u <- 1:4 # only beta parameters
 n_iters <- 1e3 #2e4 #1e4 #5e4 #
-run <- 47
+run <- 48
 deterministic <- T # flag for whether to use "deterministic particle filter" or not
 Rt <- T # flag for whether to return variables needed for calculating Rt in "state"
 thinning <- 10

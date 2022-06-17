@@ -37,18 +37,18 @@ sero_pos_dt1 <- as.data.table(read_xlsx(paste0(filepath,"Serop_feb21.xlsx")))
 sero_pos_dt2 <- fread(paste0(filepath,"Serop_nov21.csv"))
 
 # Vaccinations
-vax <- fread(paste0(filepath,"SPC_DF_COVID_VACCINATION_1.0_D.PF.COVIDVACAD1+COVIDVACAD2+COVIDVACBST+COVIDVACADT.csv"))
-# files <- list.files(paste0(filepath,"FP_processed_May_30/"))
-# files_vax <- files[grep("daily vaccination",files)]
-# age_groups_vax <- sub("daily vaccination ([0-9]+-[0-9]+|\\+[0-9]+).xlsx","\\1",files_vax)
-# age_groups_vax[age_groups_vax == "+70"] <- "70+"
-# vax_list <- vector("list", length(files_vax))
-# for (i in 1:length(files_vax)){
-#     vax_list[[i]] <- as.data.table(read_xlsx(paste0(filepath,"FP_processed_May_30/",files_vax[i])))
-# }
-# vax <- rbindlist(vax_list,idcol = "file")
-# vax[,age_group := age_groups_vax[file]]
-# vax[,file := NULL]
+# vax <- fread(paste0(filepath,"SPC_DF_COVID_VACCINATION_1.0_D.PF.COVIDVACAD1+COVIDVACAD2+COVIDVACBST+COVIDVACADT.csv"))
+files <- list.files(paste0(filepath,"FP_processed_May_30/"))
+files_vax <- files[grep("daily vaccination",files)]
+age_groups_vax <- sub("daily vaccination ([0-9]+-[0-9]+|\\+[0-9]+).xlsx","\\1",files_vax)
+age_groups_vax[age_groups_vax == "+70"] <- "70+"
+vax_list <- vector("list", length(files_vax))
+for (i in 1:length(files_vax)){
+    vax_list[[i]] <- as.data.table(read_xlsx(paste0(filepath,"FP_processed_May_30/",files_vax[i])))
+}
+vax <- rbindlist(vax_list,idcol = "file")
+vax[,age_group := age_groups_vax[file]]
+vax[,file := NULL]
 
 # Process data ---------------------------------------------------------
 get_min_age = function(x){
@@ -179,15 +179,15 @@ ggplot() +
     labs(title = "CHPF")
 # ggsave("output/total_hosps_CHPF.pdf",width = 5,height = 4)
 
-hospitals <- total_hosps_by_hosp_dt[,unique(hospital)]
-hospitals <- hospitals[!is.na(hospitals) & hospitals != "CHPF"]
-for (i in seq_along(hospitals)){
-    y <- sym(paste0("Nombre de nouvelles hospitalisations Covid ",hospitals[i]))
-    print(ggplot() + 
-              geom_line(aes(x = date,y = hosps),total_hosps_by_hosp_dt[hospital == hospitals[i]]) + 
-              geom_point(aes(x = Date,y = !!y),weekly_dt,color = "red") + 
-              labs(title = hospitals[i]))    
-}
+# hospitals <- total_hosps_by_hosp_dt[,unique(hospital)]
+# hospitals <- hospitals[!is.na(hospitals) & hospitals != "CHPF"]
+# for (i in seq_along(hospitals)){
+#     y <- sym(paste0("Nombre de nouvelles hospitalisations Covid ",hospitals[i]))
+#     print(ggplot() + 
+#               geom_line(aes(x = date,y = hosps),total_hosps_by_hosp_dt[hospital == hospitals[i]]) + 
+#               geom_point(aes(x = Date,y = !!y),weekly_dt,color = "red") + 
+#               labs(title = hospitals[i]))    
+# }
 
 # Total hospitalisations in all hospitals
 total_hosps_dt <- hosps_dt[,.(hosps = .N),by = .(date)]
@@ -312,58 +312,58 @@ data_raw[,cases_non_variant := NA]
 
 ## Vaccinations
 
-# Remove bits before : in column names
-names(vax) <- sub(".*: ","",names(vax))
-
-cols <- names(vax)[!(names(vax) %in% c("Time","OBS_VALUE"))]
-vax[,(cols) := lapply(.SD,function(x) sub(".*: ","",x)),.SDcols = cols]
-
-# Drop columns
-vax <- vax[,c("DATAFLOW","Frequency","Unit of measure","Unit multiplier","Observation Status","Data source","Comment"):=NULL]
-
-# Rename columns
-names(vax) <- c("date","country","dose","value")
-
-# Drop total doses and booster doses
-vax <- vax[!(dose %in% c("Total doses administered","Booster doses administered"))]
-# Recode dose variable
-vax[,dose := fifelse(dose=="1st dose administered",1L,2L)]
-
-# Plot
-ggplot(vax,aes(x = date,y = value,group = factor(dose),color = factor(dose))) + geom_line()
-
-# Make data table of daily vaccination doses from raw data
-dates_vax <- seq.Date(vax[,min(date)-7],vax[,max(date)],by = 1)
-
-vax_dt <- CJ(dose = c(1L,2L), date = dates_vax)
-vax_dt <- merge(vax_dt,vax[,!"country"],by = c("dose","date"),all.x = T)
-
-# Linearly interpolate cumulative number of doses over missing dates
-vax_dt[date == min(date),value := 0]
-vax_dt[,value_interp := approx(date,value,date)$y,by = .(dose)]
-
-# Calculate approximate daily numbers of doses by differencing and rounding
-vax_dt[,number := as.integer(round(diff(c(0,value_interp)))),by = .(dose)]
-
-# Difference in rounded doses vs actual
-vax_dt[,sum(number),by = .(dose)][,V1] - vax_dt[date == max(date),value,by = .(dose)][,value]
-# small so ignore FOR NOW
-
-vax_dt[,date := as.IDate(date)]
-vax_dt <- vax_dt[date <= end_date]
-
-doses <- vax[,unique(dose)]
-
-# # Change names
-# setnames(vax,c("Date","Nombre de doses injectées","Type d'injection V2"),c("date","number","dose"))
+# # Remove bits before : in column names
+# names(vax) <- sub(".*: ","",names(vax))
 # 
-# # Convert date column to Date type
-# vax[,date := as.Date(date)]
+# cols <- names(vax)[!(names(vax) %in% c("Time","OBS_VALUE"))]
+# vax[,(cols) := lapply(.SD,function(x) sub(".*: ","",x)),.SDcols = cols]
 # 
+# # Drop columns
+# vax <- vax[,c("DATAFLOW","Frequency","Unit of measure","Unit multiplier","Observation Status","Data source","Comment"):=NULL]
+# 
+# # Rename columns
+# names(vax) <- c("date","country","dose","value")
+# 
+# # Drop total doses and booster doses
+# vax <- vax[!(dose %in% c("Total doses administered","Booster doses administered"))]
 # # Recode dose variable
-# vax[,dose := fcase(dose == "Primo injection","dose1",
-#                    dose == "Schéma vaccinal complet","dose2",
-#                    dose == "Rappel","dose3")]
+# vax[,dose := fifelse(dose=="1st dose administered",1L,2L)]
+# 
+# # Plot
+# ggplot(vax,aes(x = date,y = value,group = factor(dose),color = factor(dose))) + geom_line()
+# 
+# # Make data table of daily vaccination doses from raw data
+# dates_vax <- seq.Date(vax[,min(date)-7],vax[,max(date)],by = 1)
+# 
+# vax_dt <- CJ(dose = c(1L,2L), date = dates_vax)
+# vax_dt <- merge(vax_dt,vax[,!"country"],by = c("dose","date"),all.x = T)
+# 
+# # Linearly interpolate cumulative number of doses over missing dates
+# vax_dt[date == min(date),value := 0]
+# vax_dt[,value_interp := approx(date,value,date)$y,by = .(dose)]
+# 
+# # Calculate approximate daily numbers of doses by differencing and rounding
+# vax_dt[,number := as.integer(round(diff(c(0,value_interp)))),by = .(dose)]
+# 
+# # Difference in rounded doses vs actual
+# vax_dt[,sum(number),by = .(dose)][,V1] - vax_dt[date == max(date),value,by = .(dose)][,value]
+# # small so ignore FOR NOW
+# 
+# vax_dt[,date := as.IDate(date)]
+# vax_dt <- vax_dt[date <= end_date]
+# 
+# doses <- vax[,unique(dose)]
+
+# Change names
+setnames(vax,c("Date","Nombre de doses injectées","Type d'injection V2"),c("date","number","dose"))
+
+# Convert date column to Date type
+vax[,date := as.Date(date)]
+
+# Recode dose variable
+vax[,dose := fcase(dose == "Primo injection","dose1",
+                   dose == "Schéma vaccinal complet","dose2",
+                   dose == "Rappel","dose3")]
 # # # Plot to check
 # # ggplot(vax,aes(x = date,y = number,group = age_group,color = age_group)) +
 # #     geom_line() +
@@ -371,61 +371,61 @@ doses <- vax[,unique(dose)]
 # # ggplot(vax[,.(date,number = cumsum(number)),by = .(dose,age_group)],aes(x = date,y = number,group = age_group,color = age_group)) +
 # #     geom_line() +
 # #     facet_wrap(~dose)
-# doses_by_age_and_dose <- dcast(vax1[,.(number = sum(number)),by=.(age_group,dose)],age_group ~ dose)
+# doses_by_age_and_dose <- dcast(vax[,.(number = sum(number)),by=.(age_group,dose)],age_group ~ dose)
 # doses_by_age_and_dose <- rbind(doses_by_age_and_dose,cbind(data.table(age_group="Total"),doses_by_age_and_dose[,lapply(.SD,sum),.SDcols = c("dose1","dose2","dose3")]))
 # write.csv(doses_by_age_and_dose,"output/doses_by_age_and_dose.csv",row.names = F)
-# 
-# # Reaggregate vaccine doses by model age groups 
-# dates_vax <- seq.Date(vax[,min(date)],vax[,max(date)],by = 1)
-# doses <- vax[,unique(dose)]
-# base_vax_dt <- CJ(date = dates_vax, dose = doses, age = pop[,unique(age)])
-# base_vax_dt <- merge(base_vax_dt,pop[,.(age,total)],by = "age")
-# age_groups_vax <- sort(age_groups_vax)
-# min_ages_vax <- get_min_age(age_groups_vax)
-# base_vax_dt[, age_group := cut(age,c(min_ages_vax,Inf),labels = age_groups_vax,right = F)]
-# # Merge with vaccinations data table
-# # N.B. This duplicates doses across age groups
-# vax_dt <- merge(base_vax_dt,vax,by = c("date","dose","age_group"),all.x = T)
-# # Split vaccine doses by population proportion
-# vax_dt[,number := number*total/sum(total),by = .(date,dose,age_group)]
-# # Change age groups
-# vax_dt[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
-# # Fill missing values with 0s (i.e. assume all doses were recorded)
-# setnafill(vax_dt,fill = 0,cols = "number")
-# # Sum doses over age groups
-# vax_dt <- vax_dt[,.(number = sum(number)),by = .(date,dose,age_group)]
-# 
-# # Plot to check
-# ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color = age_group)) +
-#     geom_line() +
-#     facet_wrap(~dose)
-# 
-# # Check totals are the same
-# print(vax[,sum(number)]) # 362926
-# print(vax_dt[,sum(number)]) # 362926
-# 
-# # Cast to wide format
-# vax_dt_wide <- dcast(vax_dt,date + age_group ~ dose,value.var = "number")
-# vax_dt_wide[,age_band_min := get_min_age(age_group)]
-# vax_dt_wide[,age_group := NULL]
 
-# Make vaccination schedule
-pop_mat <- matrix(rep(population,1),nrow = length(population))
+# Reaggregate vaccine doses by model age groups
+dates_vax <- seq.Date(vax[,min(date)],vax[,max(date)],by = 1)
+doses <- vax[,unique(dose)]
+base_vax_dt <- CJ(date = dates_vax, dose = doses, age = pop[,unique(age)])
+base_vax_dt <- merge(base_vax_dt,pop[,.(age,total)],by = "age")
+age_groups_vax <- sort(age_groups_vax)
+min_ages_vax <- get_min_age(age_groups_vax)
+base_vax_dt[, age_group := cut(age,c(min_ages_vax,Inf),labels = age_groups_vax,right = F)]
+# Merge with vaccinations data table
+# N.B. This duplicates doses across age groups
+vax_dt <- merge(base_vax_dt,vax,by = c("date","dose","age_group"),all.x = T)
+# Split vaccine doses by population proportion
+vax_dt[,number := number*total/sum(total),by = .(date,dose,age_group)]
+# Change age groups
+vax_dt[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
+# Fill missing values with 0s (i.e. assume all doses were recorded)
+setnafill(vax_dt,fill = 0,cols = "number")
+# Sum doses over age groups
+vax_dt <- vax_dt[,.(number = sum(number)),by = .(date,dose,age_group)]
 
-# Rough number of daily booster doses from eyeballing Fig. 5 plot in BEH health bulletin No. 84
-booster_daily_doses <- c(rep(0,40*7),rep(5000/7,as.integer(as.IDate(end_date) - vax_dt[,min(date)] - 40*7 + 1)))
+# Plot to check
+ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color = age_group)) +
+    geom_line() +
+    facet_wrap(~dose)
 
-# priority_population <- vaccine_priority_population(population, uptake = c(0.55,0.55,0.80,0.80,0.80,0.80,0.8,0.8))
-mean_days_between_doses <- 28 # from eye-balling plot of cumulative 1st and 2nd doses
-schedule <- vaccine_schedule_future(as.integer(vax_dt[,min(date)] - strt_date + 1),
-                                    vax_dt[,sum(number),by = .(date)][,V1],
-                                    mean_days_between_doses = mean_days_between_doses,
-                                    pop_mat,
-                                    booster_daily_doses_value = booster_daily_doses)
+# Check totals are the same
+print(vax[,sum(number)]) # 362926
+print(vax_dt[,sum(number)]) # 362926
 
-# # Matrix of uptake rates (age group x dose)
-# uptake <- matrix(1,nrow = length(age_groups),ncol = length(doses))
-# schedule <- vaccine_schedule_from_data(as.data.frame(vax_dt_wide),min_ages,population,uptake)
+# Cast to wide format
+vax_dt_wide <- dcast(vax_dt,date + age_group ~ dose,value.var = "number")
+vax_dt_wide[,age_band_min := get_min_age(age_group)]
+vax_dt_wide[,age_group := NULL]
+
+# # Make vaccination schedule
+# pop_mat <- matrix(rep(population,1),nrow = length(population))
+# 
+# # Rough number of daily booster doses from eyeballing Fig. 5 plot in BEH health bulletin No. 84
+# booster_daily_doses <- c(rep(0,40*7),rep(5000/7,as.integer(as.IDate(end_date) - vax_dt[,min(date)] - 40*7 + 1)))
+# 
+# # priority_population <- vaccine_priority_population(population, uptake = c(0.55,0.55,0.80,0.80,0.80,0.80,0.8,0.8))
+# mean_days_between_doses <- 28 # from eye-balling plot of cumulative 1st and 2nd doses
+# schedule <- vaccine_schedule_future(as.integer(vax_dt[,min(date)] - strt_date + 1),
+#                                     vax_dt[,sum(number),by = .(date)][,V1],
+#                                     mean_days_between_doses = mean_days_between_doses,
+#                                     pop_mat,
+#                                     booster_daily_doses_value = booster_daily_doses)
+
+# Matrix of uptake rates (age group x dose)
+uptake <- matrix(1,nrow = length(age_groups),ncol = length(doses))
+schedule <- vaccine_schedule_from_data(as.data.frame(vax_dt_wide),min_ages,population,uptake)
 
 # Plot to check
 doses_dt <- as.data.table(schedule$doses,value.name = "number")
