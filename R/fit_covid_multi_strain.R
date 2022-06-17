@@ -166,6 +166,10 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     vaccine_catchup_fraction <- 1
     n_doses <- 3L #2L
     
+    vacc_skip_progression_rate <- rep(0, n_vax)
+    vacc_skip_to <- c(0L,0L,5L,0L,0L) #integer(n_vax) #
+    vacc_skip_weight <- c(0,0,1,0,0) #integer(n_vax) #
+    
     # Relative probabilities of symptoms, hospitalisation and death for different strains
     strain_rel_p_sympt <- 1
     strain_rel_p_hosp_if_sympt <- c(1,1.85) #1 #
@@ -238,6 +242,9 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
                     vaccine_index_booster,
                     vaccine_catchup_fraction,
                     n_doses,
+                    vacc_skip_progression_rate,
+                    vacc_skip_to,
+                    vacc_skip_weight,
                     waning_rate,
                     cross_immunity,
                     sero_sensitivity_1,
@@ -306,6 +313,9 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
                      vaccine_index_booster,
                      vaccine_catchup_fraction,
                      n_doses,
+                     vacc_skip_progression_rate,
+                     vacc_skip_to,
+                     vacc_skip_weight,
                      waning_rate,
                      cross_immunity1,
                      sero_sensitivity_1,
@@ -322,35 +332,35 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     out <- simulate(covid_multi_strain, p, n_steps, deterministic,
                     p1 = p1, n_steps1 = n_steps1, transform = rotate_strains)
     
-    # # Drop time row
-    # x <- out$x
-    # time <- x[1,1,-1]
-    # x <- x[-1, , ,drop=FALSE]
-    # 
-    # n_strains <- 4
-    # 
-    # # # Plot trajectories
-    # # plot_trajectories(time,x,n_age,n_strains,n_vax)
-    # 
-    # # Extract true history of model states
-    # true_history <- x[ , ,seq(0,n_steps1+1,by=1/dt)+1,drop=F]
+    # Drop time row
+    x <- out$x
+    time <- x[1,1,-1]
+    x <- x[-1, , ,drop=FALSE]
+
+    n_strains <- 4
+
+    # # Plot trajectories
+    # plot_trajectories(time,x,n_age,n_strains,n_vax)
+
+    # Extract true history of model states
+    true_history <- x[ , ,seq(0,n_steps1+1,by=1/dt)+1,drop=F]
     
     # Add noise to simulated data
     info <- out$info
     idx <- index(info, min_ages, Rt)
-    # hosps <- true_history[idx$state[grep("hosps_",names(idx$state))]-1, ,-1]
-    # deaths <- true_history[idx$state[grep("deaths_",names(idx$state))]-1, ,-1]
-    # sero_pos <- true_history[idx$state[grep("sero_pos_1_",names(idx$state))]-1, ,-1]
-    # cases <- matrix(true_history[idx$state[match("cases",names(idx$state))]-1, ,-1],nrow = 1)
-    # cases_non_variant <- matrix(true_history[idx$state[grep("cases_non_variant",names(idx$state))]-1, ,-1],nrow = 1)
-    # 
-    # par(mfrow = c(1,1))
-    # days <- seq(1,n_steps1*dt)
-    # matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
-    # matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")
-    # matplot(days,t(sero_pos),type="l",xlab="Day",ylab="Seropositive")
-    # matplot(days,t(cases),type="l",xlab="Day",ylab="Cases")
-    # matplot(days,t(cases_non_variant),type="l",xlab="Day",ylab="Non-variant cases")
+    hosps <- true_history[idx$state[grep("hosps_",names(idx$state))]-1, ,-1]
+    deaths <- true_history[idx$state[grep("deaths_",names(idx$state))]-1, ,-1]
+    sero_pos <- true_history[idx$state[grep("sero_pos_1_",names(idx$state))]-1, ,-1]
+    cases <- matrix(true_history[idx$state[match("cases",names(idx$state))]-1, ,-1],nrow = 1)
+    cases_non_variant <- matrix(true_history[idx$state[grep("cases_non_variant",names(idx$state))]-1, ,-1],nrow = 1)
+
+    par(mfrow = c(1,1))
+    days <- seq(1,n_steps1*dt)
+    matplot(days,t(hosps),type="l",xlab="Day",ylab="Hospitalisations")
+    matplot(days,t(deaths),type="l",xlab="Day",ylab="Deaths")
+    matplot(days,t(sero_pos),type="l",xlab="Day",ylab="Seropositive")
+    matplot(days,t(cases),type="l",xlab="Day",ylab="Cases")
+    matplot(days,t(cases_non_variant),type="l",xlab="Day",ylab="Non-variant cases")
     
     
     
@@ -486,6 +496,9 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     #                             vaccine_index_booster,
     #                             vaccine_catchup_fraction,
     #                             n_doses,
+    #                             vacc_skip_progression_rate,
+    #                             vacc_skip_to,
+    #                             vacc_skip_weight,
     #                             waning_rate,
     #                             cross_immunity,
     #                             sero_sensitivity_1,
@@ -536,6 +549,9 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
                                            vaccine_index_booster,
                                            vaccine_catchup_fraction,
                                            n_doses,
+                                           vacc_skip_progression_rate,
+                                           vacc_skip_to,
+                                           vacc_skip_weight,
                                            waning_rate,
                                            cross_immunity,
                                            start_date1 = n_steps * dt,

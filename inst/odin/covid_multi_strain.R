@@ -20,16 +20,22 @@ steps_per_day <- 1/dt
 
 ## Core equations for transitions between compartments:
 update(S[, ]) <- S[i,j] + sum(n_RS[i, ,j]) - sum(n_SE[i, ,j]) - n_SV[i,j] + 
-    (if (j == 1) n_SV[i,n_vax] else n_SV[i,j-1])
+    (if (j == 1) n_SV[i,n_vax] else n_SV[i,j-1]) - 
+    (if (vacc_skip_to[j] > 0) n_SV_skip[i,j] else 0) + 
+    (if (vacc_skip_from[j] > 0) n_SV_skip[i,vacc_skip_from[j]] else 0)
 update(E[, , ]) <- E[i,j,k] + n_SE[i,j,k] + (if (j > 2) n_RE[i,j-2,k] else 0) - 
     n_EI[i,j,k] - n_EV[i,j,k] + 
-    (if (k == 1) n_EV[i,j,n_vax] else n_EV[i,j,k-1])
+    (if (k == 1) n_EV[i,j,n_vax] else n_EV[i,j,k-1]) - 
+    (if (vacc_skip_to[k] > 0) n_EV_skip[i,j,k] else 0) +
+    (if (vacc_skip_from[k] > 0) n_EV_skip[i,j,vacc_skip_from[k]] else 0)
 update(I_P[, , ]) <- new_I_P[i,j,k]
 update(I_A[, , ]) <- new_I_A[i,j,k]
 update(I_C[, , ]) <- new_I_C[i,j,k]
 update(R[, , ]) <- R[i,j,k] + n_I_AR[i,j,k] + n_I_CR[i,j,k] + n_HR[i,j,k] - 
     n_Rx[i,j,k] - n_RV[i,j,k] + 
-    (if (k == 1) n_RV[i,j,n_vax] else n_RV[i,j,k-1])
+    (if (k == 1) n_RV[i,j,n_vax] else n_RV[i,j,k-1]) - 
+    (if (vacc_skip_to[k] > 0) n_RV_skip[i,j,k] else 0) + 
+    (if (vacc_skip_from[k] > 0) n_RV_skip[i,j,vacc_skip_from[k]] else 0)
 update(H[, , ]) <- H[i,j,k] + n_I_CH[i,j,k] - n_HR[i,j,k] - n_HD[i,j,k]
 update(G[, , ]) <- G[i,j,k] + n_I_CG[i,j,k] - n_GD[i,j,k]
 update(D[, , ]) <- D[i,j,k] + n_HD[i,j,k] + n_GD[i,j,k]
@@ -59,6 +65,12 @@ p_EV[, , ] <- p_V[i,k]
 p_I_AV[, , ] <- p_V[i,k]
 p_I_PV[, , ] <- p_V[i,k]
 p_RV[, , ] <- p_V[i,k]
+
+p_SV_skip[, ] <- p_V_skip[i,j]
+p_EV_skip[, , ] <- p_V_skip[i,k]
+p_I_PV_skip[, , ] <- p_V_skip[i,k]
+p_I_AV_skip[, , ] <- p_V_skip[i,k]
+p_RV_skip[, , ] <- p_V_skip[i,k]
 
 p_C[] <- user()
 p_H[] <- user()
@@ -105,6 +117,7 @@ rel_foi_strain[, , ] <- (if (sum(lambda_sus[i, ,k]) == 0)
 
 # vaccination
 n_SV[, ] <- rbinom(S[i,j] - sum(n_SE[i, ,j]), p_SV[i,j])
+n_SV_skip[, ] <- rbinom(S[i,j] - sum(n_SE[i, ,j]) - n_SV[i,j], p_SV_skip[i,j])
 
 # Flow out of E:
 # progression
@@ -114,18 +127,21 @@ n_EI_P[, , ] <- rbinom(n_EI[i,j,k], rel_p_sympt[i,j,k]*
 n_EI_A[, , ] <- n_EI[i,j,k] - n_EI_P[i,j,k]
 # vaccination
 n_EV[, , ] <- rbinom(E[i,j,k] - n_EI[i,j,k], p_EV[i,j,k])
+n_EV_skip[, , ] <- rbinom(E[i,j,k] - n_EI[i,j,k] - n_EV[i,j,k], p_EV_skip[i,j,k])
 
 # Flow out of I_P:
 # progression
 n_I_PI_C[, , ] <- rbinom(I_P[i,j,k], p_I_PI_C)
 # vaccination
 n_I_PV[, , ] <- rbinom(I_P[i,j,k] - n_I_PI_C[i,j,k], p_I_PV[i,j,k])
+n_I_PV_skip[, , ] <- rbinom(I_P[i,j,k] - n_I_PI_C[i,j,k], p_I_PV_skip[i,j,k])
 
 # Flow out of I_A:
 # progression
 n_I_AR[, , ] <- rbinom(I_A[i,j,k], p_I_AR)
 # vaccination
 n_I_AV[, , ] <- rbinom(I_A[i,j,k] - n_I_AR[i,j,k], p_I_AV[i,j,k])
+n_I_AV_skip[, , ] <- rbinom(I_A[i,j,k] - n_I_AR[i,j,k], p_I_AV_skip[i,j,k])
 
 # Flow out of I_C:
 # progression
@@ -189,9 +205,32 @@ n_RE[, ,] <- n_Rx[i,j,k] - n_RS[i,j,k]
 # vaccination
 n_RV[, , ] <- rbinom(R[i,j,k] - n_Rx[i,j,k], p_RV[i,j,k])
 # n_RV[, , ] <- rbinom(R[i,j,k], p_RV[i,j,k])
+n_RV_skip[, , ] <- rbinom(R[i,j,k] - n_Rx[i,j,k] - n_RV[i,j,k], p_RV_skip[i,j,k])
 
-# Number vaccinated
-n_V[, ] <- n_SV[i,j] + sum(n_EV[i, ,j]) + sum(n_I_AV[i, ,j]) + sum(n_I_PV[i, ,j]) + sum(n_RV[i, ,j])
+# Number vaccinated by age and vaccine stage
+
+# Note that if an individual makes a vaccine skip move, then in the following
+# they are counted as making as having moved through each of the intermediate
+# classes they skip over, even though they do not spend any time in them.
+# Note this should not affect model dynamics, the assumption is purely for
+# bookkeeping purposes
+n_S_vaccinated[, ] <- n_SV[i,j] + 
+    (if (vacc_skipped[j] > 0) n_SV_skip[i,vacc_skipped[j]] else 0)
+n_E_vaccinated[, ] <- sum(n_EV[i, ,j]) + 
+    (if (vacc_skipped[j] > 0) sum(n_EV[i, ,vacc_skipped[j]]) else 0)
+n_I_P_vaccinated[, ] <- sum(n_I_PV[i, ,j]) + 
+    (if (vacc_skipped[j] > 0) sum(n_I_PV_skip[i, ,vacc_skipped[j]]) else 0)
+n_I_A_vaccinated[, ] <- sum(n_I_AV[i, ,j]) + 
+    (if (vacc_skipped[j] > 0) sum(n_I_AV_skip[i, ,vacc_skipped[j]]) else 0)
+n_R_vaccinated[, ] <- sum(n_RV[i, ,j]) + 
+    (if (vacc_skipped[j] > 0) sum(n_RV_skip[i, ,vacc_skipped[j]]) else 0)
+
+n_vaccinated[, ] <- 
+    n_S_vaccinated[i,j] + 
+    n_E_vaccinated[i,j] + 
+    n_I_P_vaccinated[i,j] +
+    n_I_A_vaccinated[i,j] + 
+    n_R_vaccinated[i,j]
 
 # Parallel flow for serological testing
 n_T_pre_1x[, , ] <- rbinom(T_pre_1[i,j,k], p_T_pre_1x)
@@ -200,11 +239,15 @@ n_T_P_1T_N_1[, , ] <- rbinom(T_P_1[i,j,k], p_T_P_1T_N_1)
 
 # number of new I_A
 new_I_A[, , ] <- I_A[i,j,k] + n_EI_A[i,j,k] - n_I_AR[i,j,k] - n_I_AV[i,j,k] + 
-    (if (k == 1) n_I_AV[i,j,n_vax] else n_I_AV[i,j,k-1])
+    (if (k == 1) n_I_AV[i,j,n_vax] else n_I_AV[i,j,k-1]) - 
+    (if (vacc_skip_to[k] > 0) n_I_AV_skip[i,j,k] else 0) + 
+    (if (vacc_skip_from[k] > 0) n_I_AV_skip[i,j,vacc_skip_from[k]] else 0)
 
 # number of new I_P
 new_I_P[, , ] <- I_P[i,j,k] + n_EI_P[i,j,k] - n_I_PI_C[i,j,k] - n_I_PV[i,j,k] +
-    (if (k == 1) n_I_PV[i,j,n_vax] else n_I_PV[i,j,k-1])
+    (if (k == 1) n_I_PV[i,j,n_vax] else n_I_PV[i,j,k-1]) - 
+    (if (vacc_skip_to[k] > 0) n_I_PV_skip[i,j,k] else 0) + 
+    (if (vacc_skip_from[k] > 0) n_I_PV_skip[i,j,vacc_skip_from[k]] else 0)
 
 # number of new I_C
 new_I_C[, , ] <- I_C[i,j,k] + n_I_PI_C[i,j,k] - n_I_Cx[i,j,k]
@@ -355,6 +398,15 @@ vaccine_n_candidates[, ] <-
     sum(I_P[i, ,index_dose[j]]) +
     sum(R[i, ,index_dose[j]])
 
+vacc_skip_n_candidates[, ] <-
+    (if (vacc_skip_dose[j] > 0)
+        S[i,vacc_skip_dose[j]] +
+         sum(E[i, ,vacc_skip_dose[j]]) +
+         sum(I_A[i, ,vacc_skip_dose[j]]) +
+         sum(I_P[i, ,vacc_skip_dose[j]]) +
+         sum(R[i, ,vacc_skip_dose[j]])
+     else 0)
+
 # Work out the vaccination probability via doses, driven by the
 # schedule
 vaccine_probability_doses[, ] <- min(
@@ -367,10 +419,32 @@ total_attempted_doses[, ] <- vaccine_missed_doses[i, j] + (
     if (as.integer(step) >= dim(vaccine_dose_step, 3)) 0
     else vaccine_dose_step[i, j, step + 1])
 
+# Now we work out the split of the total attempted doses, firstly for the
+# next vaccine class moves, then for the vaccine skip moves.
+#
+# Note attempted doses for next vaccine class moves competing with a vaccine
+# skip are weighted here, with remaining doses made available to the vaccine
+# skip move below.
+#
+# Note that since we require vacc_skip_dose_weight <= 1, it is not possible for
+# there to be an excess of doses for vaccine skip moves while having not
+# enough doses for the next vaccine class candidates.
+vaccine_attempted_doses[, ] <-
+    (if (vaccine_n_candidates[i, j] == 0) 0
+     else
+         min(vaccine_n_candidates[i, j] /
+                 (vaccine_n_candidates[i, j] +
+                      vacc_skip_dose_weight[j] * vacc_skip_n_candidates[i, j])
+             * total_attempted_doses[i, j],
+             vaccine_n_candidates[i, j]))
 
-# No vaccine skip moves currently so attempted doses are just equal to total
-# attempted doses
-vaccine_attempted_doses[, ] <- total_attempted_doses[i, j]
+vacc_skip_attempted_doses[, ] <-
+    (if (vacc_skip_dose_weight[j] > 0)
+        (if (vacc_skip_dose[j] > 0)
+            total_attempted_doses[i, j] -
+             vaccine_attempted_doses[i, j]
+         else 0)
+     else 0)
 
 # Calculate catch-up vaccine doses, i.e. doses not delivered according to
 # schedule, e.g. because too many individuals are in the I or H states, that
@@ -378,17 +452,57 @@ vaccine_attempted_doses[, ] <- total_attempted_doses[i, j]
 initial(vaccine_missed_doses[, ]) <- 0
 update(vaccine_missed_doses[, ]) <-
     vaccine_catchup_fraction *
-    max(total_attempted_doses[i, j] - n_V[i, index_dose[j]],
+    max(total_attempted_doses[i, j] - n_vaccinated[i, index_dose[j]],
         as.numeric(0))
 vaccine_catchup_fraction <- user(1)
 
 # Calculate probability of vaccination with a certain dose based on progression
 # at a constant rate (vaccine_progression_rate_base) or the supplied
 # time-varying probabilities (vaccine_probability_doses)
-p_V[, ] <- if (index_dose_inverse[j] > 0)
-    vaccine_probability_doses[i, index_dose_inverse[j]] else
-        1 - exp(-vaccine_progression_rate_base[i, j] * dt)
+p_V[, ] <- 
+    (if (index_dose_inverse[j] > 0)
+        vaccine_probability_doses[i, index_dose_inverse[j]] 
+     else
+        1 - exp(-vaccine_progression_rate_base[i, j] * dt))
 vaccine_progression_rate_base[, ] <- user()
+
+p_V_skip[, ] <- 
+    (if (vacc_skip_dose_inverse[j] > 0)
+        (if (vacc_skip_n_candidates[i, vacc_skip_dose_inverse[j]] > 0)
+            min(vacc_skip_attempted_doses[i, vacc_skip_dose_inverse[j]]/
+                    vacc_skip_n_candidates[i, vacc_skip_dose_inverse[j]], 
+                as.numeric(1))
+         else 0)
+     else
+         1 - exp(-vacc_skip_progression_rate_base[j] * dt))
+
+# Vaccine skip inputs
+# 1. vacc_skip_to[j] is the vaccine stratum that the vaccine skip move
+#    from stratum j goes to (0 represents no vaccine skip move from j)
+# 2. vacc_skip_from[j] is the vaccine stratum that the vaccine skip move
+#    to stratum j comes from (0 represents no vaccine skip move to j)
+# 3. vacc_skip_progression_rate_base[j] is the progression rate used for
+#    the vaccine skip from stratum j (unless the vaccine skip move is
+#    controlled by doses)
+# 4. vacc_skip_dose[j] is the vaccine stratum that the vaccine skip move comes
+#    from that is controlled by dose j (0 represents no vaccine skip
+#    move controlled by dose j)
+# 5. vacc_skip_dose_inverse[j] is the dose that the vaccine skip move from
+#    stratum j is controlled by (0 represents that no dose controls the vaccine
+#    skip move)
+# 6. vacc_skip_dose_weight[j] represents how much vaccine skip candidates are
+#    weighted for distribution of dose j relative to standard vaccine
+#    candidates for that dose
+# 7. vacc_skipped is used for bookkeeping - vacc_skipped[j] is the vaccine
+#    stratum a vaccine skip move goes from that either starts at j or skips
+#    over j (if there is no such move then the vacc_skipped[j] is 0)
+vacc_skip_to[] <- user(integer = TRUE)
+vacc_skip_from[] <- user(integer = TRUE)
+vacc_skip_progression_rate_base[] <- user()
+vacc_skip_dose[] <- user(integer = TRUE)
+vacc_skip_dose_inverse[] <- user(integer = TRUE)
+vacc_skip_dose_weight[] <- user()
+vacc_skipped[] <- user(integer = TRUE)
 
 # Calculation of I_weighted: infectious-weighted number of infectious individuals
 new_I_weighted[, , ] <- 
@@ -465,10 +579,20 @@ dim(n_EV) <- c(n_age,n_strains,n_vax)
 dim(n_I_PV) <- c(n_age,n_strains,n_vax)
 dim(n_I_AV) <- c(n_age,n_strains,n_vax)
 dim(n_RV) <- c(n_age,n_strains,n_vax)
+dim(n_SV_skip) <- c(n_age,n_vax)
+dim(n_EV_skip) <- c(n_age,n_strains,n_vax)
+dim(n_I_PV_skip) <- c(n_age,n_strains,n_vax)
+dim(n_I_AV_skip) <- c(n_age,n_strains,n_vax)
+dim(n_RV_skip) <- c(n_age,n_strains,n_vax)
 dim(n_T_pre_1x) <- c(n_age,n_strains,n_vax)
 dim(n_T_pre_1T_P_1) <- c(n_age,n_strains,n_vax)
 dim(n_T_P_1T_N_1) <- c(n_age,n_strains,n_vax)
-dim(n_V) <- c(n_age,n_vax)
+dim(n_S_vaccinated) <- c(n_age,n_vax)
+dim(n_E_vaccinated) <- c(n_age,n_vax)
+dim(n_I_P_vaccinated) <- c(n_age,n_vax)
+dim(n_I_A_vaccinated) <- c(n_age,n_vax)
+dim(n_R_vaccinated) <- c(n_age,n_vax)
+dim(n_vaccinated) <- c(n_age,n_vax)
 dim(new_I_A) <- c(n_age,n_strains,n_vax)
 dim(new_I_P) <- c(n_age,n_strains,n_vax)
 dim(new_I_C) <- c(n_age,n_strains,n_vax)
@@ -498,24 +622,39 @@ dim(rate_Rx) <- c(n_age,n_strains,n_vax)
 dim(p_Rx) <- c(n_age,n_strains,n_vax)
 dim(p_RS) <- c(n_age,n_strains,n_vax)
 dim(p_V) <- c(n_age,n_vax)
-dim(vaccine_progression_rate_base) <- c(n_age, n_vax)
+dim(p_V_skip) <- c(n_age,n_vax)
+dim(vaccine_progression_rate_base) <- c(n_age,n_vax)
 dim(p_SV) <- c(n_age,n_vax)
 dim(p_EV) <- c(n_age,n_strains,n_vax)
 dim(p_I_PV) <- c(n_age,n_strains,n_vax)
 dim(p_I_AV) <- c(n_age,n_strains,n_vax)
 dim(p_RV) <- c(n_age,n_strains,n_vax)
+dim(p_SV_skip) <- c(n_age,n_vax)
+dim(p_EV_skip) <- c(n_age,n_strains,n_vax)
+dim(p_I_PV_skip) <- c(n_age,n_strains,n_vax)
+dim(p_I_AV_skip) <- c(n_age,n_strains,n_vax)
+dim(p_RV_skip) <- c(n_age,n_strains,n_vax)
 dim(seed_value) <- user()
 dim(strain_seed_value) <- user()
 dim(index_dose) <- n_doses
 dim(index_dose_inverse) <- n_vax
 dim(vaccine_dose_step) <- user()
-dim(vaccine_n_candidates) <- c(n_age, n_doses)
-dim(vaccine_attempted_doses) <- c(n_age, n_doses)
-dim(vaccine_probability_doses) <- c(n_age, n_doses)
-dim(total_attempted_doses) <- c(n_age, n_doses)
-dim(vaccine_missed_doses) <- c(n_age, n_doses)
+dim(vaccine_n_candidates) <- c(n_age,n_doses)
+dim(vacc_skip_n_candidates) <- c(n_age,n_doses)
+dim(vaccine_attempted_doses) <- c(n_age,n_doses)
+dim(vacc_skip_attempted_doses) <- c(n_age,n_doses)
+dim(vaccine_probability_doses) <- c(n_age,n_doses)
+dim(total_attempted_doses) <- c(n_age,n_doses)
+dim(vaccine_missed_doses) <- c(n_age,n_doses)
+dim(vacc_skip_to) <- n_vax
+dim(vacc_skip_from) <- n_vax
+dim(vacc_skip_progression_rate_base) <- n_vax
+dim(vacc_skip_dose) <- n_doses
+dim(vacc_skip_dose_inverse) <- n_vax
+dim(vacc_skip_dose_weight) <- n_doses
+dim(vacc_skipped) <- n_vax
 dim(new_I_weighted) <- c(n_age,n_strains,n_vax)
 dim(I_weighted) <- c(n_age,n_strains,n_vax)
 dim(prob_strain) <- n_real_strains
-dim(eff_S) <- c(n_age, n_real_strains, n_vax)
-dim(effective_susceptible) <- c(n_age, n_real_strains)
+dim(eff_S) <- c(n_age, n_real_strains,n_vax)
+dim(effective_susceptible) <- c(n_age,n_real_strains)

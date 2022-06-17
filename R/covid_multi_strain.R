@@ -59,6 +59,9 @@ parameters <- function(dt,
                        vaccine_index_booster = NULL,
                        vaccine_catchup_fraction = 1,
                        n_doses = 2L,
+                       vacc_skip_progression_rate = NULL,
+                       vacc_skip_to = NULL,
+                       vacc_skip_weight = NULL,
                        waning_rate = 0,
                        cross_immunity = 1,
                        sero_sensitivity_1 = 0.9,
@@ -117,11 +120,11 @@ parameters <- function(dt,
     p$cross_immunity <- recycle(cross_immunity,n_real_strains)
     
     # Number of strains and relative transmissibility
-    strain <- strain_parameters(strain_transmission, strain_seed_date, 
+    strain <- parameters_strain(strain_transmission, strain_seed_date, 
                                 strain_seed_size, strain_seed_pattern,p$dt)
     
     # Construct vaccination parameters
-    vaccination <- vaccination_parameters(p$N_tot,
+    vaccination <- parameters_vaccination(p$N_tot,
                                           p$dt,
                                           rel_susceptibility,
                                           rel_p_sympt,
@@ -135,6 +138,18 @@ parameters <- function(dt,
                                           strain$n_strains, # now up to 2 strains
                                           vaccine_catchup_fraction,
                                           n_doses)
+    
+    # Vaccine stratum skip parameters
+    vacc_skip_to <- vacc_skip_to %||% integer(vaccination$n_vacc_classes)
+    vacc_skip_progression_rate <-
+        vacc_skip_progression_rate %||% rep(0, vaccination$n_vacc_classes)
+    vacc_skip_weight <- vacc_skip_weight %||% rep(0, vaccination$n_vacc_classes)
+    vacc_skip <- parameters_vacc_skip(vacc_skip_to,
+                                      vacc_skip_progression_rate,
+                                      vacc_skip_weight,
+                                      vaccination$n_vacc_classes,
+                                      n_doses,
+                                      vaccination$index_dose_inverse)
     
     # Relative probabilities for severe outcomes for strains
     p$strain_rel_p_sympt <- process_strain_rel_p(strain_rel_p_sympt,
@@ -155,7 +170,7 @@ parameters <- function(dt,
     p$sero_specificity_1 <- sero_specificity_1
     
     # Concatenate parameters into one list
-    p <- c(p,strain,vaccination)
+    p <- c(p,strain,vaccination,vacc_skip)
     
 }
 
@@ -256,7 +271,7 @@ process_strain_rel_p <- function(p, n_strains, n_real_strains) {
 }
 
 
-vaccination_parameters <- function(N_tot,
+parameters_vaccination <- function(N_tot,
                                    dt,
                                    rel_susceptibility = 1,
                                    rel_p_sympt = 1,
@@ -362,7 +377,86 @@ create_index_dose_inverse <- function(n_vacc_classes, index_dose) {
 }
 
 
-strain_parameters <- function(strain_transmission, strain_seed_date,
+parameters_vacc_skip <- function(vacc_skip_to,
+                                 vacc_skip_progression_rate,
+                                 vacc_skip_weight,
+                                 n_vacc_classes,
+                                 n_doses,
+                                 index_dose_inverse) {
+    
+    vacc_classes <- seq_len(n_vacc_classes)
+    if (length(vacc_skip_to) != n_vacc_classes) {
+        stop(sprintf("There are %s vaccine classes so 'vacc_skip_to' must be of
+                 length %s", n_vacc_classes, n_vacc_classes))
+    }
+    if (length(vacc_skip_weight) != n_vacc_classes) {
+        stop(sprintf("There are %s vaccine classes so 'vacc_skip_weight' must be of
+                 length %s", n_vacc_classes, n_vacc_classes))
+    }
+    if (length(vacc_skip_progression_rate) != n_vacc_classes) {
+        stop(sprintf("There are %s vaccine classes so 'vacc_skip_progression_rate'
+                 must be of length %s", n_vacc_classes, n_vacc_classes))
+    }
+    if (!all(vacc_skip_to %in% vacc_classes | vacc_skip_to == 0)) {
+        stop(sprintf("There are %s vaccine classes so the values in 'vacc_skip_to'
+                 must be 0 or one of: %s",
+                     n_vacc_classes,
+                     paste(vacc_classes, collapse = ", ")))
+    }
+    if (any(vacc_skip_to == 0 & vacc_skip_weight != 0)) {
+        stop("Require 0 values in 'vacc_skip_weight' for vaccine strata that have 0
+         values in 'vacc_skip_to'")
+    }
+    if (any(vacc_skip_to == 0 & vacc_skip_progression_rate != 0)) {
+        stop("Require 0 values in 'vacc_skip_progression_rate' for vaccine strata
+         that have 0 values in 'vacc_skip_to'")
+    }
+    if (any(vacc_skip_to != 0 & vacc_skip_to <= vacc_classes + 1)) {
+        stop("Require vacc_skip_to[j] = 0 or vacc_skip_to[j] > j + 1")
+    }
+    vacc_skip_moves <- which(vacc_skip_to > 0)
+    vacc_skip_to_moves <- vacc_skip_to[vacc_skip_moves]
+    if (length(unique(vacc_skip_to_moves)) != length(vacc_skip_to_moves)) {
+        stop("Cannot have more than one vaccine skip move to the same stratum")
+    }
+    
+    # assert_proportion(vacc_skip_weight)
+    
+    
+    vacc_skip_from <- integer(n_vacc_classes)
+    vacc_skip_from[vacc_skip_to[vacc_skip_moves]] <- vacc_skip_moves
+    vacc_skip_dose_inverse <- integer(n_vacc_classes)
+    vacc_skip_dose_inverse[vacc_skip_moves] <-
+        index_dose_inverse[vacc_skip_to[vacc_skip_moves] - 1]
+    vacc_skip_dose <- integer(n_doses)
+    vacc_skip_dose[vacc_skip_dose_inverse[vacc_skip_moves]] <- vacc_skip_moves
+    vacc_skipped <- integer(n_vacc_classes)
+    if (length(vacc_skip_moves) > 0) {
+        for (i in vacc_classes) {
+            skipped_from <- which(vacc_classes <= i & vacc_skip_to > i)
+            if (length(skipped_from) > 1) {
+                stop("Cannot have overlapping vaccine skip moves")
+            } else if (length(skipped_from) == 1) {
+                vacc_skipped[i] <- skipped_from
+            }
+        }
+    }
+    vacc_skip_dose_weight <- rep(0, n_doses)
+    vacc_skip_dose_weight[vacc_skip_dose_inverse[vacc_skip_moves]] <-
+        vacc_skip_weight[vacc_skip_moves]
+    
+    list(vacc_skip_to = vacc_skip_to,
+         vacc_skip_from = vacc_skip_from,
+         vacc_skip_weight = vacc_skip_weight,
+         vacc_skip_dose_weight = vacc_skip_dose_weight,
+         vacc_skip_dose = vacc_skip_dose,
+         vacc_skip_dose_inverse = vacc_skip_dose_inverse,
+         vacc_skipped = vacc_skipped,
+         vacc_skip_progression_rate_base = vacc_skip_progression_rate)
+}
+
+
+parameters_strain <- function(strain_transmission, strain_seed_date,
                               strain_seed_size, strain_seed_pattern,
                               dt) {
     if (length(strain_transmission) == 0) {
@@ -828,6 +922,9 @@ make_transform <- function(dt,
                            vaccine_index_booster,
                            vaccine_catchup_fraction,
                            n_doses,
+                           vacc_skip_progression_rate,
+                           vacc_skip_to,
+                           vacc_skip_weight,
                            waning_rate,
                            cross_immunity,
                            sero_sensitivity_1,
@@ -890,6 +987,9 @@ make_transform <- function(dt,
                         vaccine_index_booster,
                         vaccine_catchup_fraction,
                         n_doses,
+                        vacc_skip_progression_rate,
+                        vacc_skip_to,
+                        vacc_skip_weight,
                         waning_rate,
                         cross_immunity,
                         sero_sensitivity_1,
@@ -942,6 +1042,9 @@ make_transform_multistage <- function(dt,
                                       vaccine_index_booster,
                                       vaccine_catchup_fraction,
                                       n_doses,
+                                      vacc_skip_progression_rate,
+                                      vacc_skip_to,
+                                      vacc_skip_weight,
                                       waning_rate,
                                       cross_immunity,
                                       start_date1,
@@ -1016,6 +1119,9 @@ make_transform_multistage <- function(dt,
                         vaccine_index_booster,
                         vaccine_catchup_fraction,
                         n_doses,
+                        vacc_skip_progression_rate,
+                        vacc_skip_to,
+                        vacc_skip_weight,
                         waning_rate,
                         cross_immunity,
                         sero_sensitivity_1,
@@ -1067,6 +1173,9 @@ make_transform_multistage <- function(dt,
                          vaccine_index_booster,
                          vaccine_catchup_fraction,
                          n_doses,
+                         vacc_skip_progression_rate,
+                         vacc_skip_to,
+                         vacc_skip_weight,
                          waning_rate,
                          cross_immunity1,
                          sero_sensitivity_1,
