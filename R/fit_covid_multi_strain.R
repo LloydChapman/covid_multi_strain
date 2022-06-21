@@ -128,10 +128,10 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # Transmission and natural history parameters
     # intvtn_date <- as.Date(c(strt_date,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
     # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-01","2021-08-12"))
-    intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12"))
+    intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
     beta_date <- as.integer(intvtn_date - min(intvtn_date))
     # beta_value_sim <- c(0.035,0.025,0.02,0.04,0.02) #7/8*
-    beta_value_sim <- c(0.025,0.02,0.025,0.02) #7/8*
+    beta_value_sim <- c(0.025,0.02,0.025,0.02,0.025,0.02) #7/8*
     beta_type <- "piecewise-constant" #"piecewise-linear" #
     gamma_E <- 0.5
     gamma_P <- 0.4
@@ -417,12 +417,14 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     #                         min = rep(0,5), max = rep(Inf,5), discrete = rep(F,5),
     #                         prior = replicate(5,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE)))
     beta_value_list <- list(
-        name = c("beta1","beta2","beta3","beta4"), initial = c(0.025,0.02,0.025,0.02),
-        min = rep(0,4), max = rep(Inf,4), discrete = rep(F,4),
+        name = c("beta1","beta2","beta3","beta4","beta5","beta6"), initial = c(0.025,0.02,0.025,0.02,0.025,0.02),
+        min = rep(0,6), max = rep(Inf,6), discrete = rep(F,6),
         prior = #replicate(4,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE))
-            list(function(x) dgamma(x, shape = 4, scale = 0.028/4, log = TRUE),
+            list(function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
                  function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
-                 function(x) dgamma(x, shape = 4, scale = 0.028/4, log = TRUE),
+                 function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
+                 function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
+                 function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
                  function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE)
             )
     )
@@ -442,7 +444,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
                                )
     p_D_max <- pmcmc_parameter("p_D_max",p_D_max0,min = 0,max = 1,
                                prior = function(x) dbeta(x, 1, 1, log = TRUE))
-    rel_strain_transmission1 <- pmcmc_parameter("rel_strain_transmission1",5,min = 2, max = 6)
+    rel_strain_transmission1 <- pmcmc_parameter("rel_strain_transmission1",3.5,min = 2, max = 6)
     strain_seed_date1 <- pmcmc_parameter("strain_seed_date1",505,min = 500,max = 512)
     phi_cases <- pmcmc_parameter("phi_cases",0.5,min = 0,max = 1,
                                  prior = function(x) dbeta(x, 1, 1, log = TRUE))
@@ -687,7 +689,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # for (i in seq_along(init_pars)){
     #     plot(res$pars[,i],type = "l",xlab = "Iteration",ylab = names(init_pars)[i])
     # }
-    par(mfrow = c(ceiling(length(u)/2),2))
+    par(mar = c(2.5,4,2,1), mfrow = c(ceiling(length(u)/2),2))
     for (i in u){
         plot(res$pars[,i],type = "l",xlab = "Iteration",ylab = names(init_pars)[i])
     }
