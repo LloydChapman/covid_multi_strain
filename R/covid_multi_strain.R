@@ -64,6 +64,8 @@ parameters <- function(dt,
                        vacc_skip_weight = NULL,
                        waning_rate = 0,
                        cross_immunity = 1,
+                       phi_cases = 1,
+                       kappa_cases = 2,
                        sero_sensitivity_1 = 0.9,
                        sero_specificity_1 = 0.99) {
     
@@ -165,6 +167,9 @@ parameters <- function(dt,
                                                  n_real_strains)
     
     # Observation parameters
+    p$phi_cases <- phi_cases
+    p$kappa_cases <- kappa_cases
+    
     # Sensitivity and specificity of serological tests
     p$sero_sensitivity_1 <- sero_sensitivity_1
     p$sero_specificity_1 <- sero_specificity_1
@@ -546,15 +551,23 @@ index <- function(info, min_ages = seq(0,70,by = 10), Rt = TRUE){
                    deaths_70_plus = index[["D_inc_70_plus"]],
                    # deaths_70_79 = index[["D_inc_70_79"]],
                    # deaths_80_plus = index[["D_inc_80_plus"]]
+                   cases = index[["cases_inc"]],
+                   cases_non_variant = index[["cases_non_variant_inc"]],
+                   cases_0_9 = index[["cases_inc_0_9"]],
+                   cases_10_19 = index[["cases_inc_10_19"]],
+                   cases_20_29 = index[["cases_inc_20_29"]],
+                   cases_30_39 = index[["cases_inc_30_39"]],
+                   cases_40_49 = index[["cases_inc_40_49"]],
+                   cases_50_59 = index[["cases_inc_50_59"]],
+                   cases_60_69 = index[["cases_inc_60_69"]],
+                   cases_70_plus = index[["cases_inc_70_plus"]],
                    sero_pos_1 = index[["sero_pos_1"]],
                    sero_pos_1_20_29 = index[["sero_pos_1_20_29"]],
                    sero_pos_1_30_39 = index[["sero_pos_1_30_39"]],
                    sero_pos_1_40_49 = index[["sero_pos_1_40_49"]],
                    sero_pos_1_50_59 = index[["sero_pos_1_50_59"]],
                    sero_pos_1_60_69 = index[["sero_pos_1_60_69"]],
-                   sero_pos_1_70_plus = index[["sero_pos_1_70_plus"]],
-                   cases = index[["cases_inc"]],
-                   cases_non_variant = index[["cases_non_variant_inc"]]
+                   sero_pos_1_70_plus = index[["sero_pos_1_70_plus"]]
     )
     
     suffix <- paste0("_",min_ages)
@@ -711,6 +724,25 @@ compare <- function(state, observed, pars){
     # model_deaths_70_79 <- state["deaths_70_79", ]
     # model_deaths_80_plus <- state["deaths_80_plus", ]
     
+    # Modelled cases
+    model_cases_0_9 <- state["cases_0_9", ]
+    model_cases_10_19 <- state["cases_10_19", ]
+    model_cases_20_29 <- state["cases_20_29", ]
+    model_cases_30_39 <- state["cases_30_39", ]
+    model_cases_40_49 <- state["cases_40_49", ]
+    model_cases_50_59 <- state["cases_50_59", ]
+    model_cases_60_69 <- state["cases_60_69", ]
+    model_cases_70_plus <- state["cases_70_plus", ]
+    
+    model_confirmed_cases_0_9 <- pars$phi_cases * model_cases_0_9
+    model_confirmed_cases_10_19 <- pars$phi_cases * model_cases_10_19
+    model_confirmed_cases_20_29 <- pars$phi_cases * model_cases_20_29
+    model_confirmed_cases_30_39 <- pars$phi_cases * model_cases_30_39
+    model_confirmed_cases_40_49 <- pars$phi_cases * model_cases_40_49
+    model_confirmed_cases_50_59 <- pars$phi_cases * model_cases_50_59
+    model_confirmed_cases_60_69 <- pars$phi_cases * model_cases_60_69
+    model_confirmed_cases_70_plus <- pars$phi_cases * model_cases_70_plus
+    
     # Modelled seropositives
     # model_sero_pos_1 can go above N_tot (I think due to reinfection) so cap it to avoid probabilities > 1
     model_sero_pos_1 <- state["sero_pos_1", ]
@@ -819,6 +851,16 @@ compare <- function(state, observed, pars){
     # # ll_deaths_70_79 <- ll_pois(observed$deaths_70_79,model_deaths_70_79,exp_noise)
     # # ll_deaths_80_plus <- ll_pois(observed$deaths_80_plus,model_deaths_80_plus,exp_noise)
     
+    # Log-likelihoods for cases
+    ll_cases_0_9 <- ll_nbinom(observed$cases_0_9,model_confirmed_cases_0_9,pars$kappa_cases,exp_noise)
+    ll_cases_10_19 <- ll_nbinom(observed$cases_10_19,model_confirmed_cases_10_19,pars$kappa_cases,exp_noise)
+    ll_cases_20_29 <- ll_nbinom(observed$cases_20_29,model_confirmed_cases_20_29,pars$kappa_cases,exp_noise)
+    ll_cases_30_39 <- ll_nbinom(observed$cases_30_39,model_confirmed_cases_30_39,pars$kappa_cases,exp_noise)
+    ll_cases_40_49 <- ll_nbinom(observed$cases_40_49,model_confirmed_cases_40_49,pars$kappa_cases,exp_noise)
+    ll_cases_50_59 <- ll_nbinom(observed$cases_50_59,model_confirmed_cases_50_59,pars$kappa_cases,exp_noise)
+    ll_cases_60_69 <- ll_nbinom(observed$cases_60_69,model_confirmed_cases_60_69,pars$kappa_cases,exp_noise)
+    ll_cases_70_plus <- ll_nbinom(observed$cases_70_plus,model_confirmed_cases_70_plus,pars$kappa_cases,exp_noise)
+    
     # Log-likelihoods for seroprevalence
     # ll_sero_pos_1 <- ll_binom(observed$sero_pos_1,observed$sero_tot_1,model_sero_prob_pos_1)
     ll_sero_pos_1_20_29 <- ll_binom(observed$sero_pos_1_20_29,observed$sero_tot_1_20_29,model_sero_prob_pos_1_20_29)
@@ -829,7 +871,7 @@ compare <- function(state, observed, pars){
     ll_sero_pos_1_70_plus <- ll_binom(observed$sero_pos_1_70_plus,observed$sero_tot_1_70_plus,model_sero_prob_pos_1_70_plus)
     
     # Log-likelihood for variant proportion
-    ll_strain <- ll_binom(observed$cases_non_variant,observed$cases,model_strain_prob_pos)
+    ll_strain <- ll_binom(observed$strain_non_variant,observed$strain_tot,model_strain_prob_pos)
     
     # Calculate total log-likelihood
     # ll_hosps + ll_deaths
@@ -837,7 +879,8 @@ compare <- function(state, observed, pars){
     # ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
     # ll_hosps_70_plus + ll_deaths_70_plus
     # ll_hosps + ll_deaths + ll_sero_pos_1 + ll_strain +
-    1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
+    1*(ll_cases_0_9 + ll_cases_10_19 + ll_cases_20_29 + ll_cases_30_39 + ll_cases_40_49 + ll_cases_50_59 + ll_cases_60_69 + ll_cases_70_plus) +
+        1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
         1*(ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus) + 
         ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus
 }
@@ -940,6 +983,8 @@ make_transform <- function(dt,
         strain_seed_date <- pars[["strain_seed_date"]]
         p_H_max <- pars[["p_H_max"]]
         p_D_max <- pars[["p_D_max"]]
+        phi_cases <- pars[["phi_cases"]]
+        kappa_cases <- 1/pars[["alpha_cases"]]
         
         # Parameters for 1st epoch
         p <- parameters(dt,
@@ -992,11 +1037,12 @@ make_transform <- function(dt,
                         vacc_skip_weight,
                         waning_rate,
                         cross_immunity,
+                        phi_cases,
+                        kappa_cases,
                         sero_sensitivity_1,
                         sero_specificity_1)
         p
     }
-    
 }
 
 
@@ -1072,6 +1118,8 @@ make_transform_multistage <- function(dt,
         p_D_max <- pars[["p_D_max"]]
         rel_strain_transmission1 <- pars[["rel_strain_transmission1"]]
         strain_seed_date1 <- pars[["strain_seed_date1"]]
+        phi_cases <- pars[["phi_cases"]]
+        kappa_cases <- 1/pars[["alpha_cases"]]
         
         # Parameters for 1st epoch
         p <- parameters(dt,
@@ -1124,6 +1172,8 @@ make_transform_multistage <- function(dt,
                         vacc_skip_weight,
                         waning_rate,
                         cross_immunity,
+                        phi_cases,
+                        kappa_cases,
                         sero_sensitivity_1,
                         sero_specificity_1)
         
@@ -1178,6 +1228,8 @@ make_transform_multistage <- function(dt,
                          vacc_skip_weight,
                          waning_rate,
                          cross_immunity1,
+                         phi_cases,
+                         kappa_cases,
                          sero_sensitivity_1,
                          sero_specificity_1)
         
@@ -1187,7 +1239,6 @@ make_transform_multistage <- function(dt,
         p_multistage <- multistage_parameters(p, epochs)
         p_multistage
     }
-    
 }
 
 
@@ -1278,8 +1329,8 @@ plot_cases <- function(cases_modelled, cases_observed, times){
     # par(mfrow = c(2,1), oma = c(2,3,0,0))
     par(mfrow = c(1,1))
     nms <- dimnames(cases_modelled)[[1]]
-    idx_cases <- grep("cases",nms)
-    idx_cases_obs <- grep("cases",names(cases_observed))
+    idx_cases <- which(nms %in% c("cases","cases_non_variant"))
+    idx_cases_obs <- which(names(cases_observed) %in% c("cases","cases_non_variant"))
     if (ncol(cases_modelled)>1){
         idx_plot <- seq(10,ncol(cases_modelled),by=10)    
     } else {

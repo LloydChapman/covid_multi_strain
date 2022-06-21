@@ -140,7 +140,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     gamma_H <- 0.1
     gamma_G <- 1/3
     gamma_pre_1 <- 1/13
-    gamma_P_1 <- 1/400
+    gamma_P_1 <- -log(0.86)/365
     theta_A <- 0.5
     
     # relative transmissibilities of 1st and 2nd strains
@@ -247,6 +247,8 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
                     vacc_skip_weight,
                     waning_rate,
                     cross_immunity,
+                    phi_cases = 1,
+                    kappa_cases = 2,
                     sero_sensitivity_1,
                     sero_specificity_1)
     
@@ -318,6 +320,8 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
                      vacc_skip_weight,
                      waning_rate,
                      cross_immunity1,
+                     phi_cases = 1,
+                     kappa_cases = 2,
                      sero_sensitivity_1,
                      sero_specificity_1)
 
@@ -440,7 +444,10 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
                                prior = function(x) dbeta(x, 1, 1, log = TRUE))
     rel_strain_transmission1 <- pmcmc_parameter("rel_strain_transmission1",5,min = 2, max = 6)
     strain_seed_date1 <- pmcmc_parameter("strain_seed_date1",505,min = 500,max = 512)
-    
+    phi_cases <- pmcmc_parameter("phi_cases",0.5,min = 0,max = 1,
+                                 prior = function(x) dbeta(x, 1, 1, log = TRUE))
+    alpha_cases <- pmcmc_parameter("alpha_cases",0.5,min = 0,max = 1,
+                                   prior = function(x) dbeta(x, 1, 1, log = TRUE))
     # proposal <- matrix(c(0.01^2,0,0,0.01^2),nrow = 2,ncol = 2,byrow = TRUE)
     # proposal <- matrix(c(0.01^2,0,0,0,0.01^2,0,0,0,2),nrow = 3,ncol = 3,byrow = TRUE)
     # proposal <- matrix(c(0.01^2,0,0,0,
@@ -453,7 +460,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     #                      0,0,0,2,0,
     #                      0,0,0,0,2),nrow = 5,ncol = 5,byrow = TRUE)
     # proposal <- diag(c(rep(1e-7,length(beta_value)),0.1^2,rep(2^2,2)))
-    proposal <- 0.1*diag(c(rep(1e-7,length(beta_value)),0.1^2,rep(2^2,2),rep(1e-5,2),0.1^2,2^2))
+    proposal <- 0.1*diag(c(rep(1e-7,length(beta_value)),0.1^2,rep(2^2,2),rep(1e-5,2),0.1^2,2^2,1e-5,1e-5))
     # transform <- make_transform(dt,
     #                             n_age,
     #                             n_vax,
@@ -601,21 +608,65 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # Using custom accelerated adaptive MCMC algorithm
     # init_pars <- c(beta_value_list$initial,rel_strain_transmission$initial,start_date$initial,strain_seed_date$initial)
     # priors <- c(beta_value_list$prior,rel_strain_transmission$prior,replicate(2,function(x) 0))
-    init_pars <- c(beta_value_list$initial,rel_strain_transmission$initial,start_date$initial,strain_seed_date$initial,p_H_max$initial,p_D_max$initial,rel_strain_transmission1$initial,strain_seed_date1$initial)
-    priors <- c(beta_value_list$prior,rel_strain_transmission$prior,start_date$prior,strain_seed_date$prior,p_H_max$prior,p_D_max$prior,rel_strain_transmission1$prior,strain_seed_date1$prior)
+    init_pars <- c(beta_value_list$initial,
+                   rel_strain_transmission$initial,
+                   start_date$initial,strain_seed_date$initial,
+                   p_H_max$initial,p_D_max$initial,
+                   rel_strain_transmission1$initial,
+                   strain_seed_date1$initial,
+                   phi_cases$initial,
+                   alpha_cases$initial)
+    priors <- c(beta_value_list$prior,
+                rel_strain_transmission$prior,
+                start_date$prior,
+                strain_seed_date$prior,
+                p_H_max$prior,
+                p_D_max$prior,
+                rel_strain_transmission1$prior,
+                strain_seed_date1$prior,
+                phi_cases$prior,
+                alpha_cases$prior)
     # n_iters <- 100 #100
     scaling_factor_start <- 1
     # pars_min <- c(beta_value_list$min,rel_strain_transmission$min,start_date$min,strain_seed_date$min)
     # pars_max <- c(beta_value_list$max,rel_strain_transmission$max,start_date$max,strain_seed_date$max)
-    pars_min <- c(beta_value_list$min,rel_strain_transmission$min,start_date$min,strain_seed_date$min,p_H_max$min,p_D_max$min,rel_strain_transmission1$min,strain_seed_date1$min)
-    pars_max <- c(beta_value_list$max,rel_strain_transmission$max,start_date$max,strain_seed_date$max,p_H_max$max,p_D_max$max,rel_strain_transmission1$max,strain_seed_date1$max)
+    pars_min <- c(beta_value_list$min,
+                  rel_strain_transmission$min,
+                  start_date$min,
+                  strain_seed_date$min,
+                  p_H_max$min,
+                  p_D_max$min,
+                  rel_strain_transmission1$min,
+                  strain_seed_date1$min,
+                  phi_cases$min,
+                  alpha_cases$min)
+    pars_max <- c(beta_value_list$max,
+                  rel_strain_transmission$max,
+                  start_date$max,
+                  strain_seed_date$max,
+                  p_H_max$max,
+                  p_D_max$max,
+                  rel_strain_transmission1$max,
+                  strain_seed_date1$max,
+                  phi_cases$max,
+                  alpha_cases$max)
     iter0 <- 100 #10
     # discrete <- c(rep(F,length(beta_value)+1),rep(T,2))
     # discrete <- c(rep(F,length(beta_value)+1),rep(T,2),rep(F,2))
     discrete <- c(rep(F,length(init_pars)))
     # names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date")
-    names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- names(discrete) <- 
-        c(beta_value_list$name,"rel_strain_transmission","start_date","strain_seed_date","p_H_max","p_D_max","rel_strain_transmission1","strain_seed_date1")
+    names(init_pars) <- names(priors) <- names(pars_min) <- names(pars_max) <- 
+        names(discrete) <- 
+        c(beta_value_list$name,
+          "rel_strain_transmission",
+          "start_date",
+          "strain_seed_date",
+          "p_H_max",
+          "p_D_max",
+          "rel_strain_transmission1",
+          "strain_seed_date1",
+          "phi_cases",
+          "alpha_cases")
     
     tstart <- Sys.time()
     # u <- 1:8 # all parameters 1:5 # only update beta parameters
