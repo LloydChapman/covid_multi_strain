@@ -398,6 +398,12 @@ vax[,dose := fcase(dose == "Primo injection","dose1",
 # doses_by_age_and_dose <- rbind(doses_by_age_and_dose,cbind(data.table(age_group="Total"),doses_by_age_and_dose[,lapply(.SD,sum),.SDcols = c("dose1","dose2","dose3")]))
 # write.csv(doses_by_age_and_dose,"output/doses_by_age_and_dose.csv",row.names = F)
 
+# Add different delays for immune response to different doses
+delay_dose1 <- 28
+delay_dose2 <- 14
+vax[dose == "dose1", date := date + delay_dose1]
+vax[dose == "dose2", date := date + delay_dose2]
+
 # Reaggregate vaccine doses by model age groups
 dates_vax <- seq.Date(vax[,min(date)],vax[,max(date)],by = 1)
 doses <- vax[,unique(dose)]
