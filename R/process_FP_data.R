@@ -111,17 +111,36 @@ weekly_dt[,Date := dmy(Date) - 6]
 # Drop empty columns
 cases_dt[,Column1 := NULL]
 
-names(cases_dt) <- c("case_number","age","entry_date","test_result_date",
+names(cases_dt) <- c("case_number","age_group","date","test_result_date",
                      "vaccination_complete","vaccine_type","last_dose_date",
                      "hospital","death_date","history_of_covid","archipelago")
 
 # Convert Excel date numbers to dates
 cases_dt[,death_date := as.IDate(death_date,origin = "1899-12-30")]
 
-## Hospitalisations
+# Correct typos in entry date
+cases_dt[case_number == 6729, date := as.IDate("2020-10-21")] # date incorrectly given as 2020-01-21
+cases_dt[case_number == 73214, date := as.IDate("2022-03-10")] # date incorrectly given as 2020-03-10
 
+# Clean age group variable
+cases_dt[,age_group := sub("_","-",age_group)]
+cases_dt[,age_group := sub("#NUM!|#VALUE!","",age_group)]
+
+# Change age groups to model age groups
+cases_dt[,min_age := get_min_age(age_group)]
+cases_dt[,age_group := cut(min_age,c(min_ages,Inf),labels = age_groups,right = F)]
+
+# Aggregate cases by age group and date
+cases <- cases_dt[!is.na(date) & age_group != "",.(cases = .N),by = .(age_group,date)]
+
+# Plot cases
+ggplot(cases,aes(x = date,y = cases,group = age_group,color = age_group)) + 
+    geom_line() #+ 
+    # facet_wrap(~age_group)
+
+## Hospitalisations
 # 1st wave 
-names(hosps_dt1) <- c("entry_date","age","sex","death","death_date")
+names(hosps_dt1) <- c("date","age","sex","death","death_date")
 hosps_dt1[,`:=`(sex = fifelse(sex == "Masculin",1,0),
                death = fifelse(death == "Oui",1,0))]
 
@@ -144,7 +163,7 @@ hosps_dt2[,`:=`(age = as.integer(sub(" ans","",age)),
 # Drop empty columns
 hosps_dt3[,c("Column1","Column2","Column3") := NULL]
 
-names(hosps_dt3) <- c("entry_date","age","vaccination_complete","vaccine_type",
+names(hosps_dt3) <- c("date","age","vaccination_complete","vaccine_type",
                       "hospital","death_date","history_of_covid")
 
 hosps_dt3[,`:=`(age = as.integer(sub("_.*","",age)),
@@ -152,18 +171,18 @@ hosps_dt3[,`:=`(age = as.integer(sub("_.*","",age)),
 
 # Hospitalisations Nov-Dec 2021
 hosps_dt_Nov21 <- cases_dt[
-    hospital != "" & between(entry_date,
+    hospital != "" & between(date,
                              hosps_dt2[,max(collection_date)],
-                             hosps_dt3[,min(entry_date)],incbounds = F),
+                             hosps_dt3[,min(date)],incbounds = F),
     !c("test_result_date","archipelago")]
-hosps_dt_Nov21[,age := as.integer(sub("_.*","",age))]
+hosps_dt_Nov21[,age := as.integer(sub("_.*","",age_group))]
 
 
 # Bind data frames
 hosps_dt <- rbind(hosps_dt1,hosps_dt2,hosps_dt_Nov21,hosps_dt3,fill=T)
 
 # FOR NOW: Assume hospitalisation date and sample collection date are the same
-hosps_dt[,date := fifelse(is.na(collection_date),entry_date,collection_date)]
+hosps_dt[,date := fifelse(is.na(collection_date),date,collection_date)]
 
 # Plot total hospitalisations against weekly data to check
 # Total hospitalisations by hospital
@@ -267,9 +286,9 @@ sero_pos_dt2 <- process_sero_data(sero_pos_dt2, as.Date("2021-11-30"), age_group
 
 sero_pos_dt <- rbind(sero_pos_dt1,sero_pos_dt2)
 
-## Make data table of hospitalisations, deaths and seroprevalence for fitting 
-strt_date <- hosps_dt[,min(date)] - 20 # 2020-07-20
-end_date <- as.Date("2022-05-23")
+## Make data table of hospitalisations, deaths, cases and seroprevalence for fitting 
+strt_date <- hosps_dt[,min(date,na.rm = T)] - 20 # 2020-07-20
+end_date <- as.Date("2022-05-23") # last date in vaccination data files
 dates <- seq.Date(strt_date,end_date,by = 1)
 base_dt <- CJ(date = dates,age_group = age_groups_hosp)
 
@@ -289,13 +308,16 @@ reformat_data <- function(x, base_dt, vrbl, fillna = F){
 hosps_wide <- reformat_data(hosps,base_dt,"hosps",T)
 deaths_wide <- reformat_data(deaths,base_dt,"deaths",T)
 
+base_dt_case <- CJ(date = dates, age_group = age_groups)
+cases_wide <- reformat_data(cases,base_dt_case,"cases",T)
+
 setnames(sero_pos_dt,c("n","seropos"),c("sero_tot_1","sero_pos_1"))
 base_dt_sero <- CJ(date = dates,age_group = age_groups[3:length(age_groups)])
 sero_pos_wide <- reformat_data(sero_pos_dt,base_dt_sero,"sero_pos_1")
 sero_tot_wide <- reformat_data(sero_pos_dt,base_dt_sero,"sero_tot_1")
 
 # Merge different data sources
-data_raw <- Reduce(function(...) merge(...,all = T), list(hosps_wide, deaths_wide, sero_pos_wide, sero_tot_wide))
+data_raw <- Reduce(function(...) merge(...,all = T), list(hosps_wide, deaths_wide, cases_wide, sero_pos_wide, sero_tot_wide))
 
 data_raw[,day := as.integer(date - min(date) + 1L)]
 data_raw[,date := NULL]
@@ -305,10 +327,11 @@ data_raw[,date := NULL]
 data_raw[,hosps := hosps_0_39 + hosps_40_49 + hosps_50_59 + hosps_60_69 + hosps_70_plus]
 # data_raw$deaths <- NA
 data_raw[,deaths := deaths_0_39 + deaths_40_49 + deaths_50_59 + deaths_60_69 + deaths_70_plus]
+data_raw[,cases := cases_0_9 + cases_10_19 + cases_20_29 + cases_30_39 + cases_40_49 + cases_50_59 + cases_60_69 + cases_70_plus]
 data_raw[,sero_pos_1 := sero_pos_1_20_29 + sero_pos_1_30_39 + sero_pos_1_40_49 + sero_pos_1_50_59 + sero_pos_1_60_69 + sero_pos_1_70_plus]
 data_raw[,sero_tot_1 := sero_tot_1_20_29 + sero_tot_1_30_39 + sero_tot_1_40_49 + sero_tot_1_50_59 + sero_tot_1_60_69 + sero_tot_1_70_plus]
-data_raw[,cases := NA]
-data_raw[,cases_non_variant := NA]
+data_raw[,strain_tot := NA]
+data_raw[,strain_non_variant := NA]
 
 ## Vaccinations
 
