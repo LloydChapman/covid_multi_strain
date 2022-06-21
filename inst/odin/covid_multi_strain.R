@@ -334,18 +334,67 @@ update(sero_pos_1_60_69) <- sum(T_P_1[7, , ]) + sum(n_T_pre_1T_P_1[7, , ]) - sum
 initial(sero_pos_1_70_plus) <- 0
 update(sero_pos_1_70_plus) <- sum(T_P_1[8, , ]) + sum(n_T_pre_1T_P_1[8, , ]) - sum(n_T_P_1T_N_1[8, , ])
 
-# Incidence of 1st strain
+# Case incidence 
 new_cases <- sum(n_EI_P)
 initial(cases_inc) <- 0
 update(cases_inc) <- (
     if (step %% steps_per_day == 0) new_cases
     else cases_inc + new_cases)
+
 new_cases_non_variant <- sum(n_EI_P[,1, ]) +
     (if (n_real_strains == 2) sum(n_EI_P[,4, ]) else 0)
 initial(cases_non_variant_inc) <- 0
 update(cases_non_variant_inc) <- (
     if (step %% steps_per_day == 0) new_cases_non_variant
     else cases_non_variant_inc + new_cases_non_variant)
+
+new_cases_0_9 <- sum(n_EI_P[1, , ])
+initial(cases_inc_0_9) <- 0
+update(cases_inc_0_9) <- ( 
+    if (step %% steps_per_day == 0) new_cases_0_9
+    else cases_inc_0_9 + new_cases_0_9)
+
+new_cases_10_19 <- sum(n_EI_P[2, , ])
+initial(cases_inc_10_19) <- 0
+update(cases_inc_10_19) <- ( 
+    if (step %% steps_per_day == 0) new_cases_10_19
+    else cases_inc_10_19 + new_cases_10_19)
+
+new_cases_20_29 <- sum(n_EI_P[3, , ])
+initial(cases_inc_20_29) <- 0
+update(cases_inc_20_29) <- ( 
+    if (step %% steps_per_day == 0) new_cases_20_29
+    else cases_inc_20_29 + new_cases_20_29)
+
+new_cases_30_39 <- sum(n_EI_P[4, , ])
+initial(cases_inc_30_39) <- 0
+update(cases_inc_30_39) <- ( 
+    if (step %% steps_per_day == 0) new_cases_30_39
+    else cases_inc_30_39 + new_cases_30_39)
+
+new_cases_40_49 <- sum(n_EI_P[5, , ])
+initial(cases_inc_40_49) <- 0
+update(cases_inc_40_49) <- ( 
+    if (step %% steps_per_day == 0) new_cases_40_49
+    else cases_inc_40_49 + new_cases_40_49)
+
+new_cases_50_59 <- sum(n_EI_P[6, , ])
+initial(cases_inc_50_59) <- 0
+update(cases_inc_50_59) <- ( 
+    if (step %% steps_per_day == 0) new_cases_50_59
+    else cases_inc_50_59 + new_cases_50_59)
+
+new_cases_60_69 <- sum(n_EI_P[7, , ])
+initial(cases_inc_60_69) <- 0
+update(cases_inc_60_69) <- ( 
+    if (step %% steps_per_day == 0) new_cases_60_69
+    else cases_inc_60_69 + new_cases_60_69)
+
+new_cases_70_plus <- sum(n_EI_P[8, , ])
+initial(cases_inc_70_plus) <- 0
+update(cases_inc_70_plus) <- ( 
+    if (step %% steps_per_day == 0) new_cases_70_plus
+    else cases_inc_70_plus + new_cases_70_plus)
 
 ## Model parameters (default in parenthesis) 
 # Transmission and progression
