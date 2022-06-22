@@ -248,7 +248,7 @@ deaths <- deaths_dt[,.(deaths=.N),by=.(age_group,date = death_date)]
 ggplot(deaths,aes(x = date,y = deaths,group = age_group,color = age_group)) + geom_line()
 
 # Plot total deaths against weekly data to check
-total_deaths_by_hosp_dt <- deaths_dt[,.(deaths = .N),by = .(date,hospital)]
+total_deaths_by_hosp_dt <- deaths_dt[,.(deaths = .N),by = .(date = death_date,hospital)]
 total_deaths_by_hosp_dt[,iso_week := ISOweek(date)]
 total_deaths_by_hosp_dt <- total_deaths_by_hosp_dt[,.(deaths = sum(deaths)),by = .(iso_week,hospital)]
 total_deaths_by_hosp_dt[,date := ISOweek2date(paste0(iso_week,"-1"))]
@@ -259,7 +259,7 @@ ggplot() +
     labs(title = "CHPF")
 # ggsave("output/total_deaths_CHPF.pdf",width = 5,height = 4)
 
-total_deaths_dt <- deaths_dt[,.(deaths = .N),by = .(date)]
+total_deaths_dt <- deaths_dt[,.(deaths = .N),by = .(date = death_date)]
 total_deaths_dt[,iso_week := ISOweek(date)]
 total_deaths_dt <- total_deaths_dt[,.(deaths = sum(deaths)),by = .(iso_week)]
 total_deaths_dt[,date := ISOweek2date(paste0(iso_week,"-1"))]
@@ -435,9 +435,9 @@ ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color 
     geom_line() +
     facet_wrap(~dose)
 
-# Check totals are the same
-print(vax[,sum(number)]) # 362926
-print(vax_dt[,sum(number)]) # 362926
+# # Check totals are the same
+# print(vax[,sum(number)]) # 362926
+# print(vax_dt[,sum(number)]) # 362926
 
 # Cast to wide format
 vax_dt_wide <- dcast(vax_dt,date + age_group ~ dose,value.var = "number")

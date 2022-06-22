@@ -581,7 +581,6 @@ vaccine_schedule_from_data <- function(data, age_start, pop, uptake) {
         stats::reshape(data[c("date", "age_band_min", i)],
                        direction = "wide", timevar = "date",
                        idvar = "age_band_min"))
-    print(sum(doses[[1]][,-1])+sum(doses[[2]][,-1])+sum(doses[[3]][,-1]))
     for (i in seq_len(n_doses)) {
         stopifnot(identical(dim(doses[[1]]), dim(doses[[i]])))
     }
@@ -603,7 +602,6 @@ vaccine_schedule_from_data <- function(data, age_start, pop, uptake) {
         c(length(age_start), length(dates), n_doses))
     doses <- aperm(doses, c(1, 3, 2))
     doses[is.na(doses)] <- 0
-    print(sum(doses))
     
     ## We have 19 groups, 12 priority groups
     priority_population <-
