@@ -94,7 +94,7 @@ change_beta_date <- function(p,pars,beta_type,beta_date_cntfctl){
 
 change_vaccine_schedule <- function(p,schedule_cntfctl){
     # Construct vaccination parameters
-    vaccination <- vaccination_parameters(p$N_tot,
+    vaccination <- parameters_vaccination(p$N_tot,
                                           p$dt,
                                           p$rel_susceptibility,
                                           p$rel_p_sympt,
