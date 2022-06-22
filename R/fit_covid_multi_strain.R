@@ -21,11 +21,17 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     IFR[,age_group:=cut(age_low,c(min_ages,Inf),labels=age_groups,right=F)]
     agg_IFR <- IFR[,lapply(.SD,mean),.SDcols=setdiff(names(IFR),c("Age_group","age_low","age_group")),by=.(age_group)]
     ifr_odriscoll <- agg_IFR[,Median_perc_mean/100]
-    # For the time being just assume that IFR including non-hospital deaths is 10% higher
-    ifr <- 1.1*ifr_salje
-    p_G <- (ifr - p_D*ihr)/((1-p_D)*ihr + ifr)
+    # # For the time being just assume that IFR including non-hospital deaths is 10% higher
+    # ifr <- 1.1*ifr_salje
+    # p_G <- (ifr - p_D*ihr)/((1-p_D)*ihr + ifr)
+    # Set probability of death outside hospital from observed proportion of non-hospital deaths
+    p_G <- rep(weekly_dt[,sum(`Nombre de décès à domicile`,na.rm = T)/
+                             sum(`Nombre total de décès`,na.rm = T)],length(p_C))
     p_H <- ihr/(p_C*(1-p_G))
     p_P_1 <- 0.85
+    # ifr <- p_C*p_H*(p_G + (1-p_G)*p_D)
+    # # Population-weighted average IFR
+    # sum(population*ifr)/sum(population) # 0.01009238
     
     # Get max values
     p_D_max0 <- max(p_D)
@@ -251,13 +257,6 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
                     kappa_cases = 2,
                     sero_sensitivity_1,
                     sero_specificity_1)
-    
-    # Plot p.w. constant beta to check it looks right
-    beta_t <- seq(0, beta_date[length(beta_date)], by = dt)
-    pdf(paste0("output/plots",run,".pdf")) # save all plots into one pdf
-    par(mfrow = c(1,1))
-    plot(beta_t, p$beta_step, type="o", cex = 0.25)
-    points(beta_date, beta_value_sim, pch = 19, col = "red")
     
     # Number of steps in 1st epoch
     n_steps <- 500/dt
@@ -684,6 +683,13 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     
     save(list = ls(all.names = T), file = paste0("output/MCMCoutput",run,".RData"), envir = environment())
     
+    # Plot p.w. constant beta to check it looks right
+    beta_t <- seq(0, beta_date[length(beta_date)], by = dt)
+    pdf(paste0("output/plots",run,".pdf")) # save all plots into one pdf
+    par(mfrow = c(1,1))
+    plot(beta_t, p$beta_step, type="o", cex = 0.25)
+    points(beta_date, beta_value_sim, pch = 19, col = "red")
+    
     # Trace plots
     # par(mfrow = c(ceiling(length(init_pars)/2),2))
     # for (i in seq_along(init_pars)){
@@ -704,10 +710,13 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10),u],labels = names(init_pars)[u])
     
     # Plot fitted hospitalisations and deaths against data
-    plot_hosps_age(res$trajectories$state,data,dates,n_age,n_vax,n_strains)
-    plot_deaths_age(res$trajectories$state,data,dates,n_age,n_vax,n_strains)
+    plot_outcome_age(res$trajectories$state,data,dates,"hosps")
+    plot_outcome_age(res$trajectories$state,data,dates,"deaths")
+    plot_outcome_age(res$trajectories$state,data,dates,"cases")
     plot_sero(res$trajectories$state,data,dates,population[3:length(population)])
-    plot_cases(res$trajectories$state,data,dates)
+    plot_outcome(res$trajectories$state,data,dates,"hosps")
+    plot_outcome(res$trajectories$state,data,dates,"deaths")
+    plot_outcome(res$trajectories$state,data,dates,"cases")
     
     dev.off()
     

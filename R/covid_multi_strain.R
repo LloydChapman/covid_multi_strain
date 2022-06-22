@@ -1242,60 +1242,34 @@ make_transform_multistage <- function(dt,
 }
 
 
-plot_hosps_age <- function(incidence_modelled, incidence_observed, times, n_age, n_vax, n_strains){
+plot_outcome_age <- function(incidence_modelled, incidence_observed, times, vrble){
     nms <- dimnames(incidence_modelled)[[1]]
-    idx_hosps <- grep("hosps_",nms)
+    idx <- grep(paste0(vrble,"_[0-9]+"),nms)
+    idx_obs <- grep(paste0(vrble,"_"),names(incidence_observed))
     if (ncol(incidence_modelled)>1){
         idx_plot <- seq(10,ncol(incidence_modelled),by=10)    
     } else {
         idx_plot <- 1
     }
     dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
-    par(mfrow = c(5,1), oma=c(2,3,0,0))
-    for (i in seq_along(idx_hosps)){
+    par(mfrow = c(length(idx),1), oma=c(2,3,0,0))
+    for (i in seq_along(idx)){
         par(mar = c(3, 4, 2, 0.5))
         if (ncol(incidence_modelled)>1){
-            y <- t(incidence_modelled[idx_hosps[1]-1+i,idx_plot,-1])
+            y <- t(incidence_modelled[idx[1]-1+i,idx_plot,-1])
         } else {
-            y <- incidence_modelled[idx_hosps[1]-1+i,idx_plot,-1]
+            y <- incidence_modelled[idx[1]-1+i,idx_plot,-1]
         }
         matplot(times, y,
-                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Hospitalisations",xaxt = "n",#yaxt = "n",
-                ylim = c(0,max(max(incidence_observed[,5:9]),max(incidence_modelled[idx_hosps,,-1]))),
-                main = paste0("Age ", sub("_","-",sub("hosps_","",rownames(incidence_modelled)[idx_hosps[1]-1+i]))))  
-        points(times, incidence_observed[[4+i]],pch=19,col="red",cex=0.5)
+                type="l",col = alpha("black",0.1),xlab = "Day",ylab = vrble,xaxt = "n",#yaxt = "n",
+                ylim = c(0,max(max(incidence_observed[,idx_obs]),max(incidence_modelled[idx,,-1]))),
+                main = paste0("Age ", sub("_","-",sub(paste0(vrble,"_"),"",rownames(incidence_modelled)[idx[1]-1+i]))))
+        points(times, incidence_observed[[idx_obs[1]-1+i]],pch=19,col="red",cex=0.5)
         axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
-    }
+    } 
 }
 
-
-plot_deaths_age <- function(incidence_modelled, incidence_observed, times, n_age, n_vax, n_strains){
-    nms <- dimnames(incidence_modelled)[[1]]
-    idx_deaths <- grep("deaths_",nms)
-    if (ncol(incidence_modelled)>1){
-        idx_plot <- seq(10,ncol(incidence_modelled),by=10)    
-    } else {
-        idx_plot <- 1
-    }
-    dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
-    par(mfrow = c(5,1), oma=c(2,3,0,0))
-    for (i in seq_along(idx_deaths)){
-        par(mar = c(3, 4, 2, 0.5))
-        if (ncol(incidence_modelled)>1){
-            y <- t(incidence_modelled[idx_deaths[1]-1+i,idx_plot,-1])
-        } else {
-            y <- incidence_modelled[idx_deaths[1]-1+i,idx_plot,-1]
-        }
-        matplot(times, y,
-                type="l",col = alpha("black",0.1),xlab = "Day",ylab = "Deaths",xaxt = "n",#yaxt = "n",
-                ylim = c(0,max(max(incidence_observed[,10:14]),max(incidence_modelled[idx_deaths,,-1]))),
-                main = paste0("Age ", sub("_","-",sub("deaths_","",rownames(incidence_modelled)[idx_deaths[1]-1+i]))))
-        points(times, incidence_observed[[9+i]],pch=19,col="red",cex=0.5)
-        axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
-    }
-}
-
-
+    
 plot_sero <- function(seroprev_modelled, seroprev_observed, times, population){
     par(mfrow = c(6,1), oma = c(2,3,0,0))
     nms <- dimnames(seroprev_modelled)[[1]]
@@ -1322,6 +1296,32 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, times, population){
         points(times, seroprev_observed[[idx_sero_obs[1]-1+i]]/seroprev_observed[[idx_sero_tot_obs[1]-1+i]], pch = 19, col = "red")
         axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
     }
+}
+
+
+plot_outcome <- function(incidence_modelled, incidence_observed, times, vrble){
+    # par(mfrow = c(2,1), oma = c(2,3,0,0))
+    par(mfrow = c(1,1))
+    nms <- dimnames(incidence_modelled)[[1]]
+    idx <- which(nms == vrble)
+    idx_obs <- which(names(incidence_observed) == vrble)
+    if (ncol(incidence_modelled)>1){
+        idx_plot <- seq(10,ncol(incidence_modelled),by=10)    
+    } else {
+        idx_plot <- 1
+    }
+    dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
+    par(mar = c(3, 4, 2, 0.5))
+    if (ncol(incidence_modelled)>1){
+        y <- t(incidence_modelled[idx,idx_plot,-1])
+    } else {
+        y <- incidence_modelled[idx,idx_plot,-1]
+    }
+    matplot(times, y,
+            type = "l", col = alpha("black",0.1), xlab = "Day", ylab = vrble, xaxt = "n"
+    )
+    points(times, incidence_observed[[idx_obs]], pch = 19, col = "red", cex = 0.5)
+    axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
 }
 
 
