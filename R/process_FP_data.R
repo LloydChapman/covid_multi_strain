@@ -236,7 +236,13 @@ ggplot(hosps,aes(x = date,y = hosps,group = age_group,color = age_group)) + geom
 
 ## Deaths
 deaths_dt <- hosps_dt[!is.na(death_date)]
-deaths <- deaths_dt[,.(deaths=.N),by=.(age_group,date)]
+
+# Correct typo in date of death
+deaths_dt[date == as.IDate("2021-01-14") & death_date == as.IDate("2021-01-06"),
+          death_date := as.IDate("2021-01-16")]
+
+# Aggregate over age groups
+deaths <- deaths_dt[,.(deaths=.N),by=.(age_group,date = death_date)]
 
 # Plot deaths
 ggplot(deaths,aes(x = date,y = deaths,group = age_group,color = age_group)) + geom_line()
