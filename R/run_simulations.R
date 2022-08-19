@@ -25,7 +25,7 @@ source("R/process_FP_data.R")
 covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Set MCMC output
-output <- "output/MCMCoutput60.RData"
+output <- "output/MCMCoutput58.RData"
 
 ## Run counterfactual simulations
 # Set number of parameter samples and burn-in to remove
@@ -38,8 +38,8 @@ probs <- c(0.025,0.5,0.975)
 
 ## Lockdown counterfactuals
 # Make a list of alternatives for lockdown dates
-# intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
-intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
+intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
+# intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
 beta_date <- as.integer(intvtn_date - min(intvtn_date))
 beta_date_cntfctl_list <- replicate(9,beta_date,F)
 
@@ -73,7 +73,7 @@ q_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_cntfctl_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
-for (i in 8:9){#seq_along(beta_date_cntfctl_list)){
+for (i in seq_along(beta_date_cntfctl_list)){
     out <- simulate_counterfactual(output,n_smpls,beta_date_cntfctl_list[[i]],
                                    schedule_cntfctl_list[[i]],burnin = burnin,seed = seed)
     states_cntfctl <- out$states_cntfctl
