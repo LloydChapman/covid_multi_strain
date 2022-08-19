@@ -25,7 +25,7 @@ source("R/process_FP_data.R")
 covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Set MCMC output
-output <- "output/MCMCoutput58.RData"
+output <- "output/MCMCoutput60.RData"
 
 ## Run counterfactual simulations
 # Set number of parameter samples and burn-in to remove
@@ -38,7 +38,8 @@ probs <- c(0.025,0.5,0.975)
 
 ## Lockdown counterfactuals
 # Make a list of alternatives for lockdown dates
-intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
+# intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
+intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
 beta_date <- as.integer(intvtn_date - min(intvtn_date))
 beta_date_cntfctl_list <- replicate(9,beta_date,F)
 
@@ -62,9 +63,9 @@ schedule_cntfctl_list <- replicate(9,schedule,F)
 # No vaccination in counterfactual
 schedule_cntfctl_list[[7]]$doses <- array(0,dim = dim(schedule$doses))
 # Boosters starting 2 weeks earlier
-schedule_cntfctl_list[[8]] <- change_booster_timing(schedule, 14)
+schedule_cntfctl_list[[8]] <- change_booster_timing(schedule, 30)
 # Boosters starting 2 weeks later
-schedule_cntfctl_list[[9]] <- change_booster_timing(schedule, -14)
+schedule_cntfctl_list[[9]] <- change_booster_timing(schedule, -180)
 
 q_outcomes_list <- vector("list",length(beta_date_cntfctl_list))
 q_outcomes_cntfctl_list <- vector("list",length(beta_date_cntfctl_list))
@@ -72,7 +73,7 @@ q_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_cntfctl_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
-for (i in seq_along(beta_date_cntfctl_list)){
+for (i in 8:9){#seq_along(beta_date_cntfctl_list)){
     out <- simulate_counterfactual(output,n_smpls,beta_date_cntfctl_list[[i]],
                                    schedule_cntfctl_list[[i]],burnin = burnin,seed = seed)
     states_cntfctl <- out$states_cntfctl
@@ -123,10 +124,11 @@ names(ttls) <- as.character(seq_along(ttls)-1)
 
 tbl <- total_outcomes[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                          Wave = wave,
+                         Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,d = 3,method = "signif"),
                          Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = 3,method = "signif"),
                          Deaths = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "signif"))]
 tbl[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
-tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Hospitalisations","Deaths"))
+tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Deaths"))
 write.csv(tbl,"output/table1_3.csv",row.names = F)
 
 # Plot counterfactuals
