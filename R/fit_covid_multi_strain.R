@@ -48,6 +48,9 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     
     vax_eff <- fread("data/vax_eff.csv")
     
+    # # Set VE against Omicron infection in waned stratum to be the same as 2nd dose
+    # vax_eff[outcome == "infection" & vaccine == "PF/MD" & dose == "waned",omicron := 44.1]
+    
     # Melt to long format
     vax_eff_long <- melt(vax_eff,measure.vars = c("alpha","delta","omicron"),variable.name = "variant")
     
@@ -134,10 +137,12 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # Transmission and natural history parameters
     # intvtn_date <- as.Date(c(strt_date,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
     # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-01","2021-08-12"))
-    intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
+    # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
+    intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
     beta_date <- as.integer(intvtn_date - min(intvtn_date))
     # beta_value_sim <- c(0.035,0.025,0.02,0.04,0.02) #7/8*
-    beta_value_sim <- c(0.025,0.02,0.025,0.02,0.025,0.02) #7/8*
+    # beta_value_sim <- c(0.025,0.02,0.025,0.02,0.025,0.02) #7/8*
+    beta_value_sim <- c(0.025,0.02,0.025,0.02,0.025) #7/8*
     beta_type <- "piecewise-constant" #"piecewise-linear" #
     gamma_E <- 0.5
     gamma_P <- 0.4
@@ -415,16 +420,27 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # beta_value_list <- list(name = c("beta1","beta2","beta3","beta4","beta5"), initial = c(0.035,0.025,0.02,0.04,0.02),
     #                         min = rep(0,5), max = rep(Inf,5), discrete = rep(F,5),
     #                         prior = replicate(5,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE)))
+    # beta_value_list <- list(
+    #     name = c("beta1","beta2","beta3","beta4","beta5","beta6"), initial = c(0.025,0.02,0.025,0.02,0.025,0.02),
+    #     min = rep(0,6), max = rep(Inf,6), discrete = rep(F,6),
+    #     prior = #replicate(4,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE))
+    #         list(function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE)
+    #         )
+    # )
     beta_value_list <- list(
-        name = c("beta1","beta2","beta3","beta4","beta5","beta6"), initial = c(0.025,0.02,0.025,0.02,0.025,0.02),
-        min = rep(0,6), max = rep(Inf,6), discrete = rep(F,6),
+        name = c("beta1","beta2","beta3","beta4","beta5"), initial = c(0.025,0.02,0.025,0.02,0.025),
+        min = rep(0,5), max = rep(Inf,5), discrete = rep(F,5),
         prior = #replicate(4,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE))
             list(function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
                  function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
                  function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
                  function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
-                 function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
-                 function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE)
+                 function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE)
             )
     )
     beta_value <- Map(pmcmc_parameter,beta_value_list$name,beta_value_list$initial,
