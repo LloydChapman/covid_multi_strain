@@ -38,13 +38,19 @@ sero_pos_dt2 <- fread(paste0(filepath,"Serop_nov21.csv"))
 
 # Vaccinations
 # vax <- fread(paste0(filepath,"SPC_DF_COVID_VACCINATION_1.0_D.PF.COVIDVACAD1+COVIDVACAD2+COVIDVACBST+COVIDVACADT.csv"))
-files <- list.files(paste0(filepath,"FP_processed_May_30/"))
+# dir_vax <- "FP_processed_May_30/"
+dir_vax <- "2022_06_08_Vaccination_all_FP/"
+files <- list.files(paste0(filepath,dir_vax))
 files_vax <- files[grep("daily vaccination",files)]
-age_groups_vax <- sub("daily vaccination ([0-9]+-[0-9]+|\\+[0-9]+).xlsx","\\1",files_vax)
-age_groups_vax[age_groups_vax == "+70"] <- "70+"
+age_groups_vax <- gsub("[a-z]+| |\\.","",files_vax)
 vax_list <- vector("list", length(files_vax))
 for (i in 1:length(files_vax)){
-    vax_list[[i]] <- as.data.table(read_xlsx(paste0(filepath,"FP_processed_May_30/",files_vax[i])))
+    vax_list1 <- as.data.table(read_xlsx(paste0(filepath,dir_vax,files_vax[i])),
+                               sheet = 1)
+    vax_list1[,`Type d'injection V2` := "Primo injection"]
+    vax_list2 <- as.data.table(read_xlsx(paste0(filepath,dir_vax,files_vax[i]),
+                                         sheet = 2))
+    vax_list[[i]] <- rbind(vax_list1,vax_list2)
 }
 vax <- rbindlist(vax_list,idcol = "file")
 vax[,age_group := age_groups_vax[file]]
@@ -393,6 +399,10 @@ vax[,date := as.Date(date)]
 vax[,dose := fcase(dose == "Primo injection","dose1",
                    dose == "Schéma vaccinal complet","dose2",
                    dose == "Rappel","dose3")]
+
+# Aggregate doses in the same age group on the same day
+vax <- vax[,.(number = sum(number)),by = .(date,dose,age_group)]
+
 # # # Plot to check
 # # ggplot(vax,aes(x = date,y = number,group = age_group,color = age_group)) +
 # #     geom_line() +
@@ -429,6 +439,8 @@ vax_dt[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
 setnafill(vax_dt,fill = 0,cols = "number")
 # Sum doses over age groups
 vax_dt <- vax_dt[,.(number = sum(number)),by = .(date,dose,age_group)]
+# Limit vaccine schedule to end date
+vax_dt <- vax_dt[date <= end_date]
 
 # Plot to check
 ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color = age_group)) +
@@ -436,8 +448,8 @@ ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color 
     facet_wrap(~dose)
 
 # # Check totals are the same
-# print(vax[,sum(number)]) # 362926
-# print(vax_dt[,sum(number)]) # 362926
+# print(vax[,sum(number)]) # 465247
+# print(vax_dt[,sum(number)]) # 465247
 
 # Cast to wide format
 vax_dt_wide <- dcast(vax_dt,date + age_group ~ dose,value.var = "number")
@@ -471,5 +483,12 @@ doses_dt[,cum_prop := cumsum(prop),by = .(age_group,dose)]
 
 ggplot(doses_dt,aes(x = date,y = cum_prop,group = age_group, color = age_group)) + 
     geom_line() + 
-    facet_wrap(~dose)
-
+    xlim(as.Date("2021-01-01"),NA_Date_) + 
+    labs(x = "Date", y = "Proportion vaccinated") + 
+    scale_color_discrete(name = "Age group") + 
+    facet_wrap(~dose, 
+               labeller = labeller(
+                   dose = c("dose1" = "Dose 1", 
+                            "dose2" = "Dose 2", 
+                            "dose3" = "Dose 3")))
+ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3.5)
