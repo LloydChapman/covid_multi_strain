@@ -300,14 +300,15 @@ sero_pos_dt <- rbind(sero_pos_dt1,sero_pos_dt2)
 
 ## Make data table of hospitalisations, deaths, cases and seroprevalence for fitting 
 strt_date <- hosps_dt[,min(date,na.rm = T)] - 20 # 2020-07-20
-end_date <- as.Date("2022-05-23") # last date in vaccination data files
+end_date <- as.Date("2022-05-06") # last death date in data files
 dates <- seq.Date(strt_date,end_date,by = 1)
 base_dt <- CJ(date = dates,age_group = age_groups_hosp)
 
 reformat_data <- function(x, base_dt, vrbl, fillna = F){
+    max_date <- x[,max(date)]
     x <- merge(base_dt,x,by = c("date","age_group"),all.x = T)
     if(fillna){
-        setnafill(x,fill = 0,cols = vrbl)    
+        x[date <= max_date, (vrbl) := nafill(get(vrbl), fill = 0)]
     }
     x_wide <- dcast(x, date ~ age_group, value.var = vrbl)
     idx <- 2:ncol(x_wide)
