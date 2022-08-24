@@ -1,7 +1,7 @@
 plot_fit <- function(output,run){
     load(output)
     
-    dimnames(res$trajectories$state) <- list(names(idx$state)) #dimnames(pmcmc_run$trajectories$state)
+    # dimnames(res$trajectories$state) <- list(names(idx$state)) #dimnames(pmcmc_run$trajectories$state)
     
     pdf(paste0("output/hosps_by_age_fit",run,".pdf"),width = 4, height = 8)
     plot_outcome_age(res$trajectories$state,data,strt_date+data$day_start,"hosps")
