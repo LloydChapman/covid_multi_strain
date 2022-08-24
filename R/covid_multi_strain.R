@@ -1262,7 +1262,7 @@ plot_outcome_age <- function(incidence_modelled, incidence_observed, times, vrbl
         }
         matplot(times, y,
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = vrble,xaxt = "n",#yaxt = "n",
-                ylim = c(0,max(max(incidence_observed[,idx_obs]),max(incidence_modelled[idx,,-1]))),
+                ylim = c(0,max(max(incidence_observed[,idx_obs],na.rm = T),max(incidence_modelled[idx,,-1]))),
                 main = paste0("Age ", sub("_","-",sub(paste0(vrble,"_"),"",rownames(incidence_modelled)[idx[1]-1+i]))))
         points(times, incidence_observed[[idx_obs[1]-1+i]],pch=19,col="red",cex=0.5)
         axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
