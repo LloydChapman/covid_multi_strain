@@ -145,6 +145,13 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
     out <- vector("list", n_smpls)
     set.seed(seed)
     smpl <- sample.int(nrow(pars),n_smpls)
+    
+    # Extract posterior samples of trajectories
+    states <- res$trajectories$state[,burnin + smpl,]
+    
+    # Remove res object as it is very large
+    rm(res)
+    
     for (i in seq_len(n_smpls)){
         j <- smpl[i] #sample.int(nrow(pars),1)
         pars_i <- pars[j,]
@@ -182,9 +189,6 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
     states_cntfctl <- lapply(states_cntfctl,function(y) y[,,seq(1,nlayer(y),by = 1/dt),drop = F])
     
     states_cntfctl <- abind(states_cntfctl,along = 2)
-    
-    # Extract corresponding posterior samples of trajectories
-    states <- res$trajectories$state[,burnin + smpl,]
     
     return(list(states_cntfctl = states_cntfctl,states = states,smpl = smpl,info = info))
 }
@@ -277,7 +281,7 @@ simulate_prepare <- function(onward,n_smpls,seed = 1){
 }
 
 
-simulate_future_scenario <- function(args, onward){
+simulate_future_scenario <- function(args, onward, new_strain = FALSE){
     multistrain <- onward$info$multistrain
     if (multistrain){
         n_strain <- 4
@@ -305,11 +309,15 @@ simulate_future_scenario <- function(args, onward){
     state_start <- onward$state
     
     # Set up future vaccination schedule
-    pars <- simulate_vaccination_pars(onward$pars[[1]]$N_tot, args, onward, n_strain)
+    pars <- simulate_pars_vaccination(onward$pars[[1]]$N_tot, args, onward, n_strain)
     
     # pars <- unlist(pars, F, F)
     
     pars <- setup_future_betas(pars, step_start, step_end, dt)
+    
+    if (!is.null(args$strain_transmission) && new_strain){
+        state_start <- rotate_strains(state_start, info)
+    }
     
     # Create instance of model
     mod <- covid_multi_strain$new(pars,step_start,n_particles = NULL,pars_multi = T,
@@ -317,6 +325,7 @@ simulate_future_scenario <- function(args, onward){
     # Set starting values for model states for simulations
     mod$update_state(state = state_start)
     mod$set_index(index$run)
+    # Simulate
     state <- mod$simulate(steps)
     
     ret <- list(date = dates)
@@ -329,7 +338,7 @@ simulate_future_scenario <- function(args, onward){
 }
 
 
-simulate_vaccination_pars <- function(pop, args, onward, n_strain) {
+simulate_pars_vaccination <- function(pop, args, onward, n_strain) {
     priority_population <- vaccine_priority_population(
         pop,
         uptake = args$vaccine_uptake * args$vaccine_eligibility)
@@ -428,10 +437,11 @@ simulate_vaccination_pars <- function(pop, args, onward, n_strain) {
     #     extra$rel_p_G_D <- rel_severity
 
     if (!is.null(args$strain_transmission)) {
-        strain_params <- strain_parameters(
+        strain_params <- parameters_strain(
             args$strain_transmission,
             sircovid_date(args$strain_seed_date),
-            args$strain_seed_rate,
+            args$strain_seed_size,
+            args$strain_seed_pattern,
             pars[[1]]$dt)
         strain_params$cross_immunity <- args$strain_cross_immunity
         strain_params$waning_rate <- rep(args$waning_rate, 8)
