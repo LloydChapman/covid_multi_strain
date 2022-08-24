@@ -728,11 +728,11 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # Plot fitted hospitalisations and deaths against data
     plot_outcome_age(res$trajectories$state,data,dates,"hosps")
     plot_outcome_age(res$trajectories$state,data,dates,"deaths")
-    plot_outcome_age(res$trajectories$state,data,dates,"cases")
+    plot_outcome_age(res$trajectories$state,data,dates,"cases",phi_cases$initial)
     plot_sero(res$trajectories$state,data,dates,population[3:length(population)])
     plot_outcome(res$trajectories$state,data,dates,"hosps")
     plot_outcome(res$trajectories$state,data,dates,"deaths")
-    plot_outcome(res$trajectories$state,data,dates,"cases")
+    plot_outcome(res$trajectories$state,data,dates,"cases",phi_cases$initial)
     
     dev.off()
     

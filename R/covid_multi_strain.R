@@ -1242,7 +1242,7 @@ make_transform_multistage <- function(dt,
 }
 
 
-plot_outcome_age <- function(incidence_modelled, incidence_observed, times, vrble){
+plot_outcome_age <- function(incidence_modelled, incidence_observed, times, vrble, phi = 1){
     nms <- dimnames(incidence_modelled)[[1]]
     idx <- grep(paste0(vrble,"_[0-9]+"),nms)
     idx_obs <- grep(paste0(vrble,"_"),names(incidence_observed))
@@ -1256,9 +1256,9 @@ plot_outcome_age <- function(incidence_modelled, incidence_observed, times, vrbl
     for (i in seq_along(idx)){
         par(mar = c(3, 4, 2, 0.5))
         if (ncol(incidence_modelled)>1){
-            y <- t(incidence_modelled[idx[1]-1+i,idx_plot,-1])
+            y <- phi * t(incidence_modelled[idx[1]-1+i,idx_plot,-1])
         } else {
-            y <- incidence_modelled[idx[1]-1+i,idx_plot,-1]
+            y <- phi * incidence_modelled[idx[1]-1+i,idx_plot,-1]
         }
         matplot(times, y,
                 type="l",col = alpha("black",0.1),xlab = "Day",ylab = vrble,xaxt = "n",#yaxt = "n",
@@ -1299,7 +1299,7 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, times, population){
 }
 
 
-plot_outcome <- function(incidence_modelled, incidence_observed, times, vrble){
+plot_outcome <- function(incidence_modelled, incidence_observed, times, vrble, phi = 1){
     # par(mfrow = c(2,1), oma = c(2,3,0,0))
     par(mfrow = c(1,1))
     nms <- dimnames(incidence_modelled)[[1]]
@@ -1313,9 +1313,9 @@ plot_outcome <- function(incidence_modelled, incidence_observed, times, vrble){
     dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
     par(mar = c(3, 4, 2, 0.5))
     if (ncol(incidence_modelled)>1){
-        y <- t(incidence_modelled[idx,idx_plot,-1])
+        y <- phi * t(incidence_modelled[idx,idx_plot,-1])
     } else {
-        y <- incidence_modelled[idx,idx_plot,-1]
+        y <- phi * incidence_modelled[idx,idx_plot,-1]
     }
     matplot(times, y,
             type = "l", col = alpha("black",0.1), xlab = "Day", ylab = vrble, xaxt = "n"

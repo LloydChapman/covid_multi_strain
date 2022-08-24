@@ -10,7 +10,7 @@ plot_fit <- function(output,run){
     plot_outcome_age(res$trajectories$state,data,strt_date+data$day_start,"deaths")
     dev.off()
     pdf(paste0("output/cases_by_age_fit",run,".pdf"),width = 4, height = 12)
-    plot_outcome_age(res$trajectories$state,data,strt_date+data$day_start,"cases")
+    plot_outcome_age(res$trajectories$state,data,strt_date+data$day_start,"cases",phi_cases$initial)
     dev.off()
     pdf(paste0("output/sero_by_age_fit",run,".pdf"),width = 4, height = 8)
     plot_sero(res$trajectories$state,data,strt_date+data$day_start,population[3:length(population)])
@@ -22,6 +22,6 @@ plot_fit <- function(output,run){
     plot_outcome(res$trajectories$state,data,strt_date+data$day_start,"deaths")
     dev.off()
     pdf(paste0("output/cases",run,".pdf"),width = 4, height = 2.7)
-    plot_outcome(res$trajectories$state,data,strt_date+data$day_start,"cases")
+    plot_outcome(res$trajectories$state,data,strt_date+data$day_start,"cases",phi_cases$initial)
     dev.off()
 }
