@@ -449,7 +449,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # R0 <- pmcmc_parameter("R0",2,min = 0)
     # gamma <- pmcmc_parameter("gamma",0.4,min = 0,
     #                          prior = function(x) dgamma(x,shape = 1,scale = 1,log = TRUE))
-    rel_strain_transmission <- pmcmc_parameter("rel_strain_transmission",2.5,min = 0.25, max = 4)
+    rel_strain_transmission <- pmcmc_parameter("rel_strain_transmission",2.8,min = 0.25, max = 4)
     start_date <- pmcmc_parameter("start_date",1,min = 1,max = 10)
     strain_seed_date <- pmcmc_parameter("strain_seed_date",330,min = 305,max = 345)
     p_H_max <- pmcmc_parameter("p_H_max",p_H_max0/2,min = 0,max = 1,
