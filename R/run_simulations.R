@@ -25,7 +25,7 @@ source("R/process_FP_data.R")
 covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Set MCMC output
-output <- "output/MCMCoutput58.RData"
+output <- "output/MCMCoutput61.RData"
 
 ## Run counterfactual simulations
 # Set number of parameter samples and burn-in to remove
@@ -62,17 +62,22 @@ beta_date_cntfctl_list[[6]][c(2,4)] <- beta_date[c(2,4)] + 7
 schedule_cntfctl_list <- replicate(9,schedule,F)
 # No vaccination in counterfactual
 schedule_cntfctl_list[[7]]$doses <- array(0,dim = dim(schedule$doses))
-# Boosters starting 2 weeks earlier
+# Boosters starting 1 month earlier
 schedule_cntfctl_list[[8]] <- change_booster_timing(schedule, 30)
-# Boosters starting 2 weeks later
-schedule_cntfctl_list[[9]] <- change_booster_timing(schedule, -180)
+# # Boosters starting 2 weeks later
+# schedule_cntfctl_list[[9]] <- change_booster_timing(schedule, -180)
+# No boosters
+schedule_cntfctl_list[[9]]$doses[,3,] <- matrix(0, nrow = nrow(schedule$doses), 
+                                              ncol = nlayer(schedule$doses))
 
+# Create objects for storing quantiles of simulation output
 q_outcomes_list <- vector("list",length(beta_date_cntfctl_list))
 q_outcomes_cntfctl_list <- vector("list",length(beta_date_cntfctl_list))
 q_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_cntfctl_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
+# Run simulations
 for (i in seq_along(beta_date_cntfctl_list)){
     out <- simulate_counterfactual(output,n_smpls,beta_date_cntfctl_list[[i]],
                                    schedule_cntfctl_list[[i]],burnin = burnin,seed = seed)
@@ -87,7 +92,7 @@ for (i in seq_along(beta_date_cntfctl_list)){
     
     ## Calculate total differences in outcomes over each wave
     # Set wave dates
-    wave_date <- c(1,300,nlayer(states_cntfctl))
+    wave_date <- c(1,300,500,nlayer(states_cntfctl))
 
     q_outcomes_list[[i]] <- calculate_outcome_quantiles(states,info)
     q_outcomes_cntfctl_list[[i]] <- calculate_outcome_quantiles(states_cntfctl,info)
@@ -119,47 +124,53 @@ ttls <- c("No change in lockdown dates",
           "1st lockdown 1 week earlier","1st lockdown 1 week later",
           "2nd lockdown 1 week earlier","2nd lockdown 1 week later",
           "Both lockdowns 1 week earlier","Both lockdowns 1 week later",
-          "No vaccination", "Boosters 2 weeks earlier","Boosters 2 weeks later")
+          "No vaccination", "Boosters 1 month earlier","No boosters")
 names(ttls) <- as.character(seq_along(ttls)-1)
 
 tbl <- total_outcomes[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                          Wave = wave,
-                         Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,d = 3,method = "signif"),
+                         Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,f = 0.001,d = 3,method = "signif"),
                          Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = 3,method = "signif"),
                          Deaths = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "signif"))]
 tbl[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
 tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Deaths"))
-write.csv(tbl,"output/table1_3.csv",row.names = F)
+write.csv(tbl,"output/table1_4.csv",row.names = F)
 
 # Plot counterfactuals
 
 # Hospitalisations
 idx <- 1:6
+p_cases <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"cases","Cases",ttls[names(ttls) %in% idx])
+ggsave("output/cntfctl_cases4.pdf",p_cases,width = 8,height = 7)
 p_hosps <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
-ggsave("output/cntfctl_hosps3.pdf",p_hosps,width = 8,height = 7)
+ggsave("output/cntfctl_hosps4.pdf",p_hosps,width = 8,height = 7)
 # Deaths in hospital
 p_deaths <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Deaths",ttls[names(ttls) %in% idx])
-ggsave("output/cntfctl_deaths3.pdf",p_deaths,width = 8,height = 7)
+ggsave("output/cntfctl_deaths4.pdf",p_deaths,width = 8,height = 7)
 
 idx <- 7
+p_cases_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfctl[cntfctl == idx],"cases","Cases",ttls[names(ttls) %in% idx])
 p_hosps_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfctl[cntfctl == idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
 # ggsave("output/cntfctl_hosps_vax.pdf",p_hosps_vax,width = 8,height = 6)
 # Deaths in hospital
 p_deaths_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfctl[cntfctl == idx],"deaths","Deaths",ttls[names(ttls) %in% idx])
-pp <- plot_grid(p_hosps_vax + theme(legend.position = "none"),
-                p_deaths_vax + theme(legend.position = "none"))
+pp <- plot_grid(p_cases_vax + theme(legend.position = "none"),
+                p_hosps_vax + theme(legend.position = "none"),
+                p_deaths_vax + theme(legend.position = "none"), nrow = 1)
 l <- get_legend(p_deaths_vax)
-ggsave("output/cntfctl_hosps_and_deaths_vax3.pdf",plot_grid(pp,l,nrow = 2,rel_heights = c(1,0.1)),width = 6,height = 4)
+ggsave("output/cntfctl_hosps_and_deaths_vax4.pdf",plot_grid(pp,l,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 4)
 
 idx <- 8:9
+p_cases_booster <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"cases","Cases",ttls[names(ttls) %in% idx])
 p_hosps_booster <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
 # ggsave("output/cntfctl_hosps_vax.pdf",p_hosps_vax,width = 8,height = 6)
 # Deaths in hospital
 p_deaths_booster <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Deaths",ttls[names(ttls) %in% idx])
-pp1 <- plot_grid(p_hosps_booster + theme(legend.position = "none"),
-                p_deaths_booster + theme(legend.position = "none"), nrow = 1)
+pp1 <- plot_grid(p_cases_booster + theme(legend.position = "none"),
+                 p_hosps_booster + theme(legend.position = "none"),
+                 p_deaths_booster + theme(legend.position = "none"), nrow = 1)
 l1 <- get_legend(p_deaths_booster)
-ggsave("output/cntfctl_hosps_and_deaths_booster3.pdf",plot_grid(pp1,l1,nrow = 2,rel_heights = c(1,0.1)),width = 6,height = 4)
+ggsave("output/cntfctl_hosps_and_deaths_booster4.pdf",plot_grid(pp1,l1,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 4)
 
-save.image("../covid_multistrain_wip6.RData")
+save.image("../covid_multistrain_wip7.RData")
 
