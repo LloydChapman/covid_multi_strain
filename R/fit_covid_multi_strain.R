@@ -137,12 +137,14 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # Transmission and natural history parameters
     # intvtn_date <- as.Date(c(strt_date,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
     # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-01","2021-08-12"))
-    intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
+    # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
     # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
+    intvtn_date <- as.Date(c(strt_date,"2020-08-01","2020-08-27","2020-10-10","2021-01-19","2021-06-01","2021-07-26","2021-08-02","2021-09-20","2021-11-15"))
     beta_date <- as.integer(intvtn_date - min(intvtn_date))
     # beta_value_sim <- c(0.035,0.025,0.02,0.04,0.02) #7/8*
-    beta_value_sim <- c(0.025,0.02,0.025,0.02,0.025,0.02) #7/8*
+    # beta_value_sim <- c(0.025,0.02,0.025,0.02,0.025,0.02) #7/8*
     # beta_value_sim <- c(0.025,0.02,0.025,0.02,0.025) #7/8*
+    beta_value_sim <- c(0.025,0.024,0.022,0.02,0.022,0.024,0.022,0.02,0.022,0.024) #7/8*
     beta_type <- "piecewise-constant" #"piecewise-linear" #
     gamma_E <- 0.5
     gamma_P <- 0.4
@@ -393,18 +395,25 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     #                               compare, index, initial)
     if (deterministic){
         n_particles <- 1
-        filter <- particle_deterministic$new(data, covid_multi_strain, 
-                                             compare, index, initial)
+        filter <- particle_deterministic$new(
+            data, covid_multi_strain, compare, 
+            index = function(info) 
+                index(info, min_ages = min_ages, Rt = Rt), 
+            initial = initial)
     } else {
         n_particles <- 200
-        filter <- particle_filter$new(data, covid_multi_strain, n_particles,
-                                      compare, index, initial)
+        filter <- particle_filter$new(
+            data, covid_multi_strain, n_particles, compare, 
+            index = function(info) 
+                index(info, min_ages = min_ages, Rt = Rt), 
+            initial = initial
+        )
     }
     
     # tstart <- Sys.time()
-    filter$run(
-        pars = pars,
-        save_history = TRUE)
+    # filter$run(
+    #     pars = pars,
+    #     save_history = TRUE)
     # tend <- Sys.time()
     # print(tend - tstart)
     
@@ -420,18 +429,18 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     # beta_value_list <- list(name = c("beta1","beta2","beta3","beta4","beta5"), initial = c(0.035,0.025,0.02,0.04,0.02),
     #                         min = rep(0,5), max = rep(Inf,5), discrete = rep(F,5),
     #                         prior = replicate(5,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE)))
-    beta_value_list <- list(
-        name = c("beta1","beta2","beta3","beta4","beta5","beta6"), initial = c(0.025,0.02,0.025,0.02,0.025,0.02),
-        min = rep(0,6), max = rep(Inf,6), discrete = rep(F,6),
-        prior = #replicate(4,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE))
-            list(function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
-                 function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
-                 function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
-                 function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
-                 function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
-                 function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE)
-            )
-    )
+    # beta_value_list <- list(
+    #     name = c("beta1","beta2","beta3","beta4","beta5","beta6"), initial = c(0.025,0.02,0.025,0.02,0.025,0.02),
+    #     min = rep(0,6), max = rep(Inf,6), discrete = rep(F,6),
+    #     prior = #replicate(4,function(x) dgamma(x, shape = 1, scale = 1, log = TRUE))
+    #         list(function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE),
+    #              function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE)
+    #         )
+    # )
     # beta_value_list <- list(
     #     name = c("beta1","beta2","beta3","beta4","beta5"), initial = c(0.025,0.02,0.025,0.02,0.025),
     #     min = rep(0,5), max = rep(Inf,5), discrete = rep(F,5),
@@ -443,6 +452,14 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     #              function(x) dgamma(x, shape = 4, scale = 0.025/4, log = TRUE)
     #         )
     # )
+    #
+    n_betas <- length(beta_date)
+    beta_names <- paste0("beta", seq_len(n_betas))
+    beta_value_list <- list(
+        name = beta_names, initial = c(0.025,0.024,0.022,0.02,0.022,0.024,0.022,0.02,0.022,0.024),
+        min = rep(0,n_betas), max = rep(Inf,n_betas), discrete = rep(F,n_betas),
+        prior = replicate(n_betas,function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE))
+    )
     beta_value <- Map(pmcmc_parameter,beta_value_list$name,beta_value_list$initial,
                       beta_value_list$min,beta_value_list$max,
                       beta_value_list$discrete,beta_value_list$prior)
