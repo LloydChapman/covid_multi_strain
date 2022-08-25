@@ -720,8 +720,19 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     beta_t <- seq(0, beta_date[length(beta_date)], by = dt)
     pdf(paste0("output/plots",run,".pdf")) # save all plots into one pdf
     par(mfrow = c(1,1))
-    plot(beta_t, p$beta_step, type="o", cex = 0.25)
-    points(beta_date, beta_value_sim, pch = 19, col = "red")
+    # plot(beta_t, p$beta_step, type="o", cex = 0.25)
+    # points(beta_date, beta_value_sim, pch = 19, col = "red")
+    
+    n_smpls <- round(n_iters/thinning)
+    beta_value_post <- apply(res$pars[seq(round(n_smpls/10),n_smpls,by=10),1:n_betas],2,median)
+    if (beta_type == "piecewise-linear") {
+        beta_step <- parameters_piecewise_linear(beta_date, 
+                                                 beta_value_post %||% 0.1, dt)
+    } else if (beta_type == "piecewise-constant") {
+        beta_step <- parameters_piecewise_constant(beta_date, 
+                                                   beta_value_post %||% 0.1, dt)
+    }
+    plot(sircovid_date_as_date(beta_t), beta_step, type = "o", cex = 0.25)
     
     # Trace plots
     # par(mfrow = c(ceiling(length(init_pars)/2),2))
@@ -738,7 +749,6 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     plot(res$scaling_factor,type="l")
     
     par(mfrow = c(1,1))
-    n_smpls <- round(n_iters/thinning)
     # pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10), ],labels = names(init_pars))
     pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10),u],labels = names(init_pars)[u])
     
