@@ -1,6 +1,6 @@
 simulate <- function(gen_mod, p, n_steps, deterministic = FALSE, 
-                     keep_all_states = TRUE, p1 = NULL, 
-                     n_steps1 = NULL, transform = NULL){
+                     keep_all_states = TRUE, min_ages = seq(0,70,by = 10), 
+                     Rt = FALSE, p1 = NULL, n_steps1 = NULL, transform = NULL){
     # Create instance of model
     mod <- gen_mod$new(p,step = 0,n_particles = 1,n_threads = 1,seed = 1,
                        deterministic = deterministic)
@@ -42,7 +42,7 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
     }
     
     if (!keep_all_states){
-        idx <- index(info)
+        idx <- index(info, min_ages = min_ages, Rt = Rt)
         x <- x[idx$state, , ,drop = FALSE]
     }
     
@@ -178,6 +178,7 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
         }
         out[[i]] <- simulate(covid_multi_strain, p_i, n_steps, 
                              deterministic, keep_all_states = F,
+                             min_ages = min_ages, Rt = Rt,
                              p1 = p1_i, n_steps1 = n_steps1, 
                              transform = transform_state)
     }
@@ -210,8 +211,8 @@ calculate_outcome_quantiles <- function(x,info){
     return(out)
 }
 
-calculate_outcomes_by_wave <- function(x,wave_date,info){
-    cols <- names(index(info)$state)
+calculate_outcomes_by_wave <- function(x,wave_date,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
+    cols <- names(index(info,min_ages = min_ages,Rt = Rt)$state)
     dimnames(x)[[1]] <- cols
     n_waves <- length(wave_date) - 1
     
@@ -578,12 +579,12 @@ setup_future_betas <- function(pars, step_current, step_end, dt) {
 }
 
 
-arr_to_dt <- function(x,info){
+arr_to_dt <- function(x,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
     x_long <- as.data.table(x)
     
     names(x_long)[1:3] <- c("state","smpl","day")
     
-    x_long[,state := names(index(info)$state[state])]
+    x_long[,state := names(index(info,min_ages = min_ages,Rt = Rt)$state[state])]
     
     return(x_long)
 }
