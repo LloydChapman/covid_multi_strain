@@ -25,9 +25,12 @@ source("R/process_FP_data.R")
 covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Set MCMC output
-output <- "output/MCMCoutput61.RData"
+mcmc_run <- 66
+output <- paste0("output/MCMCoutput",mcmc_run,".RData")
 
 ## Run counterfactual simulations
+# Set run number
+run <- 5
 # Set number of parameter samples and burn-in to remove
 n_smpls <- 500
 burnin <- NULL #2000
@@ -38,9 +41,10 @@ probs <- c(0.025,0.5,0.975)
 
 ## Lockdown counterfactuals
 # Make a list of alternatives for lockdown dates
-intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
-# intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
-beta_date <- as.integer(intvtn_date - min(intvtn_date))
+# intvtn_date <- as.Date(c(strt_date-1,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
+# intvtn_date <- as.Date(c(strt_date-1,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
+intvtn_date <- as.Date(c("2020-08-27","2020-10-24","2021-06-01","2021-08-02","2021-11-15"))
+beta_date <- sircovid_date(intvtn_date) #as.integer(intvtn_date - min(intvtn_date))
 beta_date_cntfctl_list <- replicate(9,beta_date,F)
 
 # Move first lockdown a week earlier
@@ -134,19 +138,19 @@ tbl <- total_outcomes[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                          Deaths = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "signif"))]
 tbl[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
 tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Deaths"))
-write.csv(tbl,"output/table1_4.csv",row.names = F)
+write.csv(tbl,paste0("output/table1_",run,".csv"),row.names = F)
 
 # Plot counterfactuals
 
 # Hospitalisations
 idx <- 1:6
 p_cases <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"cases","Cases",ttls[names(ttls) %in% idx])
-ggsave("output/cntfctl_cases4.pdf",p_cases,width = 8,height = 7)
+ggsave(paste0("output/cntfctl_cases",run,".pdf"),p_cases,width = 8,height = 7)
 p_hosps <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
-ggsave("output/cntfctl_hosps4.pdf",p_hosps,width = 8,height = 7)
+ggsave(paste0("output/cntfctl_hosps",run,".pdf"),p_hosps,width = 8,height = 7)
 # Deaths in hospital
 p_deaths <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Deaths",ttls[names(ttls) %in% idx])
-ggsave("output/cntfctl_deaths4.pdf",p_deaths,width = 8,height = 7)
+ggsave(paste0("output/cntfctl_deaths",run,".pdf"),p_deaths,width = 8,height = 7)
 
 idx <- 7
 p_cases_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfctl[cntfctl == idx],"cases","Cases",ttls[names(ttls) %in% idx])
@@ -158,7 +162,7 @@ pp <- plot_grid(p_cases_vax + theme(legend.position = "none"),
                 p_hosps_vax + theme(legend.position = "none"),
                 p_deaths_vax + theme(legend.position = "none"), nrow = 1)
 l <- get_legend(p_deaths_vax)
-ggsave("output/cntfctl_hosps_and_deaths_vax4.pdf",plot_grid(pp,l,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 4)
+ggsave(paste0("output/cntfctl_hosps_and_deaths_vax",run,".pdf"),plot_grid(pp,l,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 4)
 
 idx <- 8:9
 p_cases_booster <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"cases","Cases",ttls[names(ttls) %in% idx])
@@ -170,7 +174,7 @@ pp1 <- plot_grid(p_cases_booster + theme(legend.position = "none"),
                  p_hosps_booster + theme(legend.position = "none"),
                  p_deaths_booster + theme(legend.position = "none"), nrow = 1)
 l1 <- get_legend(p_deaths_booster)
-ggsave("output/cntfctl_hosps_and_deaths_booster4.pdf",plot_grid(pp1,l1,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 4)
+ggsave(paste0("output/cntfctl_hosps_and_deaths_booster",run,".pdf"),plot_grid(pp1,l1,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 4)
 
-save.image("../covid_multistrain_wip7.RData")
+save.image(paste0("output/cntfctl_output",mcmc_run,".RData"))
 
