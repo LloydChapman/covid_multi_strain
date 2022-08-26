@@ -135,17 +135,20 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     n_vax <- 5
     
     # Transmission and natural history parameters
-    # intvtn_date <- as.Date(c(strt_date,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
-    # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-01","2021-08-12"))
-    # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
-    # intvtn_date <- as.Date(c(strt_date,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
-    intvtn_date <- as.Date(c(strt_date,"2020-08-01","2020-08-27","2020-10-10","2021-01-19","2021-06-01","2021-07-26","2021-08-02","2021-09-20","2021-11-15"))
-    beta_date <- as.integer(intvtn_date - min(intvtn_date))
+    # intvtn_date <- as.Date(c(strt_date-1,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
+    # intvtn_date <- as.Date(c(strt_date-1,"2020-10-24","2021-06-01","2021-08-12"))
+    # intvtn_date <- as.Date(c(strt_date-1,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
+    # intvtn_date <- as.Date(c(strt_date-1,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
+    # intvtn_date <- as.Date(c(strt_date-1,"2020-08-01","2020-08-27","2020-10-10","2021-01-19","2021-06-01","2021-07-26","2021-08-02","2021-09-20","2021-11-15"))
+    intvtn_date <- as.Date(c("2020-08-27","2020-10-24","2021-06-01","2021-08-02","2021-11-15"))
+    beta_date <- sircovid_date(intvtn_date) #as.integer(intvtn_date - min(intvtn_date))
     # beta_value_sim <- c(0.035,0.025,0.02,0.04,0.02) #7/8*
     # beta_value_sim <- c(0.025,0.02,0.025,0.02,0.025,0.02) #7/8*
     # beta_value_sim <- c(0.025,0.02,0.025,0.02,0.025) #7/8*
-    beta_value_sim <- c(0.025,0.024,0.022,0.02,0.022,0.024,0.022,0.02,0.022,0.024) #7/8*
-    beta_type <- "piecewise-constant" #"piecewise-linear" #
+    # beta_value_sim <- c(0.025,0.024,0.022,0.02,0.022,0.024,0.022,0.02,0.022,0.024) #7/8*
+    beta_value_sim <- c(0.025,0.02,0.024,0.02,0.024) #7/8*
+    # beta_type <- "piecewise-constant"
+    beta_type <- "piecewise-linear"
     gamma_E <- 0.5
     gamma_P <- 0.4
     gamma_A <- 0.2
@@ -455,8 +458,10 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
     #
     n_betas <- length(beta_date)
     beta_names <- paste0("beta", seq_len(n_betas))
+    # beta_initial <- c(0.025,0.024,0.022,0.02,0.022,0.024,0.022,0.02,0.022,0.024)
+    beta_initial <- c(0.025,0.02,0.024,0.02,0.024)
     beta_value_list <- list(
-        name = beta_names, initial = c(0.025,0.024,0.022,0.02,0.022,0.024,0.022,0.02,0.022,0.024),
+        name = beta_names, initial = beta_initial,
         min = rep(0,n_betas), max = rep(Inf,n_betas), discrete = rep(F,n_betas),
         prior = replicate(n_betas,function(x) dgamma(x, shape = 4, scale = 0.02/4, log = TRUE))
     )
@@ -732,7 +737,9 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,
         beta_step <- parameters_piecewise_constant(beta_date, 
                                                    beta_value_post %||% 0.1, dt)
     }
-    plot(sircovid_date_as_date(beta_t), beta_step, type = "o", cex = 0.25)
+    plot(sircovid_date_as_date(beta_t), beta_step, type = "o", cex = 0.25, xaxt = "n", xlab = "Date", ylab = "beta")
+    dates_plot <- seq.Date(sircovid_date_as_date(beta_t[1]),sircovid_date_as_date(beta_t[length(beta_t)]),by = 30)
+    axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
     
     # Trace plots
     # par(mfrow = c(ceiling(length(init_pars)/2),2))
