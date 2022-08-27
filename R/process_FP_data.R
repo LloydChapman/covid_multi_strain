@@ -136,13 +136,46 @@ cases_dt[,age_group := sub("#NUM!|#VALUE!","",age_group)]
 cases_dt[,min_age := get_min_age(age_group)]
 cases_dt[,age_group := cut(min_age,c(min_ages,Inf),labels = age_groups,right = F)]
 
+# Plot total cases against weekly data to check
+# Total cases
+total_cases_dt <- cases_dt[!is.na(date),.(cases = .N),by = .(date)]
+total_cases_dt[,iso_week := ISOweek(date)]
+total_cases_dt <- total_cases_dt[,.(cases = sum(cases,na.rm = T)),by = .(iso_week)]
+total_cases_dt[,date := ISOweek2date(paste0(iso_week,"-1"))]
+
+ggplot() + 
+    geom_line(aes(x = date,y = cases),total_cases_dt) +
+    geom_point(aes(x = Date,y = `Total nombre de nouveaux cas confirmés locaux`),weekly_dt,color = "red")
+# ggsave("output/total_cases.pdf",width = 5,height = 4)
+
+# Impute missing confirmation dates with dates of nearest cases
+cases_dt1 <- copy(cases_dt) 
+setnafill(cases_dt1, type = "locf", cols = "date")
+total_cases_dt1 <- cases_dt1[,.(cases = .N),by = .(date)]
+total_cases_dt1[,iso_week := ISOweek(date)]
+total_cases_dt1 <- total_cases_dt1[,.(cases = sum(cases,na.rm = T)),by = .(iso_week)]
+total_cases_dt1[,date := ISOweek2date(paste0(iso_week,"-1"))]
+
+ggplot() + 
+    geom_line(aes(x = date,y = cases),total_cases_dt1) +
+    geom_point(aes(x = Date,y = `Total nombre de nouveaux cas confirmés locaux`),weekly_dt,color = "red")
+# ggsave("output/total_cases_imputed_missing_dates.pdf",width = 5,height = 4)
+# Most cases with missing dates are early in first wave, so use data with imputed missing dates
+
 # Aggregate cases by age group and date
 cases <- cases_dt[!is.na(date) & age_group != "",.(cases = .N),by = .(age_group,date)]
 
 # Plot cases
 ggplot(cases,aes(x = date,y = cases,group = age_group,color = age_group)) + 
     geom_line() #+ 
-    # facet_wrap(~age_group)
+# facet_wrap(~age_group)
+
+# Aggregate cases with imputed missing dates by age group and date
+cases1 <- cases_dt1[age_group != "",.(cases = .N),by = .(age_group,date)]
+
+# Plot cases
+ggplot(cases1,aes(x = date,y = cases,group = age_group,color = age_group)) + 
+    geom_line()
 
 ## Hospitalisations
 # 1st wave 
@@ -322,7 +355,7 @@ hosps_wide <- reformat_data(hosps,base_dt,"hosps",T)
 deaths_wide <- reformat_data(deaths,base_dt,"deaths",T)
 
 base_dt_case <- CJ(date = dates, age_group = age_groups)
-cases_wide <- reformat_data(cases,base_dt_case,"cases",T)
+cases_wide <- reformat_data(cases1,base_dt_case,"cases",T)
 
 setnames(sero_pos_dt,c("n","seropos"),c("sero_tot_1","sero_pos_1"))
 base_dt_sero <- CJ(date = dates,age_group = age_groups[3:length(age_groups)])
