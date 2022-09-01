@@ -1,4 +1,4 @@
-fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = TRUE,thinning = 1){
+fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE,thinning = 1){
     #### Set up model and parameters ####
     
     
