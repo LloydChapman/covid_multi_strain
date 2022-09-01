@@ -199,10 +199,10 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
 #     return(q)
 # }
 
-calculate_outcome_quantiles <- function(x,info){
+calculate_outcome_quantiles <- function(x,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
     # If input is a 3-D array convert to a data table
     if (length(dim(x)) == 3){
-        x <- arr_to_dt(x,info)
+        x <- arr_to_dt(x,info,min_ages,Rt)
     }
     
     out <- x[,.(med = median(value),

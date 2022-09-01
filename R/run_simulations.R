@@ -25,12 +25,14 @@ source("R/process_FP_data.R")
 covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Set MCMC output
-mcmc_run <- 66
+mcmc_run <- 69
 output <- paste0("output/MCMCoutput",mcmc_run,".RData")
 
 ## Run counterfactual simulations
 # Set run number
-run <- 5
+run <- 6
+# Set whether states required to calculate Rt have been output 
+Rt <- T
 # Set number of parameter samples and burn-in to remove
 n_smpls <- 500
 burnin <- NULL #2000
@@ -51,14 +53,16 @@ beta_date_cntfctl_list <- replicate(9,beta_date,F)
 beta_date_cntfctl_list[[1]][2] <- beta_date[2] - 7
 # Move first lockdown a week later
 beta_date_cntfctl_list[[2]][2] <- beta_date[2] + 7
-# Move second lockdown a week earlier
-beta_date_cntfctl_list[[3]][4] <- beta_date[4] - 7
-# Move second lockdown a week later
-beta_date_cntfctl_list[[4]][4] <- beta_date[4] + 7
-# Move both lockdowns a week earlier
-beta_date_cntfctl_list[[5]][c(2,4)] <- beta_date[c(2,4)] - 7
-# Move both lockdowns a week later
-beta_date_cntfctl_list[[6]][c(2,4)] <- beta_date[c(2,4)] + 7
+# Move second lockdown two weeks earlier
+beta_date_cntfctl_list[[3]][4] <- beta_date[4] - 14
+# Move second lockdown two weeks later
+beta_date_cntfctl_list[[4]][4] <- beta_date[4] + 14
+# Move both lockdowns earlier
+beta_date_cntfctl_list[[5]][2] <- beta_date[2] - 7
+beta_date_cntfctl_list[[5]][4] <- beta_date[4] - 14
+# Move both lockdowns later
+beta_date_cntfctl_list[[6]][2] <- beta_date[2] + 7
+beta_date_cntfctl_list[[6]][4] <- beta_date[4] + 14
 # Use actual dates for vaccination counterfactual simulations
 
 ## Vaccination counterfactuals
@@ -98,13 +102,13 @@ for (i in seq_along(beta_date_cntfctl_list)){
     # Set wave dates
     wave_date <- c(1,300,500,nlayer(states_cntfctl))
 
-    q_outcomes_list[[i]] <- calculate_outcome_quantiles(states,info)
-    q_outcomes_cntfctl_list[[i]] <- calculate_outcome_quantiles(states_cntfctl,info)
-    q_outcomes_averted_list[[i]] <- calculate_outcome_quantiles(outcomes_averted,info)
+    q_outcomes_list[[i]] <- calculate_outcome_quantiles(states,info,min_ages,Rt)
+    q_outcomes_cntfctl_list[[i]] <- calculate_outcome_quantiles(states_cntfctl,info,min_ages,Rt)
+    q_outcomes_averted_list[[i]] <- calculate_outcome_quantiles(outcomes_averted,info,min_ages,Rt)
         
-    q_total_outcomes_list[[i]] <- calculate_outcomes_by_wave(states,wave_date,info)
-    q_total_outcomes_cntfctl_list[[i]] <- calculate_outcomes_by_wave(states_cntfctl,wave_date,info)
-    q_total_outcomes_averted_list[[i]] <- calculate_outcomes_by_wave(outcomes_averted,wave_date,info)
+    q_total_outcomes_list[[i]] <- calculate_outcomes_by_wave(states,wave_date,info,min_ages,Rt)
+    q_total_outcomes_cntfctl_list[[i]] <- calculate_outcomes_by_wave(states_cntfctl,wave_date,info,min_ages,Rt)
+    q_total_outcomes_averted_list[[i]] <- calculate_outcomes_by_wave(outcomes_averted,wave_date,info,min_ages,Rt)
     
 }
 
@@ -126,8 +130,8 @@ total_outcomes <- rbind(tmp,q_total_outcomes_cntfctl)
 
 ttls <- c("No change in lockdown dates",
           "1st lockdown 1 week earlier","1st lockdown 1 week later",
-          "2nd lockdown 1 week earlier","2nd lockdown 1 week later",
-          "Both lockdowns 1 week earlier","Both lockdowns 1 week later",
+          "2nd lockdown 2 weeks earlier","2nd lockdown 2 weeks later",
+          "Both lockdowns earlier","Both lockdowns later",
           "No vaccination", "Boosters 1 month earlier","No boosters")
 names(ttls) <- as.character(seq_along(ttls)-1)
 
