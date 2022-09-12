@@ -590,6 +590,14 @@ eff_S[, , ] <- if (n_real_strains == 1)
 initial(effective_susceptible[, ]) <- 0
 update(effective_susceptible[, ]) <- sum(eff_S[i, j, ])
 
+# Output new infections
+initial(new_infections[, , ]) <- 0
+update(new_infections[, , ]) <- n_SE[i, j, k]
+
+# Output new reinfections
+initial(new_reinfections[, , ]) <- 0
+update(new_reinfections[, , ]) <- n_RE[i, j, k]
+
 ## Array dimensions
 dim(S) <- c(n_age,n_vax)
 dim(E) <- c(n_age,n_strains,n_vax)
@@ -705,5 +713,7 @@ dim(vacc_skipped) <- n_vax
 dim(new_I_weighted) <- c(n_age,n_strains,n_vax)
 dim(I_weighted) <- c(n_age,n_strains,n_vax)
 dim(prob_strain) <- n_real_strains
-dim(eff_S) <- c(n_age, n_real_strains,n_vax)
+dim(eff_S) <- c(n_age,n_real_strains,n_vax)
 dim(effective_susceptible) <- c(n_age,n_real_strains)
+dim(new_infections) <- c(n_age,n_real_strains,n_vax)
+dim(new_reinfections) <- c(n_age,n_real_strains,n_vax)

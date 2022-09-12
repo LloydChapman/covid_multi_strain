@@ -591,10 +591,22 @@ index <- function(info, min_ages = seq(0,70,by = 10), Rt = TRUE){
         calculate_index(index, "effective_susceptible", list(n_strains),
                         suffix, "effective_susceptible")
     
-    # R states (age x (total) strain x vacc class)
-    index_R <- calculate_index(index, "R", list(S = n_tot_strains, V = n_vacc_classes), suffix)
+    # New infections (age x strain x vacc class)
+    index_new_infections <- 
+        calculate_index(index, "new_infections", 
+                        list(S = n_strains, V = n_vacc_classes), suffix)
     
-    index_state <- c(index_run, index_effective_susceptible)
+    # New reinfections (age x strain x vacc class)
+    index_new_reinfections <- 
+        calculate_index(index, "new_reinfections", 
+                        list(S = n_strains, V = n_vacc_classes), suffix)
+    
+    # R states (age x (total) strain x vacc class)
+    index_R <- calculate_index(index, "R", list(S = n_tot_strains, 
+                                                V = n_vacc_classes), suffix)
+    
+    index_state <- c(index_run, index_effective_susceptible,
+                     index_new_infections, index_new_reinfections)
     
     if (Rt){
         index_state <- c(index_state, index_S, index_R, index_prob_strain)
