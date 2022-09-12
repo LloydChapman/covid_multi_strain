@@ -591,22 +591,23 @@ index <- function(info, min_ages = seq(0,70,by = 10), Rt = TRUE){
         calculate_index(index, "effective_susceptible", list(n_strains),
                         suffix, "effective_susceptible")
     
-    # New infections (age x strain x vacc class)
-    index_new_infections <- 
-        calculate_index(index, "new_infections", 
-                        list(S = n_strains, V = n_vacc_classes), suffix)
-    
-    # New reinfections (age x strain x vacc class)
-    index_new_reinfections <- 
-        calculate_index(index, "new_reinfections", 
-                        list(S = n_strains, V = n_vacc_classes), suffix)
+    # # New infections (age x strain x vacc class)
+    # index_new_infections <- 
+    #     calculate_index(index, "new_infections", 
+    #                     list(S = n_strains, V = n_vacc_classes), suffix)
+    # 
+    # # New reinfections (age x strain x vacc class)
+    # index_new_reinfections <- 
+    #     calculate_index(index, "new_reinfections", 
+    #                     list(S = n_strains, V = n_vacc_classes), suffix)
     
     # R states (age x (total) strain x vacc class)
     index_R <- calculate_index(index, "R", list(S = n_tot_strains, 
                                                 V = n_vacc_classes), suffix)
     
-    index_state <- c(index_run, index_effective_susceptible,
-                     index_new_infections, index_new_reinfections)
+    index_state <- c(index_run, index_effective_susceptible)
+    # index_state <- c(index_run, index_effective_susceptible,
+    #                  index_new_infections, index_new_reinfections)
     
     if (Rt){
         index_state <- c(index_state, index_S, index_R, index_prob_strain)
@@ -1254,86 +1255,111 @@ make_transform_multistage <- function(dt,
 }
 
 
-plot_outcome_age <- function(incidence_modelled, incidence_observed, times, vrble, phi = 1){
-    nms <- dimnames(incidence_modelled)[[1]]
-    idx <- grep(paste0(vrble,"_[0-9]+"),nms)
-    idx_obs <- grep(paste0(vrble,"_"),names(incidence_observed))
-    if (ncol(incidence_modelled)>1){
-        idx_plot <- seq(10,ncol(incidence_modelled),by=10)    
-    } else {
-        idx_plot <- 1
+plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = 1, by_age = FALSE){
+    # Extract modelled incidence for outcome vrble from output
+    if (is.null(burnin)){
+        burnin <- round(ncol(incidence_modelled)/10)
     }
-    dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
-    par(mfrow = c(length(idx),1), oma=c(2,3,0,0))
-    for (i in seq_along(idx)){
-        par(mar = c(3, 4, 2, 0.5))
-        if (ncol(incidence_modelled)>1){
-            y <- phi * t(incidence_modelled[idx[1]-1+i,idx_plot,-1])
-        } else {
-            y <- phi * incidence_modelled[idx[1]-1+i,idx_plot,-1]
-        }
-        matplot(times, y,
-                type="l",col = alpha("black",0.1),xlab = "Day",ylab = vrble,xaxt = "n",#yaxt = "n",
-                ylim = c(0,max(max(incidence_observed[,idx_obs],na.rm = T),max(incidence_modelled[idx,,-1]))),
-                main = paste0("Age ", sub("_","-",sub(paste0(vrble,"_"),"",rownames(incidence_modelled)[idx[1]-1+i]))))
-        points(times, incidence_observed[[idx_obs[1]-1+i]],pch=19,col="red",cex=0.5)
-        axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
-    } 
+    nms <- dimnames(incidence_modelled)[[1]]
+    if (by_age){
+        idx <- grep(paste0(vrble,"_[0-9]+"),nms)
+    } else {
+        idx <- which(nms == vrble)
+    }
+    incidence_modelled <- incidence_modelled[idx,,,drop = F]
+    # Remove burn-in
+    incidence_modelled <- incidence_modelled[,-(1:(burnin+1)),,drop = F]
+    # Convert to data table
+    inc_dt <- as.data.table(incidence_modelled)
+    names(inc_dt) <- c("age_group","sample","date","value")
+    inc_dt[,date := sircovid_date_as_date(date)]
+    inc_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
+    q_inc_dt <- inc_dt[,.(med = quantile(value,0.5),
+                          q95l = quantile(value,0.025),
+                          q95u = quantile(value,0.975)),
+                       by = .(age_group,date)]
+    # Extract observed incidence for outcome vrble from data frame
+    if (by_age){
+        idx_obs <- names(incidence_observed)[grep(paste0(vrble,"_"),names(incidence_observed))]
+    } else {
+        idx_obs <- names(incidence_observed)[names(incidence_observed) == vrble]    
+    }
+    inc_obs_dt <- as.data.table(incidence_observed[,c("day_end",idx_obs)])
+    inc_obs_dt <- melt(inc_obs_dt,measure.vars = patterns(vrble),variable.name = "age_group")
+    inc_obs_dt[,date := sircovid_date_as_date(day_end)]
+    inc_obs_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
+    
+    # Plot
+    ylbl <- sub("(.)", ("\\U\\1"), tolower(vrble), pe=TRUE)
+    p <- ggplot() + 
+        geom_point(aes(x = date, y = value), inc_obs_dt, size = 0.5, color = "red") + 
+        geom_line(aes(x = date, y = phi*med),q_inc_dt) + 
+        geom_ribbon(aes(x = date, ymin = phi*q95l, ymax = phi*q95u),q_inc_dt,alpha = 0.5) + 
+        labs(x = "Date", y = ylbl)
+    if (by_age){
+        p <- p + facet_wrap(~age_group, ncol = 1)
+    }
+    return(p)
 }
 
     
-plot_sero <- function(seroprev_modelled, seroprev_observed, times, population){
-    par(mfrow = c(6,1), oma = c(2,3,0,0))
+plot_sero <- function(seroprev_modelled, seroprev_observed, population, burnin = NULL, by_age = FALSE){
+    # Extract modelled seroprevalence from output
+    if (is.null(burnin)){
+        burnin <- round(ncol(seroprev_modelled)/10)
+    }
     nms <- dimnames(seroprev_modelled)[[1]]
-    idx_sero <- grep("sero_pos_1_",nms)
-    idx_sero_obs <- grep("sero_pos_1_",names(seroprev_observed))
-    idx_sero_tot_obs <- grep("sero_tot_1_",names(seroprev_observed))
-    if (ncol(seroprev_modelled)>1){
-        idx_plot <- seq(10,ncol(seroprev_modelled),by=10)    
+    if (by_age){
+        idx_sero <- grep("sero_pos_1_",nms) 
     } else {
-        idx_plot <- 1
+        idx_sero <- which(nms == "sero_pos_1")
     }
-    dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
-    for (i in 1:6){
-        par(mar = c(3, 4, 2, 0.5))
-        if (ncol(seroprev_modelled)>1){
-            y <- t(seroprev_modelled[idx_sero[1]-1+i,idx_plot,-1]/population[i])
-        } else {
-            y <- seroprev_modelled[idx_sero[1]-1+i,idx_plot,-1]/population[i]
-        }
-        matplot(times, y,
-                type = "l", col = alpha("black",0.1), xlab = "Day", ylab = "Seroprevalence", xaxt = "n", #yaxt = "n",
-                ylim = c(0,max(max(seroprev_modelled[idx_sero,idx_plot,-1]/population),max(seroprev_observed[,idx_sero_obs]/seroprev_observed[,idx_sero_tot_obs],na.rm = T))),
-                main = paste0("Age ",sub("_","-",sub("sero_pos_1_","",rownames(seroprev_modelled)[idx_sero[1]-1+i]))))
-        points(times, seroprev_observed[[idx_sero_obs[1]-1+i]]/seroprev_observed[[idx_sero_tot_obs[1]-1+i]], pch = 19, col = "red")
-        axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
-    }
-}
-
-
-plot_outcome <- function(incidence_modelled, incidence_observed, times, vrble, phi = 1){
-    # par(mfrow = c(2,1), oma = c(2,3,0,0))
-    par(mfrow = c(1,1))
-    nms <- dimnames(incidence_modelled)[[1]]
-    idx <- which(nms == vrble)
-    idx_obs <- which(names(incidence_observed) == vrble)
-    if (ncol(incidence_modelled)>1){
-        idx_plot <- seq(10,ncol(incidence_modelled),by=10)    
+    seroprev_modelled <- seroprev_modelled[idx_sero,,,drop = F]
+    # Remove burn-in
+    seroprev_modelled <- seroprev_modelled[,-(1:(burnin+1)),,drop = F]
+    # Convert to data table
+    sero_dt <- as.data.table(seroprev_modelled)
+    names(sero_dt) <- c("age_group","sample","date","value")
+    sero_dt[,date := sircovid_date_as_date(date)]
+    sero_dt[,age_group := sub("_","-",sub(paste0("sero_pos_1_"),"",age_group))]
+    q_sero_dt <- sero_dt[,.(med = quantile(value,0.5),
+                           q95l = quantile(value,0.025),
+                           q95u = quantile(value,0.975)),
+                        by = .(age_group,date)]
+    if (by_age){
+        pop_dt <- copy(population)
+        pop_dt[age_group == "70+",age_group := "70-plus"]
+        q_sero_dt <- merge(q_sero_dt,pop_dt,by = "age_group",all.x = T)
     } else {
-        idx_plot <- 1
+        q_sero_dt[,population := population[!(age_group %in% c("0-9","10-19")),sum(population)]]
     }
-    dates_plot <- seq.Date(times[1], times[length(times)], by = 30)
-    par(mar = c(3, 4, 2, 0.5))
-    if (ncol(incidence_modelled)>1){
-        y <- phi * t(incidence_modelled[idx,idx_plot,-1])
+    # Extract observed seroprevalence
+    if (by_age){
+        idx_sero_obs <- names(seroprev_observed)[grep("sero_pos_1_",names(seroprev_observed))]
+        idx_sero_tot_obs <- names(seroprev_observed)[grep("sero_tot_1_",names(seroprev_observed))]
     } else {
-        y <- phi * incidence_modelled[idx,idx_plot,-1]
+        idx_sero_obs <- names(seroprev_observed)[names(seroprev_observed) == "sero_pos_1"]
+        idx_sero_tot_obs <- names(seroprev_observed)[names(seroprev_observed) == "sero_tot_1"]        
     }
-    matplot(times, y,
-            type = "l", col = alpha("black",0.1), xlab = "Day", ylab = vrble, xaxt = "n"
-    )
-    points(times, incidence_observed[[idx_obs]], pch = 19, col = "red", cex = 0.5)
-    axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
+    sero_obs_dt <- as.data.table(seroprev_observed[,c("day_end",idx_sero_obs,idx_sero_tot_obs)])
+    sero_obs_dt <- melt(sero_obs_dt, measure.vars = patterns(positive = "sero_pos_1",total = "sero_tot_1"))
+    sero_obs_dt[,date := sircovid_date_as_date(day_end)]
+    # sero_obs_dt[,age_group := sub("_","-",sub(paste0("sero_pos_1_"),"",age_group))]
+    sero_obs_dt[,age_group := sero_dt[,unique(age_group)][variable]]
+    sero_obs_dt[!is.na(positive),`:=`(ci_lb = mapply(function(n,x) binom.test(n,x)$conf.int[1],positive,total),
+                                      ci_ub = mapply(function(n,x) binom.test(n,x)$conf.int[2],positive,total))]
+    
+    # Plot
+    p <- ggplot() + 
+        geom_point(aes(x = date,y = positive/total),sero_obs_dt,color = "red") + 
+        geom_errorbar(aes(x = date,ymin = ci_lb,ymax = ci_ub),sero_obs_dt,color = "red") + 
+        geom_line(aes(x = date,y = pmin(med/population,1)),q_sero_dt) +
+        geom_ribbon(aes(x = date,ymin = pmin(q95l/population,1),ymax = pmin(q95u/population,1)),q_sero_dt,alpha = 0.5) + 
+        labs(x = "Date",y = "Seroprevalence") 
+    if (by_age){
+        p <- p + facet_wrap(~age_group,ncol = 1)
+    }
+    return(p)
 }
 
 
