@@ -136,6 +136,9 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
     # Load MCMC output
     load(output)
     
+    # Initialise dust model generator
+    covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
+    
     if (is.null(burnin)){
         burnin <- round((n_iters/thinning)/10)
     }
@@ -218,7 +221,12 @@ calculate_outcomes_by_wave <- function(x,wave_date,info,min_ages = seq(0,70,by =
     
     tmp <- vector("list",n_waves)
     for (j in 1:n_waves){
-        times <- wave_date[j]:wave_date[j+1]
+        if (j != n_waves){ # if it's not the final wave, go up to start of next wave
+            times <- wave_date[j]:(wave_date[j+1]-1)
+        } else { # if it's the final wave, include last date
+            times <- wave_date[n_waves]:wave_date[n_waves+1]
+        }
+        
         # Calculate total outcomes averted over wave
         tmp[[j]] <- as.data.table(t(apply(x[,,times], c(1,2), sum)))
         tmp[[j]][,smpl := .I]
@@ -246,7 +254,7 @@ plot_counterfactuals <- function(q_outcomes,q_outcomes_cntfctl,outcome,ylbl,ttls
         geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u,fill = "Fitted"),q_outcomes[state == outcome],alpha = 0.5) +
         geom_line(aes(x = date,y = med,color = "Counterfactual"),q_outcomes_cntfctl[state == outcome]) + 
         geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u,fill = "Counterfactual"),q_outcomes_cntfctl[state == outcome],alpha = 0.5) +
-        labs(x = "Day",y = ylbl) +
+        labs(x = "Date",y = ylbl) +
         scale_color_manual(name = "",values = clrs) +
         scale_fill_manual(name = "",values = clrs) +
         facet_wrap(~cntfctl,nrow = 2,labeller = labeller(cntfctl = ttls),dir = "v") +
