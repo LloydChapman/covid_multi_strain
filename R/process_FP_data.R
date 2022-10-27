@@ -525,4 +525,4 @@ ggplot(doses_dt,aes(x = date,y = cum_prop,group = age_group, color = age_group))
                    dose = c("dose1" = "Dose 1", 
                             "dose2" = "Dose 2", 
                             "dose3" = "Dose 3")))
-ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3.5)
+# ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3.5)
