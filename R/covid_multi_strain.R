@@ -1255,7 +1255,7 @@ make_transform_multistage <- function(dt,
 }
 
 
-plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = 1, by_age = FALSE){
+plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, by_age = FALSE, burnin = NULL){
     # Extract modelled incidence for outcome vrble from output
     if (is.null(burnin)){
         burnin <- round(ncol(incidence_modelled)/10)
@@ -1274,6 +1274,12 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = 1,
     names(inc_dt) <- c("age_group","sample","date","value")
     inc_dt[,date := sircovid_date_as_date(date)]
     inc_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
+    if (vrble == "cases"){
+        # Remove burn-in
+        phi <- phi[-(1:(burnin+1))]
+        # Multiply incidence by reporting rate
+        inc_dt[,value := phi * value]        
+    }
     q_inc_dt <- inc_dt[,.(med = quantile(value,0.5),
                           q95l = quantile(value,0.025),
                           q95u = quantile(value,0.975)),
@@ -1284,7 +1290,7 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = 1,
     } else {
         idx_obs <- names(incidence_observed)[names(incidence_observed) == vrble]    
     }
-    inc_obs_dt <- as.data.table(incidence_observed[,c("day_end",idx_obs)])
+    inc_obs_dt <- as.data.table(incidence_observed[c("day_end",idx_obs)])
     inc_obs_dt <- melt(inc_obs_dt,measure.vars = patterns(vrble),variable.name = "age_group")
     inc_obs_dt[,date := sircovid_date_as_date(day_end)]
     inc_obs_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
@@ -1293,8 +1299,8 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = 1,
     ylbl <- sub("(.)", ("\\U\\1"), tolower(vrble), pe=TRUE)
     p <- ggplot() + 
         geom_point(aes(x = date, y = value), inc_obs_dt, size = 0.5, color = "red") + 
-        geom_line(aes(x = date, y = phi*med),q_inc_dt) + 
-        geom_ribbon(aes(x = date, ymin = phi*q95l, ymax = phi*q95u),q_inc_dt,alpha = 0.5) + 
+        geom_line(aes(x = date, y = med),q_inc_dt) + 
+        geom_ribbon(aes(x = date, ymin = q95l, ymax = q95u),q_inc_dt,alpha = 0.5) + 
         labs(x = "Date", y = ylbl)
     if (by_age){
         p <- p + facet_wrap(~age_group, ncol = 1)
@@ -1303,7 +1309,7 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = 1,
 }
 
     
-plot_sero <- function(seroprev_modelled, seroprev_observed, population, burnin = NULL, by_age = FALSE){
+plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age = FALSE, burnin = NULL){
     # Extract modelled seroprevalence from output
     if (is.null(burnin)){
         burnin <- round(ncol(seroprev_modelled)/10)
@@ -1341,7 +1347,7 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, burnin =
         idx_sero_obs <- names(seroprev_observed)[names(seroprev_observed) == "sero_pos_1"]
         idx_sero_tot_obs <- names(seroprev_observed)[names(seroprev_observed) == "sero_tot_1"]        
     }
-    sero_obs_dt <- as.data.table(seroprev_observed[,c("day_end",idx_sero_obs,idx_sero_tot_obs)])
+    sero_obs_dt <- as.data.table(seroprev_observed[c("day_end",idx_sero_obs,idx_sero_tot_obs)])
     sero_obs_dt <- melt(sero_obs_dt, measure.vars = patterns(positive = "sero_pos_1",total = "sero_tot_1"))
     sero_obs_dt[,date := sircovid_date_as_date(day_end)]
     # sero_obs_dt[,age_group := sub("_","-",sub(paste0("sero_pos_1_"),"",age_group))]
