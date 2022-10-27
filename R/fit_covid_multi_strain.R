@@ -176,7 +176,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     strain_seed_pattern <- 1
     
     # Vaccination parameters
-    vaccine_progression_rate <- c(0,0,1/(26*7),0,1/(26*7))
+    vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(0.923)/140)
     
     
     vaccine_index_dose2 <- 2L
@@ -763,13 +763,13 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10),u],labels = names(init_pars)[u])
     
     # Plot fitted hospitalisations and deaths against data
-    plot_outcome_age(res$trajectories$state,data,dates,"hosps")
-    plot_outcome_age(res$trajectories$state,data,dates,"deaths")
-    plot_outcome_age(res$trajectories$state,data,dates,"cases",phi_cases$initial)
-    plot_sero(res$trajectories$state,data,dates,population[3:length(population)])
-    plot_outcome(res$trajectories$state,data,dates,"hosps")
-    plot_outcome(res$trajectories$state,data,dates,"deaths")
-    plot_outcome(res$trajectories$state,data,dates,"cases",phi_cases$initial)
+    plot_outcome(res$trajectories$state,data,"hosps",by_age = T)
+    plot_outcome(res$trajectories$state,data,"deaths",by_age = T)
+    plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"],by_age = T)
+    plot_sero(res$trajectories$state,data,agg_pop,by_age = T)
+    plot_outcome(res$trajectories$state,data,"hosps")
+    plot_outcome(res$trajectories$state,data,"deaths")
+    plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"])
     
     dev.off()
     

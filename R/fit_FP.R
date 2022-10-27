@@ -36,7 +36,7 @@ u <- c(1:5,7:9,12:13) # beta parameters, seed date, strain seed date, IHR scalin
 # u <- c(1:10,12:14,17) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, observation parameters for case data
 # u <- c(1:7,9:11,14) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, observation parameters for case data
 n_iters <- 5e4 #1e3 #2e4 #1e4 #
-run <- 70
+run <- 71
 deterministic <- T # flag for whether to use "deterministic particle filter" or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state"
 thinning <- 10
