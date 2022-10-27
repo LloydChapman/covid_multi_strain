@@ -25,12 +25,12 @@ source("R/process_FP_data.R")
 covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Set MCMC output
-mcmc_run <- 69
+mcmc_run <- 70
 output <- paste0("output/MCMCoutput",mcmc_run,".RData")
 
 ## Run counterfactual simulations
 # Set run number
-run <- 7
+run <- 9
 # Set whether states required to calculate Rt have been output 
 Rt <- T
 # Set number of parameter samples and burn-in to remove
