@@ -122,8 +122,8 @@ n_SV_skip[, ] <- rbinom(S[i,j] - sum(n_SE[i, ,j]) - n_SV[i,j], p_SV_skip[i,j])
 # Flow out of E:
 # progression
 n_EI[, , ] <- rbinom(E[i,j,k], p_EI)
-n_EI_P[, , ] <- rbinom(n_EI[i,j,k], rel_p_sympt[i,j,k]*
-                           strain_rel_p_sympt[j]*p_C[i])
+n_EI_P[, , ] <- rbinom(n_EI[i,j,k], min(rel_p_sympt[i,j,k]*
+                           strain_rel_p_sympt[j]*p_C[i], as.numeric(1)))
 n_EI_A[, , ] <- n_EI[i,j,k] - n_EI_P[i,j,k]
 # vaccination
 n_EV[, , ] <- rbinom(E[i,j,k] - n_EI[i,j,k], p_EV[i,j,k])
@@ -146,17 +146,17 @@ n_I_AV_skip[, , ] <- rbinom(I_A[i,j,k] - n_I_AR[i,j,k], p_I_AV_skip[i,j,k])
 # Flow out of I_C:
 # progression
 n_I_Cx[, , ] <- rbinom(I_C[i,j,k], p_I_Cx)
-n_I_CR[, , ] <- rbinom(n_I_Cx[i,j,k], 1 - rel_p_hosp_if_sympt[i,j,k]*
-                           strain_rel_p_hosp_if_sympt[j]*p_H[i]) #
+n_I_CR[, , ] <- rbinom(n_I_Cx[i,j,k], 1 - min(rel_p_hosp_if_sympt[i,j,k]*
+                           strain_rel_p_hosp_if_sympt[j]*p_H[i], as.numeric(1))) #
 n_I_CHG[, , ] <- n_I_Cx[i,j,k] - n_I_CR[i,j,k]
-n_I_CH[, , ] <- rbinom(n_I_CHG[i,j,k], 1 - rel_p_death[i,j,k]*
-                           strain_rel_p_death[j]*p_G[i])
+n_I_CH[, , ] <- rbinom(n_I_CHG[i,j,k], 1 - min(rel_p_death[i,j,k]*
+                           strain_rel_p_death[j]*p_G[i], as.numeric(1)))
 n_I_CG[, , ] <- n_I_CHG[i,j,k] - n_I_CH[i,j,k]
 
 # Flow out of H:
 n_Hx[, , ] <- rbinom(H[i,j,k], p_Hx)
-n_HD[, , ] <- rbinom(n_Hx[i,j,k], rel_p_death[i,j,k]*
-                         strain_rel_p_death[j]*p_D[i])
+n_HD[, , ] <- rbinom(n_Hx[i,j,k], min(rel_p_death[i,j,k]*
+                         strain_rel_p_death[j]*p_D[i], as.numeric(1)))
 n_HR[, , ] <- n_Hx[i,j,k] - n_HD[i,j,k]
 
 # Flow out of G:
