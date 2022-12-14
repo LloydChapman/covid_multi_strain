@@ -163,7 +163,7 @@ ggplot() +
 # Most cases with missing dates are early in first wave, so use data with imputed missing dates
 
 # Aggregate cases by age group and date
-cases <- cases_dt[!is.na(date) & age_group != "",.(cases = .N),by = .(age_group,date)]
+cases <- cases_dt[!is.na(date) & !is.na(age_group),.(cases = .N),by = .(age_group,date)]
 
 # Plot cases
 ggplot(cases,aes(x = date,y = cases,group = age_group,color = age_group)) + 
@@ -171,7 +171,7 @@ ggplot(cases,aes(x = date,y = cases,group = age_group,color = age_group)) +
 # facet_wrap(~age_group)
 
 # Aggregate cases with imputed missing dates by age group and date
-cases1 <- cases_dt1[age_group != "",.(cases = .N),by = .(age_group,date)]
+cases1 <- cases_dt1[!is.na(age_group),.(cases = .N),by = .(age_group,date)]
 
 # Plot cases
 ggplot(cases1,aes(x = date,y = cases,group = age_group,color = age_group)) + 
@@ -322,12 +322,22 @@ process_sero_data <- function(sero_dt,sample_date,age_groups,min_ages){
     
     x[,age_group := cut(max_ages,c(min_ages,Inf),labels = age_groups)]
     x <- x[,lapply(.SD, function(y) sum(as.integer(round(y)))),.SDcols = c("n","seropos"),by = .(date,age_group)]
+    x[,seroprev := mapply(
+        function(y,z) paste0(round(100*y/z,1)," (", 
+                             round(100*binom.test(y,z)$conf.int[1],1),"--",
+                             round(100*binom.test(y,z)$conf.int[2],1),")"),
+        seropos,n
+    )]
     
     return(x)
 }
 
 sero_pos_dt1 <- process_sero_data(sero_pos_dt1, as.Date("2021-02-14"), age_groups, min_ages)
+# write.csv(sero_pos_dt1,"data/seroprev_feb21.csv",row.names = F)
+print(binom.test(sero_pos_dt1[,sum(seropos)],sero_pos_dt1[,sum(n)]))
 sero_pos_dt2 <- process_sero_data(sero_pos_dt2, as.Date("2021-11-30"), age_groups, min_ages)
+# write.csv(sero_pos_dt2,"data/seroprev_nov21.csv",row.names = F)
+print(binom.test(sero_pos_dt2[,sum(seropos)],sero_pos_dt2[,sum(n)]))
 
 sero_pos_dt <- rbind(sero_pos_dt1,sero_pos_dt2)
 
