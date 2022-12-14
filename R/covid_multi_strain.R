@@ -1255,7 +1255,7 @@ make_transform_multistage <- function(dt,
 }
 
 
-plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, by_age = FALSE, burnin = NULL){
+plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, by_age = FALSE, burnin = NULL, moving_avg = FALSE){
     # Extract modelled incidence for outcome vrble from output
     if (is.null(burnin)){
         burnin <- round(ncol(incidence_modelled)/10)
@@ -1294,12 +1294,19 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     inc_obs_dt <- melt(inc_obs_dt,measure.vars = patterns(vrble),variable.name = "age_group")
     inc_obs_dt[,date := sircovid_date_as_date(day_end)]
     inc_obs_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
+    if (moving_avg){
+        inc_obs_dt[,value := frollmean(value,7)]
+    }
     
     # Plot
     ylbl <- sub("(.)", ("\\U\\1"), tolower(vrble), pe=TRUE)
-    p <- ggplot() + 
-        geom_point(aes(x = date, y = value), inc_obs_dt, size = 0.5, color = "red") + 
-        geom_line(aes(x = date, y = med),q_inc_dt) + 
+    p <- ggplot()
+    if (moving_avg){
+        p <- p + geom_line(aes(x = date, y = value), inc_obs_dt, size = 0.5, color = "red")
+    } else {
+        p <- p + geom_point(aes(x = date, y = value), inc_obs_dt, size = 0.5, color = "red")
+    }
+    p <- p + geom_line(aes(x = date, y = med),q_inc_dt) + 
         geom_ribbon(aes(x = date, ymin = q95l, ymax = q95u),q_inc_dt,alpha = 0.5) + 
         labs(x = "Date", y = ylbl)
     if (by_age){
@@ -1398,6 +1405,101 @@ plot_cases <- function(cases_modelled, cases_observed, times){
     }
 }
 
+
+plot_transmission_rate <- function(pars,beta_date,n_betas,end_date,burnin = NULL){
+    if (is.null(burnin)){
+        burnin <- round(nrow(pars)/10)
+    }
+    beta_value_post <- t(apply(pars[-(1:(burnin+1)),1:n_betas],2,
+                               function(x) quantile(x,probs = c(0.5,0.025,0.975))))
+    if (beta_type == "piecewise-linear"){
+        beta_step <- apply(
+            beta_value_post,2,
+            function(x) parameters_piecewise_linear(beta_date,
+                                                    x %||% 0.1, dt))
+    } else if (beta_type == "piecewise-constant"){
+        beta_step <- apply(
+            beta_value_post,2,
+            function(x) parameters_piecewise_constant(beta_date,
+                                                      x %||% 0.1, dt))
+    }
+    beta_t <- seq(0,end_date,by = dt)
+    beta_step <- as.data.table(apply(
+        beta_step,2,function(x) parameters_expand_step(seq_along(beta_t),x)))
+    beta_step[,date := sircovid_date_as_date(beta_t)]
+    p <- ggplot(beta_step) + 
+        geom_line(aes(x = date,y = `50%`)) + 
+        geom_ribbon(aes(x = date,ymin = `2.5%`,ymax = `97.5%`),alpha = 0.5) + 
+        labs(x = "Date",y = "beta(t)")
+    return(p)
+}
+
+
+plot_traces <- function(pars,u){
+    pars_dt <- as.data.table(pars[-1,u])
+    pars_dt[,iter := seq_len(nrow(pars)-1)]
+    pars_long_dt <- melt(pars_dt,id.vars = "iter")
+    
+    p <- ggplot(pars_long_dt,aes(x = iter,y = value)) + geom_line() +
+        facet_wrap(~variable,scales = "free",ncol = 3) + 
+        labs(x = "Iteration") + 
+        theme(axis.title.y = element_blank(),
+              axis.text.x = element_text(size = 8))
+    
+    return(p)
+    # for (i in u){
+    #     print(ggplot(pars_df,aes(x = iter,y = !!sym(colnames(pars)[i]))) + geom_line())
+    # }
+}
+
+
+plot_posteriors <- function(pars,u,priors,pars_min,pars_max,burnin = NULL){
+    if (is.null(burnin)){
+        burnin <- round(nrow(pars)/10)
+    }
+    # Remove burn-in
+    pars <- pars[-(1:(burnin+1)),u]
+    pars_dt <- as.data.table(pars)
+    pars_dt[,iter := seq_len(nrow(pars))]
+    pars_long_dt <- melt(pars_dt,id.vars = "iter")
+    
+    priors_dt <- data.table()
+    for (i in seq_along(u)){
+        nm <- names(priors)[u[i]]
+        x <- seq(min(pars_dt[[i]]),max(pars_dt[[i]]),length.out = 100)
+        priors_dt[,c(paste0("x_",nm),paste0("y_",nm)) := 
+                      list(x,
+                           if(all(exp(priors[[u[i]]](x))==1)){
+                               rep(1/(pars_max[u[i]]-pars_min[u[i]]),length(x))
+                           } else {
+                               exp(priors[[u[i]]](x))
+                           })]
+    }
+    
+    priors_long_dt <- melt(priors_dt,measure.vars = patterns(x = "x_",y = "y_"))
+    priors_long_dt[,variable := names(priors)[u[variable]]]
+        
+    p <- ggplot() + 
+        geom_histogram(aes(x = value,y = ..density..),pars_long_dt) +
+        geom_line(aes(x = x,y = y),priors_long_dt,colour = "red") +
+        facet_wrap(~variable,scales = "free",ncol = 3) + 
+        labs(y = "Density") +
+        theme(axis.title.x = element_blank(),
+              axis.text.x = element_text(size = 5))
+    return(p)
+}
+
+plot_pairwise_correlation <- function(pars,u,burnin = NULL){
+    if (is.null(burnin)){
+        burnin <- round(nrow(pars)/10)
+    }
+    # Remove burn-in
+    pars <- pars[-(1:(burnin+1)),u]
+    pars_dt <- as.data.table(pars)
+    p <- ggpairs(pars_dt) + 
+        theme(axis.text.x = element_text(angle = 90))
+    return(p)
+}
 
 ##' Rotate strains, so that strain 1 becomes the sum of strains 1 and
 ##' 2 and strain 2 is empty. Use this to allow sequential replacement
