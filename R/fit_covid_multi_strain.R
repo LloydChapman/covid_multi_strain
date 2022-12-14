@@ -26,7 +26,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     # p_G <- (ifr - p_D*ihr)/((1-p_D)*ihr + ifr)
     # Set probability of death outside hospital from observed proportion of non-hospital deaths
     p_G <- rep(weekly_dt[,sum(`Nombre de décès à domicile`,na.rm = T)/
-                             sum(`Nombre total de décès`,na.rm = T)],length(p_C))
+                             sum(`Nombre total de nouvelles hospitalisations tous hôpitaux`,na.rm = T)],length(p_C))
     p_H <- ihr/(p_C*(1-p_G))
     p_P_1 <- 0.85
     # ifr <- p_C*p_H*(p_G + (1-p_G)*p_D)
@@ -176,8 +176,9 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     strain_seed_pattern <- 1
     
     # Vaccination parameters
-    vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(0.923)/140)
-    
+    # vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(67.7/82.8)/(105-25)) # (Stowe Nat Comm 2022 Table S11)
+    # # vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(66/89)/((5-1)*30) # (Ferdinands BMJ 2022))
+    vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(0.923)/140) # (Barnard Nat Comm 2022 Table S4)
     
     vaccine_index_dose2 <- 2L
     vaccine_index_booster <- 4L
@@ -190,7 +191,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     
     # Relative probabilities of symptoms, hospitalisation and death for different strains
     strain_rel_p_sympt <- 1
-    strain_rel_p_hosp_if_sympt <- c(1,1.85) #1 #
+    strain_rel_p_hosp_if_sympt <- c(1,1.6*1.85) #1 #
     strain_rel_p_death <- 1
     
     strain_rel_p_sympt1 <- 1
@@ -763,13 +764,13 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10),u],labels = names(init_pars)[u])
     
     # Plot fitted hospitalisations and deaths against data
-    plot_outcome(res$trajectories$state,data,"hosps",by_age = T)
-    plot_outcome(res$trajectories$state,data,"deaths",by_age = T)
-    plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"],by_age = T)
-    plot_sero(res$trajectories$state,data,agg_pop,by_age = T)
-    plot_outcome(res$trajectories$state,data,"hosps")
-    plot_outcome(res$trajectories$state,data,"deaths")
-    plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"])
+    print(plot_outcome(res$trajectories$state,data,"hosps",by_age = T))
+    print(plot_outcome(res$trajectories$state,data,"deaths",by_age = T))
+    print(plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"],by_age = T))
+    print(plot_sero(res$trajectories$state,data,agg_pop,by_age = T))
+    print(plot_outcome(res$trajectories$state,data,"hosps"))
+    print(plot_outcome(res$trajectories$state,data,"deaths"))
+    print(plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"]))
     
     dev.off()
     
