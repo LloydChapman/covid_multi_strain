@@ -59,6 +59,32 @@ create_simulate_object <- function(samples,start_date_sim,date){
 }
 
 
+calculate_parameter_quantiles <- function(output, digits = 3, burnin = NULL){
+    load(output)
+    
+    if (is.null(burnin)){
+        burnin <- round((n_iters/thinning)/10)
+    }
+    # Remove burn-in
+    idx_drop <- -(1:(burnin+1))
+    res$pars <- res$pars[idx_drop, ]
+    
+    tmp <- signif(apply(res$pars, 2, calculate_median_and_ci),digits = digits)
+    tmp[,c("start_date","strain_seed_date","strain_seed_date1")] <- 
+        apply(tmp[,c("start_date","strain_seed_date","strain_seed_date1")],2,
+              function(x) as.character(sircovid_date_as_date(x)))
+    tmp <- as.data.table(t(tmp),keep.rownames = T)
+    
+    data.table(Parameter = tmp[,rn],
+               `Median (95% CI)` = sprintf("%s (%s, %s)", tmp[,V1], tmp[,`2.5%`], tmp[,`97.5%`]))
+}
+
+
+calculate_median_and_ci <- function(x){
+    c(median(x), quantile(x,c(0.025, 0.975)))
+}
+
+
 load_fit <- function(filename){
     dat <- readRDS(filename)
     
