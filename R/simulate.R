@@ -1,6 +1,9 @@
 simulate <- function(gen_mod, p, n_steps, deterministic = FALSE, 
                      keep_all_states = TRUE, min_ages = seq(0,70,by = 10), 
                      Rt = FALSE, p1 = NULL, n_steps1 = NULL, transform = NULL){
+    # TODO: Make this work with one list for p rather than separate 
+    # objects for each epoch, so it works for an arbitrary number of epochs
+    
     # Create instance of model
     mod <- gen_mod$new(p,step = 0,n_particles = 1,n_threads = 1,seed = 1,
                        deterministic = deterministic)
@@ -77,8 +80,10 @@ plot_trajectories <- function(time,x,n_age,n_strains,n_vax){
 }
 
 
-change_beta_date <- function(p,pars,beta_type,beta_date_cntfctl){
+change_beta_value <- function(p,pars,beta_type,beta_date_cntfctl,beta_idx){
     beta_value <- pars[sprintf("beta%s", seq_along(beta_date_cntfctl))]
+    beta_date_cntfctl <- beta_date_cntfctl[beta_idx]
+    beta_value <- beta_value[beta_idx]
     # Construct time-varying transmission coefficient
     if (beta_type == "piecewise-linear") {
         beta_step <- parameters_piecewise_linear(beta_date_cntfctl, 
@@ -132,7 +137,7 @@ change_booster_timing <- function(schedule, days_earlier){
 
 
 ## Run counterfactual simulations
-simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cntfctl,burnin = NULL,seed = 1){
+simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,beta_idx,schedule_cntfctl,burnin = NULL,seed = 1){
     # Load MCMC output
     load(output)
     
@@ -143,14 +148,14 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
         burnin <- round((n_iters/thinning)/10)
     }
     # Remove burn-in
-    pars <- res$pars[-(1:burnin),]
+    pars <- res$pars[-(1:(burnin+1)),]
         
     out <- vector("list", n_smpls)
     set.seed(seed)
     smpl <- sample.int(nrow(pars),n_smpls)
     
     # Extract posterior samples of trajectories
-    states <- res$trajectories$state[,burnin + smpl,]
+    states <- res$trajectories$state[,burnin + 1 + smpl,]
     
     # Remove res object as it is very large
     rm(res)
@@ -162,18 +167,20 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,schedule_cn
             names(pars_i) <- names(init_pars)
         }
         transform_pars <- transform(pars_i)
+        # TODO: Make this work with one list for p rather than separate 
+        # objects for each epoch, so it works for an arbitrary number of epochs
         if (class(transform_pars) == "multistage_parameters"){
-            # TODO: Make this work with one list for p rather than separate 
-            # objects for each epoch, so it works for an arbitrary number of epochs
-            p_i <- transform_pars[[1]]$pars
-            p_i <- change_beta_date(p_i, pars_i, beta_type, beta_date_cntfctl)
-            p_i <- change_vaccine_schedule(p_i, schedule_cntfctl)
-            p1_i <- transform_pars[[2]]$pars
-            p1_i <- change_beta_date(p1_i, pars_i, beta_type, beta_date_cntfctl)
-            p1_i <- change_vaccine_schedule(p1_i, schedule_cntfctl)
+            p <- lapply(transform_pars, function(x){
+                change_beta_value(x$pars, pars_i, beta_type, beta_date_cntfctl, beta_idx)
+            })
+            p <- lapply(p, function(x){
+                change_vaccine_schedule(x, schedule_cntfctl)
+            })
+            p_i <- p[[1]]
+            p1_i <- p[[2]]
         } else {
             p_i <- transform_pars
-            p_i <- change_beta_date(p_i, pars_i, beta_type, beta_date_cntfctl)
+            p_i <- change_beta_value(p_i, pars_i, beta_type, beta_date_cntfctl, beta_idx)
             p_i <- change_vaccine_schedule(p_i, schedule_cntfctl)
             p1_i <- NULL
             n_steps1 <- NULL
@@ -222,13 +229,13 @@ calculate_outcomes_by_wave <- function(x,wave_date,info,min_ages = seq(0,70,by =
     tmp <- vector("list",n_waves)
     for (j in 1:n_waves){
         if (j != n_waves){ # if it's not the final wave, go up to start of next wave
-            times <- wave_date[j]:(wave_date[j+1]-1)
+            date_idx <- (wave_date[j]:(wave_date[j+1]-1)) + 1
         } else { # if it's the final wave, include last date
-            times <- wave_date[n_waves]:wave_date[n_waves+1]
+            date_idx <- (wave_date[n_waves]:wave_date[n_waves+1]) + 1
         }
         
         # Calculate total outcomes averted over wave
-        tmp[[j]] <- as.data.table(t(apply(x[,,times], c(1,2), sum)))
+        tmp[[j]] <- as.data.table(t(apply(x[,,date_idx], c(1,2), sum)))
         tmp[[j]][,smpl := .I]
     }
     total_x_waves <- rbindlist(tmp,idcol = "wave")
@@ -262,6 +269,23 @@ plot_counterfactuals <- function(q_outcomes,q_outcomes_cntfctl,outcome,ylbl,ttls
     return(p)
 }
 
+plot_counterfactuals_together <- function(q_outcomes,q_outcomes_cntfctl,outcome,ttls,lbls){
+    q_outcomes1 <- q_outcomes[state %in% outcome]
+    q_outcomes_cntfctl1 <- q_outcomes_cntfctl[state %in% outcome]
+    q_outcomes1[,state := factor(state,levels = outcome)]
+    q_outcomes_cntfctl1[,state := factor(state,levels = outcome)]
+    p <- ggplot() + 
+        geom_line(aes(x = date,y = med,group = factor(cntfctl),color = factor(cntfctl)),q_outcomes_cntfctl1) + 
+        geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u,fill = factor(cntfctl)),q_outcomes_cntfctl1,alpha = 0.5) +
+        geom_line(aes(x = date,y = med),q_outcomes1,color = "black",linetype = "dashed") +
+        geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u),q_outcomes1,fill = "black",alpha = 0.5) +
+        labs(x = "Date") +
+        scale_color_discrete(name = "Counterfactual",labels = lbls) +
+        scale_fill_discrete(name = "Counterfactual",labels = lbls) +
+        theme(axis.title.y = element_blank(),legend.position = "bottom") +
+        facet_wrap(~state,nrow = 1,scales = "free",labeller = labeller(state = ttls))
+    return(p)
+}
 
 simulate_prepare <- function(onward,n_smpls,seed = 1){
     info <- onward$info
@@ -600,8 +624,8 @@ arr_to_dt <- function(x,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
 
 med_and_CI = function(x,l,u,f=1,d=1,method="round"){
     if (method=="signif"){
-        paste0(signif(f*x,d)," (",signif(f*l,d),"-",signif(f*u,d),")")
+        paste0(signif(f*x,d)," (",signif(f*l,d)," -- ",signif(f*u,d),")")
     } else if (method=="round"){
-        paste0(round(f*x,d)," (",round(f*l,d),"-",round(f*u,d),")")
+        paste0(round(f*x,d)," (",round(f*l,d)," -- ",round(f*u,d),")")
     }
 }
