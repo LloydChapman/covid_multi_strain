@@ -388,6 +388,7 @@ data_raw[,sero_pos_1 := sero_pos_1_20_29 + sero_pos_1_30_39 + sero_pos_1_40_49 +
 data_raw[,sero_tot_1 := sero_tot_1_20_29 + sero_tot_1_30_39 + sero_tot_1_40_49 + sero_tot_1_50_59 + sero_tot_1_60_69 + sero_tot_1_70_plus]
 data_raw[,strain_tot := NA]
 data_raw[,strain_non_variant := NA]
+saveRDS(data_raw,"data/data_raw.rds")
 
 ## Vaccinations
 
@@ -535,4 +536,4 @@ ggplot(doses_dt,aes(x = date,y = cum_prop,group = age_group, color = age_group))
                    dose = c("dose1" = "Dose 1", 
                             "dose2" = "Dose 2", 
                             "dose3" = "Dose 3")))
-# ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3.5)
+# ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
