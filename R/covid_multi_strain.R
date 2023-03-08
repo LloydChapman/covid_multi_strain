@@ -1277,6 +1277,10 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     if (vrble == "cases"){
         # Remove burn-in
         phi <- phi[-(1:(burnin+1))]
+        # Convert to data table with sample number
+        phi_dt <- data.table(sample = seq_along(phi),phi = phi)
+        # Add phi to inc_dt
+        inc_dt[,phi := phi_dt[match(inc_dt[,sample],sample),phi]]
         # Multiply incidence by reporting rate
         inc_dt[,value := phi * value]        
     }
@@ -1295,7 +1299,8 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     inc_obs_dt[,date := sircovid_date_as_date(day_end)]
     inc_obs_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
     if (moving_avg){
-        inc_obs_dt[,value := frollmean(value,7)]
+        inc_obs_dt[,value := as.numeric(value)]
+        inc_obs_dt[,value := frollmean(value,7),by = .(age_group)]
     }
     
     # Plot
@@ -1376,6 +1381,64 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
 }
 
 
+plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,burnin = NULL,seed = 1){
+    # Extract modelled incidence for outcome vrble from output
+    if (is.null(burnin)){
+        burnin <- round(ncol(state)/10)
+    }
+    nms <- dimnames(state)[[1]]
+    idx <- grep(paste0(vrble,"_[0-9]+",collapse = "|"),nms)
+    state <- state[idx,,,drop = F]
+    # Remove burn-in
+    # state <- state[,-(1:(burnin+1)),,drop = F]
+    set.seed(1)
+    smpl <- sample.int(ncol(state)-(burnin+1),n_smpls) 
+    state <- state[,burnin + 1 + smpl,,drop = F]
+    # Convert to data table
+    state_dt <- as.data.table(state)
+    names(state_dt) <- c("age_group","sample","date","value")
+    state_dt[,date := sircovid_date_as_date(date)]
+    state_dt[,state := gsub("_[0-9a-z]+","",age_group)]
+    state_dt[,age_group := sub("_","-",sub(".*_([0-9]+_[0-9a-z]+)","\\1",age_group))]
+    # Aggregate cases in <40 year-olds
+    state_dt[state == "cases" & get_min_age(age_group) < 40,age_group := "0-39"]
+    state_dt <- state_dt[,.(value = sum(value)),by = .(state,age_group,sample,date)]
+    if ("cases" %in% vrble){
+        # Remove burn-in
+        phi <- phi[-(1:(burnin+1))]
+        # Convert to data table with sample number
+        phi_dt <- data.table(sample = seq_along(phi),phi = phi)
+        # Add phi to inc_dt
+        state_dt[,phi := phi_dt[match(state_dt[,sample],sample),phi]]
+        # Multiply incidence by reporting rate
+        state_dt[,value := phi * value]        
+    }
+    state_dt[,prop := value/sum(value),by = .(state,sample,date)]
+    q_state_dt <- state_dt[,unlist(lapply(.SD,function(x) 
+        list(q95l = quantile(x,probs = 0.025,na.rm = T),
+             med = quantile(x,probs = 0.5,na.rm = T),
+             q95u = quantile(x,probs = 0.975,na.rm = T))),
+        recursive = F),.SDcols = c("value","prop"),by = .(state,age_group,date)]
+    # q_state_dt[state == "cases" & get_min_age(age_group) < 40,age_group := "0-39"]
+    # q_state_dt <- q_state_dt[,lapply(.SD,sum),.SDcols = c("med","q95l","q95u"),by = .(state,age_group,date)]
+    q_state_dt[,state := factor(state,levels = vrble)]
+    p <- ggplot(q_state_dt,aes(x = date,y = value.med,fill = age_group)) + 
+        geom_area() +
+        labs(x = "Date") + 
+        scale_fill_discrete(name = "Age group") + 
+        theme(axis.title.y = element_blank(),legend.position = "bottom") + 
+        facet_wrap(~state,scales = "free",labeller = labeller(state = ttls))
+    
+    p1 <- ggplot(q_state_dt,aes(x = date,y = prop.med,fill = age_group)) +
+        geom_area() +
+        labs(x = "Date",y = "Proportion") +
+        theme(legend.position = "bottom") + 
+        scale_fill_discrete(name = "Age group") +
+        facet_wrap(~state,scales = "free",labeller = labeller(state = ttls))
+    
+    return(list(p = p,p1 = p1))    
+}
+
 plot_cases <- function(cases_modelled, cases_observed, times){
     # par(mfrow = c(2,1), oma = c(2,3,0,0))
     par(mfrow = c(1,1))
@@ -1427,11 +1490,11 @@ plot_transmission_rate <- function(pars,beta_date,n_betas,end_date,burnin = NULL
     beta_step <- as.data.table(apply(
         beta_step,2,function(x) parameters_expand_step(seq_along(beta_t),x)))
     beta_step[,date := sircovid_date_as_date(beta_t)]
-    p <- ggplot(beta_step) + 
-        geom_line(aes(x = date,y = `50%`)) + 
-        geom_ribbon(aes(x = date,ymin = `2.5%`,ymax = `97.5%`),alpha = 0.5) + 
+    p <- ggplot() + 
+        geom_line(aes(x = date,y = `50%`,color = "Fitted"),beta_step) + 
+        geom_ribbon(aes(x = date,ymin = `2.5%`,ymax = `97.5%`,fill = "Fitted"),beta_step,alpha = 0.5) + 
         labs(x = "Date",y = "beta(t)")
-    return(p)
+    return(list(p = p,beta_step = beta_step))
 }
 
 
