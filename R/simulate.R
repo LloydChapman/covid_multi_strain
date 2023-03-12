@@ -5,7 +5,7 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
     # objects for each epoch, so it works for an arbitrary number of epochs
     
     # Create instance of model
-    mod <- gen_mod$new(p,step = 0,n_particles = 1,n_threads = 1,seed = 1,
+    mod <- gen_mod$new(p,step = 0,n_particles = 1,n_threads = 1,seed = 1L,
                        deterministic = deterministic)
     
     info <- mod$info()
@@ -137,7 +137,7 @@ change_booster_timing <- function(schedule, days_earlier){
 
 
 ## Run counterfactual simulations
-simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,beta_idx,schedule_cntfctl,burnin = NULL,seed = 1){
+simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,beta_idx,schedule_cntfctl,burnin = NULL,seed = 1L){
     # Load MCMC output
     load(output)
     
@@ -250,7 +250,7 @@ calculate_outcomes_by_wave <- function(x,wave_date,info,min_ages = seq(0,70,by =
                                     q95u = quantile(x,probs = 0.975))),
         recursive = F),.SDcols = cols,by = .(wave)]
     
-    return(q_total_x)
+    return(list(total = total_x,q_total = q_total_x))
 }
 
 
@@ -287,7 +287,7 @@ plot_counterfactuals_together <- function(q_outcomes,q_outcomes_cntfctl,outcome,
     return(p)
 }
 
-simulate_prepare <- function(onward,n_smpls,seed = 1){
+simulate_prepare <- function(onward,n_smpls,seed = 1L){
     info <- onward$info
     
     # Take random sample of posterior parameters without replacement
