@@ -25,18 +25,18 @@ source("R/process_FP_data.R")
 covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Set MCMC output
-mcmc_run <- 76
+mcmc_run <- 76 #75
 output <- paste0("output/MCMCoutput",mcmc_run,".RData")
 
 ## Run counterfactual simulations
 # Set run number
-run <- 17
+run <- 17 #16
 # Set whether states required to calculate Rt have been output 
 Rt <- T
 # Set number of parameter samples and burn-in to remove
 n_smpls <- 500
 burnin <- 1500 #NULL #2000
-seed <- 1
+seed <- 1L
 
 # Set probabilities for quantiles for outcomes
 probs <- c(0.025,0.5,0.975)
@@ -86,12 +86,15 @@ schedule_cntfctl_list[[10]]$doses[,3,] <- matrix(0, nrow = nrow(schedule$doses),
 q_outcomes_list <- vector("list",length(beta_date_cntfctl_list))
 q_outcomes_cntfctl_list <- vector("list",length(beta_date_cntfctl_list))
 q_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
+q_prop_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_cntfctl_list <- vector("list",length(beta_date_cntfctl_list))
 q_total_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
+q_prop_total_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_list))
 
-new_infections_cntfctl_by_vacc_list <- vector("list",length(beta_date_cntfctl_list))
-new_reinfections_cntfctl_by_vacc_list <- vector("list",length(beta_date_cntfctl_list))
+# new_infections_cntfctl_by_vacc_list <- vector("list",length(beta_date_cntfctl_list))
+# new_reinfections_cntfctl_by_vacc_list <- vector("list",length(beta_date_cntfctl_list))
+
 # Run simulations
 for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ # 
     out <- simulate_counterfactual(output,n_smpls,beta_date_cntfctl_list[[i]],beta_idx_list[[i]],
@@ -106,6 +109,7 @@ for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ #
     
     # Calculate pairwise differences in simulated outcomes across time
     outcomes_averted <- states - states_cntfctl
+    prop_outcomes_averted <- outcomes_averted/states_cntfctl
     # dimnames(outcomes_averted[[i]])[[1]] <- names(index(info)$state)
 
     ## Calculate total differences in outcomes over each wave
@@ -116,11 +120,23 @@ for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ #
     q_outcomes_list[[i]] <- calculate_outcome_quantiles(states,info,min_ages,Rt)
     q_outcomes_cntfctl_list[[i]] <- calculate_outcome_quantiles(states_cntfctl,info,min_ages,Rt)
     q_outcomes_averted_list[[i]] <- calculate_outcome_quantiles(outcomes_averted,info,min_ages,Rt)
+    q_prop_outcomes_averted_list[[i]] <- calculate_outcome_quantiles(prop_outcomes_averted,info,min_ages,Rt)
 
-    q_total_outcomes_list[[i]] <- calculate_outcomes_by_wave(states,wave_date,info,min_ages,Rt)
-    q_total_outcomes_cntfctl_list[[i]] <- calculate_outcomes_by_wave(states_cntfctl,wave_date,info,min_ages,Rt)
-    q_total_outcomes_averted_list[[i]] <- calculate_outcomes_by_wave(outcomes_averted,wave_date,info,min_ages,Rt)
+    q_total_outcomes_list[[i]] <- calculate_outcomes_by_wave(states,wave_date,info,min_ages,Rt)$q_total
+    tmp1 <- calculate_outcomes_by_wave(states_cntfctl,wave_date,info,min_ages,Rt)
+    q_total_outcomes_cntfctl_list[[i]] <- tmp1$q_total
+    tmp2 <- calculate_outcomes_by_wave(outcomes_averted,wave_date,info,min_ages,Rt)
+    q_total_outcomes_averted_list[[i]] <- tmp2$q_total
+    tmp3 <- cbind(tmp1$total[,1],tmp2$total[,-1][, Map(`/`, .SD, tmp1$total[,-1])])
+    cols <- names(index(info,min_ages = min_ages,Rt = Rt)$state)
+    q_prop_total_outcomes_averted_list[[i]] <- tmp3[,unlist(
+        lapply(.SD,function(x) list(q95l = quantile(x,probs = 0.025,na.rm = T),
+                                    med = quantile(x,probs = 0.5,na.rm = T),
+                                    q95u = quantile(x,probs = 0.975,na.rm = T))),
+        recursive = F),.SDcols = cols,by = .(wave)]
 
+    rm(states,states_cntfctl,outcomes_averted,prop_outcomes_averted)
+    gc()
     # res <- calculate_new_infections_by_vacc(states_cntfctl)
     # new_infections_cntfctl_by_vacc_list[[i]] <- res$new_infections_by_vacc
     # new_reinfections_cntfctl_by_vacc_list[[i]] <- res$new_reinfections_by_vacc
@@ -129,13 +145,16 @@ for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ #
 q_outcomes <- rbindlist(q_outcomes_list, idcol = "cntfctl")
 q_outcomes_cntfctl <- rbindlist(q_outcomes_cntfctl_list, idcol = "cntfctl")
 q_outcomes_averted <- rbindlist(q_outcomes_averted_list, idcol = "cntfctl")
+q_prop_outcomes_averted <- rbindlist(q_prop_outcomes_averted_list, idcol = "cntfctl")
 q_outcomes[,date := strt_date + day - 1]
 q_outcomes_cntfctl[,date := strt_date + day - 1]
 q_outcomes_averted[,date := strt_date + day - 1]
+q_prop_outcomes_averted[,date := strt_date + day - 1]
 
 q_total_outcomes <- rbindlist(q_total_outcomes_list, idcol = "cntfctl")
 q_total_outcomes_cntfctl <- rbindlist(q_total_outcomes_cntfctl_list, idcol = "cntfctl")
 q_total_outcomes_averted <- rbindlist(q_total_outcomes_averted_list, idcol = "cntfctl")
+q_prop_total_outcomes_averted <- rbindlist(q_prop_total_outcomes_averted_list, idcol = "cntfctl")
 
 # new_infections_cntfctl_by_vacc <- rbindlist(new_infections_cntfctl_by_vacc_list, idcol = "cntfctl")
 # new_reinfections_cntfctl_by_vacc <- rbindlist(new_reinfections_cntfctl_by_vacc_list, idcol = "cntfctl")
@@ -210,6 +229,15 @@ tbl1 <- q_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(tt
 tbl1[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
 tbl1 <- dcast(tbl1, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Deaths"))
 write.csv(tbl1, paste0("output/total_outcomes_averted_",run,".csv"),row.names = F)
+
+tbl2 <- q_prop_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
+                                    Wave = wave,
+                                    Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,d = 3,method = "round"),
+                                    Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = 3,method = "round"),
+                                    Deaths = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "round"))]
+tbl2[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
+tbl2 <- dcast(tbl2, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Deaths"))
+write.csv(tbl2,paste0("output/prop_total_outcomes_averted_",run,".csv"),row.names = F)
 
 # Plot counterfactuals
 
