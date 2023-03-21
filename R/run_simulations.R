@@ -215,7 +215,7 @@ tbl <- total_outcomes[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                          Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = 3,method = "signif"),
                          Deaths = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "signif"))]
 tbl[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
-tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Deaths"))
+tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
 write.csv(tbl[c(1,2,9,11),],paste0("output/table1_",run,".csv"),row.names = F)
 
 write.csv(tbl[c(1,9,11),],paste0("output/table1_vax_",run,".csv"),row.names = F)
@@ -227,7 +227,7 @@ tbl1 <- q_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(tt
                                  Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = 0,method = "round"),
                                  Deaths = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 0,method = "round"))]
 tbl1[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
-tbl1 <- dcast(tbl1, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Deaths"))
+tbl1 <- dcast(tbl1, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
 write.csv(tbl1, paste0("output/total_outcomes_averted_",run,".csv"),row.names = F)
 
 tbl2 <- q_prop_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
@@ -236,7 +236,7 @@ tbl2 <- q_prop_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,nam
                                     Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = 3,method = "round"),
                                     Deaths = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "round"))]
 tbl2[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
-tbl2 <- dcast(tbl2, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Deaths"))
+tbl2 <- dcast(tbl2, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
 write.csv(tbl2,paste0("output/prop_total_outcomes_averted_",run,".csv"),row.names = F)
 
 # Plot counterfactuals
@@ -248,7 +248,7 @@ p_cases_lockdown <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes
 # Hospitalisations
 p_hosps_lockdown <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
 # Deaths in hospital
-p_deaths_lockdown <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Deaths",ttls[names(ttls) %in% idx])
+p_deaths_lockdown <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Hospital deaths",ttls[names(ttls) %in% idx])
 pp0 <- plot_grid(p_cases_lockdown + theme(legend.position = "none"),
                  p_hosps_lockdown + theme(legend.position = "none"),
                  p_deaths_lockdown + theme(legend.position = "none"), nrow = 1)
@@ -264,7 +264,7 @@ ggsave(paste0("output/cntfctl_cases",run,".pdf"),p_cases,width = 8,height = 5.2)
 p_hosps <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
 ggsave(paste0("output/cntfctl_hosps",run,".pdf"),p_hosps,width = 8,height = 5.2)
 # Deaths in hospital
-p_deaths <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Deaths",ttls[names(ttls) %in% idx])
+p_deaths <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Hospital deaths",ttls[names(ttls) %in% idx])
 ggsave(paste0("output/cntfctl_deaths",run,".pdf"),p_deaths,width = 8,height = 5.2)
 
 # No vaccination counterfactual
@@ -272,7 +272,7 @@ idx <- 8
 p_cases_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfctl[cntfctl == idx],"cases","Cases",ttls[names(ttls) %in% idx])
 p_hosps_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfctl[cntfctl == idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
 # ggsave("output/cntfctl_hosps_vax.pdf",p_hosps_vax,width = 8,height = 6)
-p_deaths_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfctl[cntfctl == idx],"deaths","Deaths",ttls[names(ttls) %in% idx])
+p_deaths_vax <- plot_counterfactuals(q_outcomes[cntfctl == idx],q_outcomes_cntfctl[cntfctl == idx],"deaths","Hospital deaths",ttls[names(ttls) %in% idx])
 pp <- plot_grid(p_cases_vax + theme(legend.position = "none"),
                 p_hosps_vax + theme(legend.position = "none"),
                 p_deaths_vax + theme(legend.position = "none"), nrow = 1)
@@ -284,7 +284,7 @@ idx <- 10 #8:9
 p_cases_booster <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"cases","Cases",ttls[names(ttls) %in% idx])
 p_hosps_booster <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
 # ggsave("output/cntfctl_hosps_vax.pdf",p_hosps_vax,width = 8,height = 6)
-p_deaths_booster <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Deaths",ttls[names(ttls) %in% idx])
+p_deaths_booster <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Hospital deaths",ttls[names(ttls) %in% idx])
 pp1 <- plot_grid(p_cases_booster + theme(legend.position = "none"),
                  p_hosps_booster + theme(legend.position = "none"),
                  p_deaths_booster + theme(legend.position = "none"), nrow = 1)
@@ -293,7 +293,7 @@ ggsave(paste0("output/cntfctl_hosps_and_deaths_booster",run,".pdf"),plot_grid(pp
 
 # pp2 <- plot_grid(pp0,pp,pp1,l1,nrow = 4,ncol = 1,rel_heights = c(1,1,1,0.1),width = 9, height = 10)
 outcome <- c("cases","hosps","deaths")
-ttls1 <- c("Cases","Hospitalisations","Deaths")
+ttls1 <- c("Cases","Hospitalisations","Hospital deaths")
 names(ttls1) <- outcome
 p_cntfctl <- plot_counterfactuals_together(q_outcomes[cntfctl %in% c(1,8,10)],q_outcomes_cntfctl[cntfctl %in% c(1,8,10)],outcome,ttls1,ttls[names(ttls) %in% c(1,8,10)])
 ggsave(paste0("output/cntfctl_cases_hosps_and_deaths",run,".pdf"),p_cntfctl,width = 9,height = 3)
