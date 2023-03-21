@@ -1305,6 +1305,11 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     
     # Plot
     ylbl <- sub("(.)", ("\\U\\1"), tolower(vrble), pe=TRUE)
+    if (ylbl == "Hosps"){
+        ylbl <- "Hospitalisations"  
+    } else if (ylbl == "Deaths"){
+        ylbl <- "Hospital deaths"
+    }
     p <- ggplot()
     if (moving_avg){
         p <- p + geom_line(aes(x = date, y = value), inc_obs_dt, size = 0.5, color = "red")
@@ -1315,7 +1320,11 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
         geom_ribbon(aes(x = date, ymin = q95l, ymax = q95u),q_inc_dt,alpha = 0.5) + 
         labs(x = "Date", y = ylbl)
     if (by_age){
-        p <- p + facet_wrap(~age_group, ncol = 1)
+        if (vrble == "cases"){ # 2 columns for cases as there are more age groups in the data 
+            p <- p + facet_wrap(~age_group, ncol = 2)
+        } else {
+            p <- p + facet_wrap(~age_group, ncol = 1)
+        }
     }
     return(p)
 }
@@ -1469,11 +1478,11 @@ plot_cases <- function(cases_modelled, cases_observed, times){
 }
 
 
-plot_transmission_rate <- function(pars,beta_date,n_betas,end_date,burnin = NULL){
+plot_transmission_rate <- function(pars,beta_type,beta_date,dt,end_date,burnin = NULL){
     if (is.null(burnin)){
         burnin <- round(nrow(pars)/10)
     }
-    beta_value_post <- t(apply(pars[-(1:(burnin+1)),1:n_betas],2,
+    beta_value_post <- t(apply(pars[-(1:(burnin+1)),seq_along(beta_date)],2,
                                function(x) quantile(x,probs = c(0.5,0.025,0.975))))
     if (beta_type == "piecewise-linear"){
         beta_step <- apply(
