@@ -262,8 +262,8 @@ plot_counterfactuals <- function(q_outcomes,q_outcomes_cntfctl,outcome,ylbl,ttls
         geom_line(aes(x = date,y = med,color = "Counterfactual"),q_outcomes_cntfctl[state == outcome]) + 
         geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u,fill = "Counterfactual"),q_outcomes_cntfctl[state == outcome],alpha = 0.5) +
         labs(x = "Date",y = ylbl) +
-        scale_color_manual(name = "",values = clrs) +
-        scale_fill_manual(name = "",values = clrs) +
+        scale_color_manual(name = "",breaks = c("Fitted","Counterfactual"),values = clrs) +
+        scale_fill_manual(name = "",breaks = c("Fitted","Counterfactual"),values = clrs) +
         facet_wrap(~cntfctl,nrow = 2,labeller = labeller(cntfctl = ttls),dir = "v") +
         theme(legend.position = "bottom")
     return(p)
