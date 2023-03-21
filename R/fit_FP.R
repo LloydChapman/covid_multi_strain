@@ -50,9 +50,12 @@ burnin <- 1500
 # Set whether to plot moving average of data
 moving_avg <- F
 
+# Set output to use
+output <- paste0("output/MCMCoutput",run,".RData")
+
 # Plot fit
-plot_fit(paste0("output/MCMCoutput",run,".RData"),run,burnin,moving_avg)
+plot_fit(output,run,burnin,moving_avg)
 
 # Process fit
-pars_qntls <- calculate_parameter_quantiles(paste0("output/MCMCoutput",run,".RData"),burnin = burnin)
+pars_qntls <- calculate_parameter_quantiles(output,burnin = burnin)
 write.csv(pars_qntls,paste0("output/parameter_quantiles",run,".csv"), row.names = F)
