@@ -278,3 +278,11 @@ recycle <- function(x, n, name = deparse(substitute(x))) {
          name, n))
   }
 }
+
+get_min_age = function(x){
+  as.numeric(sub("-.*","",sub("\\+|<","-",x)))  
+}
+
+get_max_age = function(x){
+  as.numeric(sub(".*-","",sub("\\+|<","-",x)))    
+}
