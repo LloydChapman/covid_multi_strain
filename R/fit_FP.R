@@ -12,6 +12,7 @@ library(lubridate)
 library(ISOweek)
 library(ggplot2)
 library(GGally)
+library(cowplot)
 library(MASS)
 library(abind)
 
@@ -89,7 +90,7 @@ moving_avg <- F
 n_smpls <- 1000 #10 #
 
 # Plot fit
-plot_fit(output,run,burnin,moving_avg,n_smpls)
+plot_fit(output,run,pop,burnin,moving_avg,n_smpls)
 
 # Process fit
 pars_qntls <- calculate_parameter_quantiles(output,burnin = burnin)

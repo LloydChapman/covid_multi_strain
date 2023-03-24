@@ -1,4 +1,4 @@
-plot_fit <- function(output,run,burnin = NULL,moving_avg = FALSE,n_smpls = 1000){
+plot_fit <- function(output,run,pop,burnin = NULL,moving_avg = FALSE,n_smpls = 1000){
     load(output)
     
     if (is.null(burnin)){

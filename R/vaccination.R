@@ -66,7 +66,9 @@ vaccination_coverage_plot <- function(schedule, age_groups, vax, pop){
                    labeller = labeller(
                        dose = c("dose1" = "Dose 1", 
                                 "dose2" = "Dose 2", 
-                                "dose3" = "Dose 3")))
+                                "dose3" = "Dose 3"))) +
+        theme_cowplot(font_size = 12) +
+        theme(strip.background = element_blank())
 }
 
 

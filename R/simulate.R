@@ -265,7 +265,8 @@ plot_counterfactuals <- function(q_outcomes,q_outcomes_cntfctl,outcome,ylbl,ttls
         scale_color_manual(name = "",breaks = c("Fitted","Counterfactual"),values = clrs) +
         scale_fill_manual(name = "",breaks = c("Fitted","Counterfactual"),values = clrs) +
         facet_wrap(~cntfctl,nrow = 2,labeller = labeller(cntfctl = ttls),dir = "v") +
-        theme(legend.position = "bottom")
+        theme_cowplot(font_size = 12) + 
+        theme(legend.position = "bottom",strip.background = element_blank())
     return(p)
 }
 
@@ -282,7 +283,8 @@ plot_counterfactuals_together <- function(q_outcomes,q_outcomes_cntfctl,outcome,
         labs(x = "Date") +
         scale_color_discrete(name = "Counterfactual",labels = lbls) +
         scale_fill_discrete(name = "Counterfactual",labels = lbls) +
-        theme(axis.title.y = element_blank(),legend.position = "bottom") +
+        theme_cowplot(font_size = 12) + 
+        theme(axis.title.y = element_blank(),legend.position = "bottom",strip.background = element_blank()) +
         facet_wrap(~state,nrow = 1,scales = "free",labeller = labeller(state = ttls))
     return(p)
 }

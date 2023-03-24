@@ -1355,12 +1355,13 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     }
     p <- p + geom_line(aes(x = date, y = med),q_inc_dt) + 
         geom_ribbon(aes(x = date, ymin = q95l, ymax = q95u),q_inc_dt,alpha = 0.5) + 
-        labs(x = "Date", y = ylbl)
+        labs(x = "Date", y = ylbl) + 
+        theme_cowplot(font_size = 12)
     if (by_age){
         if (vrble == "cases"){ # 2 columns for cases as there are more age groups in the data 
-            p <- p + facet_wrap(~age_group, ncol = 2)
+            p <- p + facet_wrap(~age_group, ncol = 2) + theme(strip.background = element_blank())
         } else {
-            p <- p + facet_wrap(~age_group, ncol = 1)
+            p <- p + facet_wrap(~age_group, ncol = 1) + theme(strip.background = element_blank())
         }
     }
     return(p)
@@ -1419,9 +1420,10 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
         geom_errorbar(aes(x = date,ymin = ci_lb,ymax = ci_ub),sero_obs_dt,color = "red") + 
         geom_line(aes(x = date,y = pmin(med/population,1)),q_sero_dt) +
         geom_ribbon(aes(x = date,ymin = pmin(q95l/population,1),ymax = pmin(q95u/population,1)),q_sero_dt,alpha = 0.5) + 
-        labs(x = "Date",y = "Seroprevalence") 
+        labs(x = "Date",y = "Seroprevalence") +
+        theme_cowplot(font_size = 12)
     if (by_age){
-        p <- p + facet_wrap(~age_group,ncol = 1)
+        p <- p + facet_wrap(~age_group,ncol = 1) + theme(strip.background = element_blank())
     }
     return(p)
 }
@@ -1472,15 +1474,17 @@ plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,burnin = NULL,seed 
         geom_area() +
         labs(x = "Date") + 
         scale_fill_discrete(name = "Age group") + 
-        theme(axis.title.y = element_blank(),legend.position = "bottom") + 
-        facet_wrap(~state,scales = "free",labeller = labeller(state = ttls))
+        facet_wrap(~state,scales = "free",labeller = labeller(state = ttls)) +
+        theme_cowplot(font_size = 12) + 
+        theme(axis.title.y = element_blank(),legend.position = "bottom",strip.background = element_blank())
     
     p1 <- ggplot(q_state_dt,aes(x = date,y = prop.med,fill = age_group)) +
         geom_area() +
         labs(x = "Date",y = "Proportion") +
-        theme(legend.position = "bottom") + 
         scale_fill_discrete(name = "Age group") +
-        facet_wrap(~state,scales = "free",labeller = labeller(state = ttls))
+        facet_wrap(~state,scales = "free",labeller = labeller(state = ttls)) + 
+        theme_cowplot(font_size = 12) + 
+        theme(legend.position = "bottom", strip.background = element_blank())
     
     return(list(p = p,p1 = p1))    
 }
@@ -1539,7 +1543,8 @@ plot_transmission_rate <- function(pars,beta_type,beta_date,dt,end_date,burnin =
     p <- ggplot() + 
         geom_line(aes(x = date,y = `50%`,color = "Fitted"),beta_step) + 
         geom_ribbon(aes(x = date,ymin = `2.5%`,ymax = `97.5%`,fill = "Fitted"),beta_step,alpha = 0.5) + 
-        labs(x = "Date",y = "beta(t)")
+        labs(x = "Date",y = "beta(t)") + 
+        theme_cowplot(font_size = 12)
     return(list(p = p,beta_step = beta_step))
 }
 
@@ -1552,8 +1557,10 @@ plot_traces <- function(pars,u){
     p <- ggplot(pars_long_dt,aes(x = iter,y = value)) + geom_line() +
         facet_wrap(~variable,scales = "free",ncol = 3) + 
         labs(x = "Iteration") + 
+        theme_cowplot(font_size = 10) + 
         theme(axis.title.y = element_blank(),
-              axis.text.x = element_text(size = 8))
+              axis.text.x = element_text(size = 8),
+              strip.background = element_blank())
     
     return(p)
     # for (i in u){
@@ -1593,8 +1600,10 @@ plot_posteriors <- function(pars,u,priors,pars_min,pars_max,burnin = NULL){
         geom_line(aes(x = x,y = y),priors_long_dt,colour = "red") +
         facet_wrap(~variable,scales = "free",ncol = 3) + 
         labs(y = "Density") +
+        theme_cowplot(font_size = 10) +
         theme(axis.title.x = element_blank(),
-              axis.text.x = element_text(size = 5))
+              axis.text.x = element_text(size = 6),
+              strip.background = element_blank())
     return(p)
 }
 
@@ -1606,7 +1615,9 @@ plot_pairwise_correlation <- function(pars,u,burnin = NULL){
     pars <- pars[-(1:(burnin+1)),u]
     pars_dt <- as.data.table(pars)
     p <- ggpairs(pars_dt) + 
-        theme(axis.text.x = element_text(angle = 90))
+        theme_cowplot(font_size = 10) +
+        theme(axis.text.x = element_text(angle = 90),
+              strip.background = element_blank())
     return(p)
 }
 
