@@ -1549,6 +1549,177 @@ plot_transmission_rate <- function(pars,beta_type,beta_date,dt,end_date,burnin =
 }
 
 
+plot_immune_status <- function(output,pop,age_groups,burnin = NULL,n_smpls = 1000,seed = 1){
+    load(output)
+    
+    state <- res$trajectories$state
+    
+    rm(res)
+    gc()
+    
+    if (is.null(burnin)){
+        burnin <- round(ncol(incidence_modelled)/10)
+    }
+    
+    set.seed(seed)
+    smpl <- sample.int(ncol(state)-(burnin+1),n_smpls)
+    state <- state[,burnin + 1 + smpl,,drop = F]
+    
+    index_S <- grep("S_",dimnames(state)[[1]])
+    nms_S <- dimnames(state)[[1]][index_S]
+    # names(index_S) <- sub("_.*","",sub("_.*_","",nms_S))
+    names(index_S) <- nms_S
+    
+    index_R <- grep("R_",dimnames(state)[[1]])
+    nms_R <- dimnames(state)[[1]][index_R]
+    # names(index_R) <- gsub("_[0-9]+|_[0-9]+_S[0-9]+","",nms_R)
+    names(index_R) <- gsub("_S[0-9]+","",nms_R)
+    
+    
+    # S <- state[index_S,,,drop = F]
+    # index_R1 <- index_R[1:100]
+    # index_R2 <- index_R[101:length(index_R)]
+    # R1 <- state[index_R1,,,drop = F]
+    # R2 <- state[index_R2,,,drop = F]
+    
+    # S_R <- abind1(abind1(S,R1),R2)
+    
+    index_S_R <- c(index_S,index_R)
+    S_R <- state[index_S_R,,,drop = F]
+    
+    S_R_by_vacc <- sapply(
+        seq_len(dim(S_R)[3]),
+        function(k) rowsum(S_R[,,k],names(index_S_R),reorder = F), 
+        simplify = "array")
+    x <- sapply(
+        seq_len(dim(S_R_by_vacc)[3]),
+        function(k) rowsum(S_R_by_vacc[,,k],sub("[A-Za-z]+_([0-9]+).*","\\1",dimnames(S_R_by_vacc)[[1]]),reorder = F),
+        simplify = "array")
+    population <- pop[,.(sum(total)),by = .(age_group)][,V1]
+    inf <- population - x
+    
+    # inf1 <- array(sum(population) - apply(S_R_by_vacc,c(2,3),sum),dim = c(1,dim(S_R_by_vacc)[2:3]))
+    dimnames(inf)[[1]] <- paste0("Inf_",dimnames(inf)[[1]])
+    
+    S_R_by_vacc_inf <- abind1(S_R_by_vacc,inf)
+    
+    # med_S_R_by_vacc_inf <- apply(S_R_by_vacc_inf,c(1,3),median)
+    # 
+    # matplot(t(med_S_R_by_vacc_inf),type = "l")
+    # 
+    # med_S_R_by_vacc_inf1 <- data.table(t(med_S_R_by_vacc_inf))
+    # med_S_R_by_vacc_inf1[, time := as.numeric(rownames(med_S_R_by_vacc_inf1))]
+    # med_S_R_by_vacc_inf_long <- melt(med_S_R_by_vacc_inf1,id.vars = "time")
+    # 
+    # # Calculate proportion
+    # med_S_R_by_vacc_inf_long[,prop := value/sum(value), by = .(time)]
+    # 
+    # # Set plotting order
+    # med_S_R_by_vacc_inf_long[,variable := factor(variable,levels = c("S","S1","S2","S3","S4","Infected","R","R_V1","R_V2","R_V3","R_V4"))]
+    # 
+    # ggplot(med_S_R_by_vacc_inf_long, aes(x = time,y = prop,fill = variable)) + geom_area()
+    # ggsave("output/pop_immune_status.png",height = 4,width = 6)
+    # 
+    # View(med_S_R_by_vacc_inf_long[time==657,])
+    
+    S_R_by_vacc_inf_long <- data.table:::as.data.table.array(S_R_by_vacc_inf)
+    names(S_R_by_vacc_inf_long) <- c("state","sample","date","value")
+    
+    # Convert dates
+    S_R_by_vacc_inf_long[, date := sircovid_date_as_date(date)]
+    
+    # Add age and vaccination status variables
+    S_R_by_vacc_inf_long[,age := sub("[A-Za-z]+_([0-9]+).*","\\1",state)]
+    min_ages <- get_min_age(age_groups)
+    S_R_by_vacc_inf_long[,age_group := cut(as.numeric(age),c(min_ages,Inf),labels = age_groups,right = F)]
+    S_R_by_vacc_inf_long[,vacc := sub("_[0-9]+","",state)]
+    
+    # Calculate proportion
+    S_R_by_vacc_inf_long[,prop := value/sum(value),by = .(sample,date,age_group)]
+    
+    # Calculate median and 95% CI
+    q_S_R_by_vacc_inf <- S_R_by_vacc_inf_long[,unlist(lapply(.SD,function(x) 
+        list(q95l = quantile(x,probs = 0.025),
+             med = quantile(x,probs = 0.5),
+             q95u = quantile(x,probs = 0.975))),
+        recursive = F),.SDcols = c("value","prop"),by = .(state,vacc,date,age_group)]
+    
+    # Set plotting order
+    q_S_R_by_vacc_inf[,vacc := factor(vacc,levels = c("S","S_1","S_2","S_3","S_4","Inf","R","R_V1","R_V2","R_V3","R_V4"))]
+    
+    # Plot
+    lbls = c(S = "Fully susc",
+             S_1 = "Susc 1 dose",
+             S_2 = "Susc 2 dose",
+             S_3 = "Susc waned",
+             S_4 = "Susc boosted",
+             "Inf" = "Inf",
+             R = "Rec unvacc",
+             R_V1 = "Rec 1 dose",
+             R_V2 = "Rec 2 dose",
+             R_V3 = "Rec waned",
+             R_V4 = "Rec boosted")
+    p <- ggplot(q_S_R_by_vacc_inf, aes(x = date,y = prop.med,fill = vacc)) + 
+        geom_area() + 
+        labs(x = "Date",y = "Proportion",fill = "State") + 
+        scale_fill_viridis_d(labels = lbls) +
+        # theme(axis.text.x = element_text(angle = 90)) +
+        facet_wrap(~age_group,nrow = 2) + 
+        theme_cowplot(font_size = 10) + 
+        theme(strip.background = element_blank())
+    # ggsave(paste0("output/pop_immune_status_by_age",run,".pdf"),height = 5,width = 11)
+    
+    pop_immune_status_by_age <- q_S_R_by_vacc_inf[date == max(date),]
+    pop_immune_status_by_age <- pop_immune_status_by_age[order(age_group,vacc),]
+    
+    tbl <- pop_immune_status_by_age[,.(
+        State = lbls[vacc],
+        `Age group` = age_group,
+        Number = med_and_CI(value.med,value.q95l,value.q95u,
+                            d = 3,method = "signif"),
+        Percentage = med_and_CI(prop.med,prop.q95l,prop.q95u,
+                                f = 100,d = 3,method = "signif")
+    )]
+    # write.csv(tbl,paste0("output/table2_by_age_",run,".csv"),row.names = F)
+    
+    # Proportion of total population in each immune state
+    S_R_by_vacc_inf_long1 <- S_R_by_vacc_inf_long[,.(value = sum(value)),by = .(vacc,sample,date)]
+    S_R_by_vacc_inf_long1[,prop := value/sum(value),by = .(sample,date)]
+    
+    # Calculate median and 95% CI
+    q_S_R_by_vacc_inf1 <- S_R_by_vacc_inf_long1[,unlist(lapply(.SD,function(x) 
+        list(q95l = quantile(x,probs = 0.025),
+             med = quantile(x,probs = 0.5),
+             q95u = quantile(x,probs = 0.975))),
+        recursive = F),.SDcols = c("value","prop"),by = .(vacc,date)]
+    
+    # Set plotting order
+    q_S_R_by_vacc_inf1[,vacc := factor(vacc,levels = c("S","S_1","S_2","S_3","S_4","Inf","R","R_V1","R_V2","R_V3","R_V4"))]
+    
+    # Plot
+    p1 <- ggplot(q_S_R_by_vacc_inf1, aes(x = date,y = prop.med,fill = vacc)) + 
+        geom_area() + 
+        labs(x = "Date",y = "Proportion",fill = "State") + 
+        scale_fill_viridis_d(labels = lbls) + 
+        theme_cowplot(font_size = 12) + 
+        theme(strip.background = element_blank())
+    # ggsave(paste0("output/pop_immune_status",run,".pdf"),height = 4,width = 6)
+    
+    pop_immune_status <- q_S_R_by_vacc_inf1[date == max(date),]
+    pop_immune_status <- pop_immune_status[q_S_R_by_vacc_inf1[,order(unique(vacc))],]
+    
+    tbl1 <- pop_immune_status[,.(
+        State = lbls[vacc],
+        Number = med_and_CI(value.med,value.q95l,value.q95u,
+                            d = 3,method = "signif"),
+        Percentage = med_and_CI(prop.med,prop.q95l,prop.q95u,
+                                f = 100,d = 3,method = "signif")
+    )]
+    # write.csv(tbl1,paste0("output/table2_",run,".csv"),row.names = F)
+    return(list(p = p,p1 = p1,tbl = tbl, tbl1 = tbl1))
+}
+
+
 plot_traces <- function(pars,u){
     pars_dt <- as.data.table(pars[-1,u])
     pars_dt[,iter := seq_len(nrow(pars)-1)]

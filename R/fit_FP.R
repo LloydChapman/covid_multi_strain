@@ -39,7 +39,6 @@ end_date <- as.Date("2022-05-06") # last death date in data files
 
 # Set age groups
 age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
-min_ages <- get_min_age(age_groups)
 
 # Create vaccination schedule
 # Set delays for immune response to different vaccine doses
@@ -70,7 +69,7 @@ u <- c(1:5,7:9,12:13) # beta parameters, seed date, strain seed date, IHR scalin
 # u <- c(1:10,12:14,17) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, observation parameters for case data
 # u <- c(1:7,9:11,14) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, observation parameters for case data
 n_iters <- 5e4 #1e3 #2e4 #1e4 #200 #
-run <- 76 #77
+run <- 75 #76 #77
 deterministic <- T # flag for whether to use "deterministic particle filter" or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state"
 thinning <- 10
@@ -89,8 +88,22 @@ moving_avg <- F
 # Set number of posterior samples for age-decomposition plots
 n_smpls <- 1000 #10 #
 
+# Set seed for immune status plot
+seed <- 1L
+
 # Plot fit
 plot_fit(output,run,pop,burnin,moving_avg,n_smpls)
+
+# Plot breakdown of immunity in the population over time
+res <- plot_immune_status(output,pop,age_groups,burnin,n_smpls,seed)
+p <- res$p
+ggsave(paste0("output/pop_immune_status_by_age",run,".pdf"),p,height = 5,width = 11)
+p1 <- res$p1
+ggsave(paste0("output/pop_immune_status",run,".pdf"),p1,height = 4,width = 6)
+tbl <- res$tbl
+write.csv(tbl,paste0("output/table2_by_age_",run,".csv"),row.names = F)
+tbl1 <- res$tbl1
+write.csv(tbl1,paste0("output/table2_",run,".csv"),row.names = F)
 
 # Process fit
 pars_qntls <- calculate_parameter_quantiles(output,burnin = burnin)
