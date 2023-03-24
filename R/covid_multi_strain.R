@@ -1,3 +1,40 @@
+transmission_matrix <- function(country, pop, age_groups){
+    # Load contact matrices
+    contact_matrices <- fread("data/synthetic_contacts_2020.csv")
+    setnames(contact_matrices,"age_cotactee","age_contactee")
+    
+    # Get contact matrix for desired country
+    contact <- contact_matrices[iso3c == country & setting == "overall" & location_contact == "all"]
+    age_cols <- names(contact)[grep("age",names(contact))]
+    contact[,(paste0("min_",age_cols)):=lapply(.SD,function(x) as.numeric(sub("\\+","",sub(" to.*","",x)))),.SDcols = age_cols] 
+    
+    # Sum mean numbers of contacts over contact age groups being aggregated
+    min_ages <- get_min_age(age_groups)
+    contact[,age_contactee := cut(min_age_contactee,c(min_ages,Inf),labels = age_groups,right = F)]
+    contact1 <- contact[,.(contacts = sum(mean_number_of_contacts)),by = .(age_contactor,age_contactee,min_age_contactor)]
+    
+    min_ages_contact <- contact[,unique(min_age_contactor)]
+    age_groups_contact <- contact[,unique(age_contactor)]
+    pop_contact <- copy(pop)
+    pop_contact[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
+    pop_contact <- pop_contact[,.(population = sum(total)),by = .(age_group_contact)]
+    
+    contact1 <- merge(contact1,pop_contact,by.x = "age_contactor",by.y = "age_group_contact")
+    contact1[,age_contactor := cut(min_age_contactor,c(min_ages,Inf),labels = age_groups,right = F)]
+    
+    # Take population-weighted average of mean number of contacts over "participant" age groups being aggregated
+    contact2 <- contact1[,.(contacts = sum(contacts * population)/sum(population)), by = .(age_contactor,age_contactee)]
+    
+    # Plot
+    ggplot(contact2,aes(x = age_contactee,y = age_contactor,fill = contacts)) + geom_tile()
+    
+    # Convert the contact matrix to the "transmission matrix" (the contact matrix weighted by the population in each age group)
+    contact_matrix <- matrix(contact2[,contacts],nrow = length(age_groups),ncol = length(age_groups), byrow = T) # N.B. individuals in rows, contacts in columns
+    population <- pop[,.(sum(total)),by = .(age_group)][,V1]
+    transmission <- contact_matrix/rep(population, each = ncol(contact_matrix))
+}
+
+
 initial <- function(info, n_particles, pars) {
     index <- info$index
     state <- numeric(info$len)
@@ -1194,7 +1231,7 @@ make_transform_multistage <- function(dt,
         p1 <- parameters(dt,
                          n_age,
                          n_vax,
-                         transmission,
+                         m,
                          beta_date,
                          beta_value = beta_value,
                          beta_type,

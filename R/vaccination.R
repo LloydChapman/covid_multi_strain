@@ -1,3 +1,75 @@
+vaccination_data <- function(vax, delay_dose1, delay_dose2, pop, age_groups_vax, age_groups, end_date, uptake){
+    # Aggregate doses in the same age group on the same day
+    vax <- vax[,.(number = sum(number)),by = .(date,dose,age_group)]
+    
+    # Add different delays for immune response to different doses
+    vax[dose == "dose1", date := date + delay_dose1]
+    vax[dose == "dose2", date := date + delay_dose2]
+    
+    # Reaggregate vaccine doses by model age groups
+    dates_vax <- seq.Date(vax[,min(date)],vax[,max(date)],by = 1)
+    doses <- vax[,unique(dose)]
+    base_vax_dt <- CJ(date = dates_vax, dose = doses, age = pop[,unique(age)])
+    base_vax_dt <- merge(base_vax_dt,pop[,.(age,total)],by = "age")
+    age_groups_vax <- sort(age_groups_vax)
+    min_ages_vax <- get_min_age(age_groups_vax)
+    base_vax_dt[, age_group := cut(age,c(min_ages_vax,Inf),labels = age_groups_vax,right = F)]
+    # Merge with vaccinations data table
+    # N.B. This duplicates doses across age groups
+    vax_dt <- merge(base_vax_dt,vax,by = c("date","dose","age_group"),all.x = T)
+    # Split vaccine doses by population proportion
+    vax_dt[,number := number*total/sum(total),by = .(date,dose,age_group)]
+    # Change age groups
+    min_ages <- get_min_age(age_groups)
+    vax_dt[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
+    # Fill missing values with 0s (i.e. assume all doses were recorded)
+    setnafill(vax_dt,fill = 0,cols = "number")
+    # Sum doses over age groups
+    vax_dt <- vax_dt[,.(number = sum(number)),by = .(date,dose,age_group)]
+    # Limit vaccine schedule to end date
+    vax_dt <- vax_dt[date <= end_date]
+    
+    # Plot to check
+    ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color = age_group)) +
+        geom_line() +
+        facet_wrap(~dose)
+    
+    # # Check totals are the same
+    # print(vax[,sum(number)]) # 465247
+    # print(vax_dt[,sum(number)]) # 465247
+    
+    # Cast to wide format
+    vax_dt_wide <- dcast(vax_dt,date + age_group ~ dose,value.var = "number")
+    vax_dt_wide[,age_band_min := get_min_age(age_group)]
+    vax_dt_wide[,age_group := NULL]
+    
+    population <- pop[,.(sum(total)),by = .(age_group)][,V1]
+    
+    schedule <- vaccine_schedule_from_data(as.data.frame(vax_dt_wide),min_ages,population,uptake)
+}
+
+
+vaccination_coverage_plot <- function(schedule, age_groups, vax, pop){
+    # Plot to check
+    doses_dt <- as.data.table(schedule$doses,value.name = "number")
+    doses_dt[,`:=`(age_group = age_groups[V1],dose = vax[,unique(dose)][V2], date = vax[,sort(unique(date))][V3])]
+    doses_dt <- merge(doses_dt,pop[,.(population = sum(total)),by = .(age_group)],by = "age_group")
+    doses_dt[,prop := number/population]
+    doses_dt[,cum_prop := cumsum(prop),by = .(age_group,dose)]
+    
+    ggplot(doses_dt,aes(x = date,y = cum_prop,group = age_group, color = age_group)) + 
+        geom_line() + 
+        # xlim(as.Date("2021-01-01"),NA_Date_) + 
+        labs(x = "Date", y = "Proportion vaccinated") + 
+        scale_color_discrete(name = "Age group") + 
+        facet_wrap(~dose, 
+                   labeller = labeller(
+                       dose = c("dose1" = "Dose 1", 
+                                "dose2" = "Dose 2", 
+                                "dose3" = "Dose 3")))
+}
+
+
 calculate_rel_param <- function(vax_eff_arr){
     # Create matrix of 0s for "vaccine effectiveness" in unvaccinated individuals
     unvax_eff <- array(0, dim = dim(vax_eff_arr)[c(1:2,4)])

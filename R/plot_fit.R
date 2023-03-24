@@ -1,4 +1,4 @@
-plot_fit <- function(output,run,burnin = NULL,moving_avg = FALSE){
+plot_fit <- function(output,run,burnin = NULL,moving_avg = FALSE,n_smpls = 1000){
     load(output)
     
     if (is.null(burnin)){
@@ -11,7 +11,7 @@ plot_fit <- function(output,run,burnin = NULL,moving_avg = FALSE){
     ggsave(paste0("output/hosps_by_age_fit",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 8)
     plot_outcome(res$trajectories$state,data,"deaths",by_age = T,burnin = burnin,moving_avg = moving_avg)
     ggsave(paste0("output/deaths_by_age_fit",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 8)
-    plot_sero(res$trajectories$state,data,agg_pop,by_age = T,burnin = burnin)
+    plot_sero(res$trajectories$state,data,pop[,.(population = sum(total)),by = .(age_group)],by_age = T,burnin = burnin)
     ggsave(paste0("output/sero_by_age_fit",run,".pdf"),width = 4, height = 8)
     plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"],burnin = burnin,moving_avg = moving_avg)
     ggsave(paste0("output/cases",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 2.7)
@@ -23,7 +23,6 @@ plot_fit <- function(output,run,burnin = NULL,moving_avg = FALSE){
     vrble <- c("cases","hosps","deaths")
     ttls <- c("Cases","Hospitalisations","Hospital deaths")
     names(ttls) <- vrble
-    n_smpls <- 1000
     p_list <- plot_outcome_by_age(res$trajectories$state,vrble,res$pars[,"phi_cases"],ttls,n_smpls,burnin = burnin)
     ggsave(paste0("output/outcomes_by_age",run,".pdf"),p_list$p,width = 9,height = 3)
     ggsave(paste0("output/prop_outcomes_by_age",run,".pdf"),p_list$p1,width = 9,height = 3)

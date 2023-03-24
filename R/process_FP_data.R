@@ -10,14 +10,20 @@ if(Sys.info()["user"]=="akucharski") {
  filepath <- "~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/"
 }
 
+# Load packages
+library(qs)
+library(readxl)
+library(data.table)
+library(ggplot2)
+library(lubridate)
+library(ISOweek)
+
+source("R/utils.R")
+
 # Load data files ---------------------------------------------------------
 
 # Population
 pop <- qread(paste0(filepath,"unwpp_data.qs")) 
-
-# Contact matrix
-contact_matrices <- fread(paste0(filepath,"synthetic_contacts_2020.csv")) 
-setnames(contact_matrices,"age_cotactee","age_contactee")
 
 # Weekly count data
 weekly_dt <- as.data.table(read_xlsx(paste0(filepath,"Weekly data summary.xlsx")))
@@ -57,52 +63,14 @@ vax[,age_group := age_groups_vax[file]]
 vax[,file := NULL]
 
 # Process data ---------------------------------------------------------
-get_min_age = function(x){
-    as.numeric(sub("-.*","",sub("\\+|<","-",x)))  
-}
-
-get_max_age = function(x){
-    as.numeric(sub(".*-","",sub("\\+|<","-",x)))    
-}
-
 # Age groups
 age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
 min_ages <- get_min_age(age_groups)
-n_age <- length(age_groups)
 
 # Population
 pop <- pop[country == "French Polynesia" & year == 2020]
 pop[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
-agg_pop <- pop[,.(population = sum(total)),by = .(age_group)]
-population <- agg_pop[,population]
-
-# FOR NOW: use contact matrix for France (is Fiji an alternative as a Pacific island?)
-contact <- contact_matrices[iso3c == "FRA" & setting == "overall" & location_contact == "all"]
-age_cols <- names(contact)[grep("age",names(contact))]
-contact[,(paste0("min_",age_cols)):=lapply(.SD,function(x) as.numeric(sub("\\+","",sub(" to.*","",x)))),.SDcols = age_cols] 
-
-# Sum mean numbers of contacts over contact age groups being aggregated
-contact[,age_contactee := cut(min_age_contactee,c(min_ages,Inf),labels = age_groups,right = F)]
-contact1 <- contact[,.(contacts = sum(mean_number_of_contacts)),by = .(age_contactor,age_contactee,min_age_contactor)]
-
-min_ages_contact <- contact[,unique(min_age_contactor)]
-age_groups_contact <- contact[,unique(age_contactor)]
-pop_contact <- copy(pop)
-pop_contact[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
-pop_contact <- pop_contact[,.(population = sum(total)),by = .(age_group_contact)]
-
-contact1 <- merge(contact1,pop_contact,by.x = "age_contactor",by.y = "age_group_contact")
-contact1[,age_contactor := cut(min_age_contactor,c(min_ages,Inf),labels = age_groups,right = F)]
-
-# Take population-weighted average of mean number of contacts over "participant" age groups being aggregated
-contact2 <- contact1[,.(contacts = sum(contacts * population)/sum(population)), by = .(age_contactor,age_contactee)]
-
-# Plot
-ggplot(contact2,aes(x = age_contactee,y = age_contactor,fill = contacts)) + geom_tile()
-
-# Convert the contact matrix to the "transmission matrix" (the contact matrix weighted by the population in each age group)
-contact_matrix <- matrix(contact2[,contacts],nrow = n_age,ncol = n_age, byrow = T) # N.B. individuals in rows, contacts in columns
-transmission <- contact_matrix/rep(population, each = ncol(contact_matrix))
+write.csv(pop,"data/population.csv",row.names = F)
 
 ## Weekly data
 weekly_dt[,Date := sub(".*-","",Date)]
@@ -146,7 +114,7 @@ total_cases_dt[,date := ISOweek2date(paste0(iso_week,"-1"))]
 ggplot() + 
     geom_line(aes(x = date,y = cases),total_cases_dt) +
     geom_point(aes(x = Date,y = `Total nombre de nouveaux cas confirmés locaux`),weekly_dt,color = "red")
-# ggsave("output/total_cases.pdf",width = 5,height = 4)
+ggsave("output/total_cases.pdf",width = 5,height = 4)
 
 # Impute missing confirmation dates with dates of nearest cases
 cases_dt1 <- copy(cases_dt) 
@@ -159,7 +127,7 @@ total_cases_dt1[,date := ISOweek2date(paste0(iso_week,"-1"))]
 ggplot() + 
     geom_line(aes(x = date,y = cases),total_cases_dt1) +
     geom_point(aes(x = Date,y = `Total nombre de nouveaux cas confirmés locaux`),weekly_dt,color = "red")
-# ggsave("output/total_cases_imputed_missing_dates.pdf",width = 5,height = 4)
+ggsave("output/total_cases_imputed_missing_dates.pdf",width = 5,height = 4)
 # Most cases with missing dates are early in first wave, so use data with imputed missing dates
 
 # Aggregate cases by age group and date
@@ -235,7 +203,7 @@ ggplot() +
     geom_line(aes(x = date,y = hosps),total_hosps_by_hosp_dt[is.na(hospital) | hospital == "CHPF"]) +
     geom_point(aes(x = Date,y = `Nombre de nouvelles hospitalisations Covid CHPf Tahiti`),weekly_dt,color = "red") + 
     labs(title = "CHPF")
-# ggsave("output/total_hosps_CHPF.pdf",width = 5,height = 4)
+ggsave("output/total_hosps_CHPF.pdf",width = 5,height = 4)
 
 # hospitals <- total_hosps_by_hosp_dt[,unique(hospital)]
 # hospitals <- hospitals[!is.na(hospitals) & hospitals != "CHPF"]
@@ -256,7 +224,7 @@ total_hosps_dt[,date := ISOweek2date(paste0(iso_week,"-1"))]
 ggplot() + 
     geom_line(aes(x = date,y = hosps),total_hosps_dt) +
     geom_point(aes(x = Date,y = `Nombre total de nouvelles hospitalisations tous hôpitaux`),weekly_dt,color = "red")
-# ggsave("output/total_hosps.pdf",width = 5,height = 4)
+ggsave("output/total_hosps.pdf",width = 5,height = 4)
 
 # Add age groups
 age_groups_hosp <- c(paste0(min_ages[c(1,5:(length(min_ages)-1))],"-",min_ages[5:length(min_ages)]-1), paste0(min_ages[length(min_ages)],"+"))
@@ -296,7 +264,7 @@ ggplot() +
     geom_line(aes(x = date,y = deaths),total_deaths_by_hosp_dt[is.na(hospital) | hospital == "CHPF"]) +
     geom_point(aes(x = Date,y = `Nombre de décès CHPf`),weekly_dt,color = "red") + 
     labs(title = "CHPF")
-# ggsave("output/total_deaths_CHPF.pdf",width = 5,height = 4)
+ggsave("output/total_deaths_CHPF.pdf",width = 5,height = 4)
 
 total_deaths_dt <- deaths_dt[,.(deaths = .N),by = .(date = death_date)]
 total_deaths_dt[,iso_week := ISOweek(date)]
@@ -307,7 +275,7 @@ ggplot() +
     geom_line(aes(x = date,y = deaths),total_deaths_dt) + 
     geom_point(aes(x = Date,y = `Nombre total de décès`),weekly_dt,color = "blue") + 
     geom_point(aes(x = Date,y = `Nombre total de décès hospitaliers`),weekly_dt,color = "red")
-# ggsave("output/total_deaths.pdf",width = 5, height = 4)
+ggsave("output/total_deaths.pdf",width = 5, height = 4)
 
 ## Seroprevalence
 process_sero_data <- function(sero_dt,sample_date,age_groups,min_ages){
@@ -333,10 +301,10 @@ process_sero_data <- function(sero_dt,sample_date,age_groups,min_ages){
 }
 
 sero_pos_dt1 <- process_sero_data(sero_pos_dt1, as.Date("2021-02-14"), age_groups, min_ages)
-# write.csv(sero_pos_dt1,"data/seroprev_feb21.csv",row.names = F)
+write.csv(sero_pos_dt1,"data/seroprev_feb21.csv",row.names = F)
 print(binom.test(sero_pos_dt1[,sum(seropos)],sero_pos_dt1[,sum(n)]))
 sero_pos_dt2 <- process_sero_data(sero_pos_dt2, as.Date("2021-11-30"), age_groups, min_ages)
-# write.csv(sero_pos_dt2,"data/seroprev_nov21.csv",row.names = F)
+write.csv(sero_pos_dt2,"data/seroprev_nov21.csv",row.names = F)
 print(binom.test(sero_pos_dt2[,sum(seropos)],sero_pos_dt2[,sum(n)]))
 
 sero_pos_dt <- rbind(sero_pos_dt1,sero_pos_dt2)
@@ -388,51 +356,9 @@ data_raw[,sero_pos_1 := sero_pos_1_20_29 + sero_pos_1_30_39 + sero_pos_1_40_49 +
 data_raw[,sero_tot_1 := sero_tot_1_20_29 + sero_tot_1_30_39 + sero_tot_1_40_49 + sero_tot_1_50_59 + sero_tot_1_60_69 + sero_tot_1_70_plus]
 data_raw[,strain_tot := NA]
 data_raw[,strain_non_variant := NA]
-saveRDS(data_raw,"data/data_raw.rds")
+write.csv(data_raw,"data/data_cases_hosps_deaths_serology.csv",row.names = F)
 
 ## Vaccinations
-
-# # Remove bits before : in column names
-# names(vax) <- sub(".*: ","",names(vax))
-# 
-# cols <- names(vax)[!(names(vax) %in% c("Time","OBS_VALUE"))]
-# vax[,(cols) := lapply(.SD,function(x) sub(".*: ","",x)),.SDcols = cols]
-# 
-# # Drop columns
-# vax <- vax[,c("DATAFLOW","Frequency","Unit of measure","Unit multiplier","Observation Status","Data source","Comment"):=NULL]
-# 
-# # Rename columns
-# names(vax) <- c("date","country","dose","value")
-# 
-# # Drop total doses and booster doses
-# vax <- vax[!(dose %in% c("Total doses administered","Booster doses administered"))]
-# # Recode dose variable
-# vax[,dose := fifelse(dose=="1st dose administered",1L,2L)]
-# 
-# # Plot
-# ggplot(vax,aes(x = date,y = value,group = factor(dose),color = factor(dose))) + geom_line()
-# 
-# # Make data table of daily vaccination doses from raw data
-# dates_vax <- seq.Date(vax[,min(date)-7],vax[,max(date)],by = 1)
-# 
-# vax_dt <- CJ(dose = c(1L,2L), date = dates_vax)
-# vax_dt <- merge(vax_dt,vax[,!"country"],by = c("dose","date"),all.x = T)
-# 
-# # Linearly interpolate cumulative number of doses over missing dates
-# vax_dt[date == min(date),value := 0]
-# vax_dt[,value_interp := approx(date,value,date)$y,by = .(dose)]
-# 
-# # Calculate approximate daily numbers of doses by differencing and rounding
-# vax_dt[,number := as.integer(round(diff(c(0,value_interp)))),by = .(dose)]
-# 
-# # Difference in rounded doses vs actual
-# vax_dt[,sum(number),by = .(dose)][,V1] - vax_dt[date == max(date),value,by = .(dose)][,value]
-# # small so ignore FOR NOW
-# 
-# vax_dt[,date := as.IDate(date)]
-# vax_dt <- vax_dt[date <= end_date]
-# 
-# doses <- vax[,unique(dose)]
 
 # Change names
 setnames(vax,c("Date","Nombre de doses injectées","Type d'injection V2"),c("date","number","dose"))
@@ -447,93 +373,4 @@ vax[,dose := fcase(dose == "Primo injection","dose1",
 
 # Aggregate doses in the same age group on the same day
 vax <- vax[,.(number = sum(number)),by = .(date,dose,age_group)]
-
-# # # Plot to check
-# # ggplot(vax,aes(x = date,y = number,group = age_group,color = age_group)) +
-# #     geom_line() +
-# #     facet_wrap(~dose)
-# # ggplot(vax[,.(date,number = cumsum(number)),by = .(dose,age_group)],aes(x = date,y = number,group = age_group,color = age_group)) +
-# #     geom_line() +
-# #     facet_wrap(~dose)
-# doses_by_age_and_dose <- dcast(vax[,.(number = sum(number)),by=.(age_group,dose)],age_group ~ dose)
-# doses_by_age_and_dose <- rbind(doses_by_age_and_dose,cbind(data.table(age_group="Total"),doses_by_age_and_dose[,lapply(.SD,sum),.SDcols = c("dose1","dose2","dose3")]))
-# write.csv(doses_by_age_and_dose,"output/doses_by_age_and_dose.csv",row.names = F)
-
-# Add different delays for immune response to different doses
-delay_dose1 <- 28
-delay_dose2 <- 14
-vax[dose == "dose1", date := date + delay_dose1]
-vax[dose == "dose2", date := date + delay_dose2]
-
-# Reaggregate vaccine doses by model age groups
-dates_vax <- seq.Date(vax[,min(date)],vax[,max(date)],by = 1)
-doses <- vax[,unique(dose)]
-base_vax_dt <- CJ(date = dates_vax, dose = doses, age = pop[,unique(age)])
-base_vax_dt <- merge(base_vax_dt,pop[,.(age,total)],by = "age")
-age_groups_vax <- sort(age_groups_vax)
-min_ages_vax <- get_min_age(age_groups_vax)
-base_vax_dt[, age_group := cut(age,c(min_ages_vax,Inf),labels = age_groups_vax,right = F)]
-# Merge with vaccinations data table
-# N.B. This duplicates doses across age groups
-vax_dt <- merge(base_vax_dt,vax,by = c("date","dose","age_group"),all.x = T)
-# Split vaccine doses by population proportion
-vax_dt[,number := number*total/sum(total),by = .(date,dose,age_group)]
-# Change age groups
-vax_dt[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
-# Fill missing values with 0s (i.e. assume all doses were recorded)
-setnafill(vax_dt,fill = 0,cols = "number")
-# Sum doses over age groups
-vax_dt <- vax_dt[,.(number = sum(number)),by = .(date,dose,age_group)]
-# Limit vaccine schedule to end date
-vax_dt <- vax_dt[date <= end_date]
-
-# Plot to check
-ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color = age_group)) +
-    geom_line() +
-    facet_wrap(~dose)
-
-# # Check totals are the same
-# print(vax[,sum(number)]) # 465247
-# print(vax_dt[,sum(number)]) # 465247
-
-# Cast to wide format
-vax_dt_wide <- dcast(vax_dt,date + age_group ~ dose,value.var = "number")
-vax_dt_wide[,age_band_min := get_min_age(age_group)]
-vax_dt_wide[,age_group := NULL]
-
-# # Make vaccination schedule
-# pop_mat <- matrix(rep(population,1),nrow = length(population))
-# 
-# # Rough number of daily booster doses from eyeballing Fig. 5 plot in BEH health bulletin No. 84
-# booster_daily_doses <- c(rep(0,40*7),rep(5000/7,as.integer(as.IDate(end_date) - vax_dt[,min(date)] - 40*7 + 1)))
-# 
-# # priority_population <- vaccine_priority_population(population, uptake = c(0.55,0.55,0.80,0.80,0.80,0.80,0.8,0.8))
-# mean_days_between_doses <- 28 # from eye-balling plot of cumulative 1st and 2nd doses
-# schedule <- vaccine_schedule_future(as.integer(vax_dt[,min(date)] - strt_date + 1),
-#                                     vax_dt[,sum(number),by = .(date)][,V1],
-#                                     mean_days_between_doses = mean_days_between_doses,
-#                                     pop_mat,
-#                                     booster_daily_doses_value = booster_daily_doses)
-
-# Matrix of uptake rates (age group x dose)
-uptake <- matrix(1,nrow = length(age_groups),ncol = length(doses))
-schedule <- vaccine_schedule_from_data(as.data.frame(vax_dt_wide),min_ages,population,uptake)
-
-# Plot to check
-doses_dt <- as.data.table(schedule$doses,value.name = "number")
-doses_dt[,`:=`(age_group = age_groups[V1],dose = doses[V2], date = dates_vax[V3])]
-doses_dt <- merge(doses_dt,agg_pop,by = "age_group")
-doses_dt[,prop := number/population]
-doses_dt[,cum_prop := cumsum(prop),by = .(age_group,dose)]
-
-ggplot(doses_dt,aes(x = date,y = cum_prop,group = age_group, color = age_group)) + 
-    geom_line() + 
-    xlim(as.Date("2021-01-01"),NA_Date_) + 
-    labs(x = "Date", y = "Proportion vaccinated") + 
-    scale_color_discrete(name = "Age group") + 
-    facet_wrap(~dose, 
-               labeller = labeller(
-                   dose = c("dose1" = "Dose 1", 
-                            "dose2" = "Dose 2", 
-                            "dose3" = "Dose 3")))
-# ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
+write.csv(vax,"data/data_vaccination.csv",row.names = F)

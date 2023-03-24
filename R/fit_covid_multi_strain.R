@@ -1,4 +1,4 @@
-fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE,thinning = 1){
+fit_covid_multi_strain <- function(data_raw,schedule,pop,age_groups,u,n_iters,run,deterministic = TRUE,Rt = FALSE,thinning = 1){
     #### Set up model and parameters ####
     
     
@@ -25,6 +25,16 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     # ifr <- 1.1*ifr_salje
     # p_G <- (ifr - p_D*ihr)/((1-p_D)*ihr + ifr)
     # Set probability of death outside hospital from observed proportion of non-hospital deaths
+    # Weekly count data
+    filepath <- "~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/"
+    weekly_dt <- as.data.table(read_xlsx(paste0(filepath,"Weekly data summary.xlsx")))
+    weekly_dt[,Date := sub(".*-","",Date)]
+    weekly_dt[,Year := as.integer(paste0("20",sub("[0-9]+/[0-9]+/","",Date)))]
+    weekly_dt[Date == "03/01",Year := 2021L]
+    weekly_dt[Date == "02/01",Year := 2022L]
+    setnafill(weekly_dt,type = "locf",cols = "Year")
+    weekly_dt[,Date := paste0(sub("([0-9]+/[0-9]+).*","\\1",Date),"/",Year)]
+    weekly_dt[,Date := dmy(Date) - 6]
     p_G <- rep(weekly_dt[,sum(`Nombre de décès à domicile`,na.rm = T)/
                              sum(`Nombre total de nouvelles hospitalisations tous hôpitaux`,na.rm = T)],length(p_C))
     p_H <- ihr/(p_C*(1-p_G))
@@ -45,6 +55,8 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     # p_death <- IFR$median_perc[19:27]/100
     # p_death[length(p_death)-1] <- (p_death[length(p_death)-1]+p_death[length(p_death)])/2
     # p_death <- p_death[1:(length(p_death)-1)]
+    
+    population <- pop[,.(sum(total)),by = .(age_group)][,V1]
     
     vax_eff <- fread("data/vax_eff.csv")
     
@@ -133,6 +145,10 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     dt <- 0.25
     n_age <- length(age_groups)
     n_vax <- 5
+    
+    # Transmission matrix
+    # FOR NOW: use contact matrix for France (is Fiji an alternative as a Pacific island?)
+    transmission <- transmission_matrix("FRA", pop, age_groups)
     
     # Transmission and natural history parameters
     # intvtn_date <- as.Date(c(strt_date-1,"2020-08-27","2020-10-24","2021-06-01","2021-08-12"))
@@ -767,7 +783,7 @@ fit_covid_multi_strain <- function(u,n_iters,run,deterministic = TRUE,Rt = FALSE
     print(plot_outcome(res$trajectories$state,data,"hosps",by_age = T))
     print(plot_outcome(res$trajectories$state,data,"deaths",by_age = T))
     print(plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"],by_age = T))
-    print(plot_sero(res$trajectories$state,data,agg_pop,by_age = T))
+    print(plot_sero(res$trajectories$state,data,pop[,.(population = sum(total)),by = .(age_group)],by_age = T))
     print(plot_outcome(res$trajectories$state,data,"hosps"))
     print(plot_outcome(res$trajectories$state,data,"deaths"))
     print(plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"]))
