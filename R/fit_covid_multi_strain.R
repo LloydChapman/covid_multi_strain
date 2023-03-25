@@ -1,6 +1,8 @@
 fit_covid_multi_strain <- function(data_raw,schedule,pop,age_groups,u,n_iters,run,deterministic = TRUE,Rt = FALSE,thinning = 1){
     #### Set up model and parameters ####
-    
+    if (n_iters < 100){
+        stop("n_iters must be at least 100")
+    }
     
     # Age-structured SEIR model with deaths and vaccination
     # gen_seirhd_age_vax_multistrain_sero_time_dep_beta <- odin_dust("test_examples/seirhdagevaxmultistrainserotimedepbeta.R")
@@ -18,6 +20,7 @@ fit_covid_multi_strain <- function(data_raw,schedule,pop,age_groups,u,n_iters,ru
     # O'Driscoll IFR
     IFR <- fread("data/ifr_odriscoll.csv")
     IFR[,age_low:=get_min_age(IFR$Age_group)]
+    min_ages <- get_min_age(age_groups)
     IFR[,age_group:=cut(age_low,c(min_ages,Inf),labels=age_groups,right=F)]
     agg_IFR <- IFR[,lapply(.SD,mean),.SDcols=setdiff(names(IFR),c("Age_group","age_low","age_group")),by=.(age_group)]
     ifr_odriscoll <- agg_IFR[,Median_perc_mean/100]
@@ -26,17 +29,8 @@ fit_covid_multi_strain <- function(data_raw,schedule,pop,age_groups,u,n_iters,ru
     # p_G <- (ifr - p_D*ihr)/((1-p_D)*ihr + ifr)
     # Set probability of death outside hospital from observed proportion of non-hospital deaths
     # Weekly count data
-    filepath <- "~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/"
-    weekly_dt <- as.data.table(read_xlsx(paste0(filepath,"Weekly data summary.xlsx")))
-    weekly_dt[,Date := sub(".*-","",Date)]
-    weekly_dt[,Year := as.integer(paste0("20",sub("[0-9]+/[0-9]+/","",Date)))]
-    weekly_dt[Date == "03/01",Year := 2021L]
-    weekly_dt[Date == "02/01",Year := 2022L]
-    setnafill(weekly_dt,type = "locf",cols = "Year")
-    weekly_dt[,Date := paste0(sub("([0-9]+/[0-9]+).*","\\1",Date),"/",Year)]
-    weekly_dt[,Date := dmy(Date) - 6]
-    p_G <- rep(weekly_dt[,sum(`Nombre de décès à domicile`,na.rm = T)/
-                             sum(`Nombre total de nouvelles hospitalisations tous hôpitaux`,na.rm = T)],length(p_C))
+    prob_death_community <- read.csv("data/prob_death_community.csv")[1,1]
+    p_G <- rep(prob_death_community,length(p_C))
     p_H <- ihr/(p_C*(1-p_G))
     p_P_1 <- 0.85
     # ifr <- p_C*p_H*(p_G + (1-p_G)*p_D)
@@ -748,7 +742,7 @@ fit_covid_multi_strain <- function(data_raw,schedule,pop,age_groups,u,n_iters,ru
     # plot(beta_t, p$beta_step, type="o", cex = 0.25)
     # points(beta_date, beta_value_sim, pch = 19, col = "red")
     
-    n_smpls <- round(n_iters/thinning)
+    n_smpls <- ifelse(round(n_iters/thinning) > 10,round(n_iters/thinning),n_iters)
     beta_value_post <- apply(res$pars[seq(round(n_smpls/10),n_smpls,by=10),1:n_betas],2,median)
     if (beta_type == "piecewise-linear") {
         beta_step <- parameters_piecewise_linear(beta_date, 

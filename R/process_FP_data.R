@@ -374,3 +374,9 @@ vax[,dose := fcase(dose == "Primo injection","dose1",
 # Aggregate doses in the same age group on the same day
 vax <- vax[,.(number = sum(number)),by = .(date,dose,age_group)]
 write.csv(vax,"data/data_vaccination.csv",row.names = F)
+
+# Probability of death in the community given severe disease
+prob_death_community <- weekly_dt[
+    ,sum(`Nombre de décès à domicile`,na.rm = T)/
+        sum(`Nombre total de nouvelles hospitalisations tous hôpitaux`,na.rm = T)]
+write.csv(prob_death_community,"data/prob_death_community.csv",row.names = F)
