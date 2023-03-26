@@ -137,7 +137,9 @@ change_booster_timing <- function(schedule, days_earlier){
 
 
 ## Run counterfactual simulations
-simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,beta_idx,schedule_cntfctl,burnin = NULL,seed = 1L){
+simulate_counterfactual <- function(output,n_smpls,transmission,beta_date_cntfctl,
+                                    beta_idx,schedule_cntfctl,burnin = NULL,
+                                    seed = 1L,min_ages = seq(0,70,by = 10)){
     # Load MCMC output
     load(output)
     
