@@ -44,10 +44,10 @@ process_fit <- function(samples,init_pars,idx,n_steps,dt,transform,index,filter,
 
 
 create_simulate_object <- function(samples,start_date_sim,date){
-    start_date_sim <- sircovid_date(start_date_sim)
+    start_date_sim <- covid_multi_strain_date(start_date_sim)
     fit_dates <- samples$trajectories$date
     idx_dates <- (fit_dates >= start_date_sim) & 
-        (fit_dates <= sircovid_date(date))
+        (fit_dates <= covid_multi_strain_date(date))
     date <- fit_dates[idx_dates]
     
     state_keep <- c("hosps", "deaths")
@@ -72,7 +72,7 @@ calculate_parameter_quantiles <- function(output, digits = 3, burnin = NULL){
     tmp <- signif(apply(res$pars, 2, calculate_median_and_ci),digits = digits)
     tmp[,c("start_date","strain_seed_date","strain_seed_date1")] <- 
         apply(tmp[,c("start_date","strain_seed_date","strain_seed_date1")],2,
-              function(x) as.character(sircovid_date_as_date(x)))
+              function(x) as.character(covid_multi_strain_date_as_date(x)))
     tmp <- as.data.table(t(tmp),keep.rownames = T)
     
     data.table(Parameter = tmp[,rn],
@@ -104,7 +104,7 @@ create_onward <- function(dat){
     date <- dat$info$date
     dt <- 1/dat$samples$trajectories$rate
     list(date = date,
-         step = sircovid_date(date)/dt,
+         step = covid_multi_strain_date(date)/dt,
          dt = dt,
          pars = dat$samples$pars,
          # base = dat$parameters$base,

@@ -179,7 +179,7 @@ parameters_piecewise_linear <- function(date, value, dt) {
     if (length(date) < 2) {
         stop("Need at least two dates and values for a varying piecewise linear")
     }
-    # assert_sircovid_date(date)
+    # assert_covid_multi_strain_date(date)
     # assert_increasing(date)
     
     if (date[[1]] != 0) {
@@ -210,7 +210,7 @@ parameters_piecewise_constant <- function(date, value, dt) {
     if (length(date) != length(value)) {
         stop("'date' and 'value' must have the same length")
     }
-    # assert_sircovid_date(date)
+    # assert_covid_multi_strain_date(date)
     # assert_increasing(date)
     if (!is.null(date)) {
         if (date[1L] != 0) {
@@ -376,7 +376,7 @@ strain_parameters <- function(strain_transmission, strain_seed_date,
         if (length(strain_seed_size) != 1L) {
             stop("'strain_seed_size' must be a single value")
         }
-        # assert_sircovid_date(strain_seed_date)
+        # assert_covid_multi_strain_date(strain_seed_date)
         # assert_non_negative(strain_seed_size)
         # assert_positive(strain_seed_pattern)
         

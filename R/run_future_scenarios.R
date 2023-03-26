@@ -75,7 +75,13 @@ args <- list(end_date = as.Date(end_date),
              vaccine_lag_groups = NULL,
              vaccine_lag_days = NULL,
              vaccine_booster_daily_doses = vaccine_booster_daily_doses,
-             vaccine_booster_eligibility = rep(1,8))
+             vaccine_booster_eligibility = rep(1,8),
+             strain_transmission = NULL,
+             strain_seed_date = NULL,
+             strain_seed_size = NULL,
+             strain_seed_pattern = NULL,
+             strain_cross_immunity = NULL,
+             waning_rate = NULL)
 
 # Simulate future scenarios
 ret <- simulate_future_scenario(args,onward1)

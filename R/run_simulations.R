@@ -74,7 +74,7 @@ transmission <- transmission_matrix("FRA",pop,age_groups)
 # intvtn_date <- as.Date(c(strt_date-1,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
 # intvtn_date <- as.Date(c(strt_date-1,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
 intvtn_date <- as.Date(c("2020-08-27","2020-10-24","2021-06-01","2021-08-02","2021-11-15"))
-beta_date <- sircovid_date(intvtn_date) #as.integer(intvtn_date - min(intvtn_date))
+beta_date <- covid_multi_strain_date(intvtn_date) #as.integer(intvtn_date - min(intvtn_date))
 beta_idx_list <- replicate(10,seq_along(beta_date),F)
 beta_date_cntfctl_list <- replicate(10,beta_date,F) #replicate(10,beta_date,F)
 
@@ -174,10 +174,10 @@ q_outcomes <- rbindlist(q_outcomes_list, idcol = "cntfctl")
 q_outcomes_cntfctl <- rbindlist(q_outcomes_cntfctl_list, idcol = "cntfctl")
 q_outcomes_averted <- rbindlist(q_outcomes_averted_list, idcol = "cntfctl")
 q_prop_outcomes_averted <- rbindlist(q_prop_outcomes_averted_list, idcol = "cntfctl")
-q_outcomes[,date := sircovid_date_as_date(day)]
-q_outcomes_cntfctl[,date := sircovid_date_as_date(day)]
-q_outcomes_averted[,date := sircovid_date_as_date(day)]
-q_prop_outcomes_averted[,date := sircovid_date_as_date(day)]
+q_outcomes[,date := covid_multi_strain_date_as_date(day)]
+q_outcomes_cntfctl[,date := covid_multi_strain_date_as_date(day)]
+q_outcomes_averted[,date := covid_multi_strain_date_as_date(day)]
+q_prop_outcomes_averted[,date := covid_multi_strain_date_as_date(day)]
 
 q_total_outcomes <- rbindlist(q_total_outcomes_list, idcol = "cntfctl")
 q_total_outcomes_cntfctl <- rbindlist(q_total_outcomes_cntfctl_list, idcol = "cntfctl")
@@ -197,8 +197,8 @@ names(ttls) <- as.character(seq_along(ttls)-1)
 # pdf("output/infctns_by_vacc_status.pdf",)
 # for (i in 9:10){
 #     idx_wave3 = wave_date[3]:wave_date[4]
-#     dates <- seq.Date(sircovid_date_as_date(wave_date[3]),sircovid_date_as_date(wave_date[4]),by = 1)
-#     dates_plot <- seq.Date(sircovid_date_as_date(wave_date[3]),sircovid_date_as_date(wave_date[4]),by = 30)
+#     dates <- seq.Date(covid_multi_strain_date_as_date(wave_date[3]),covid_multi_strain_date_as_date(wave_date[4]),by = 1)
+#     dates_plot <- seq.Date(covid_multi_strain_date_as_date(wave_date[3]),covid_multi_strain_date_as_date(wave_date[4]),by = 30)
 #     matplot(dates,t(apply(new_infections_cntfctl_by_vacc_list[[i]][,,idx_wave3],c(1,3),median)),type = "l",xaxt = "n",xlab = "Date",ylab = "Infections", ylim = c(0,550), main = ttls[names(ttls) == i])
 #     nc <- nrow(new_infections_cntfctl_by_vacc_list[[i]])
 #     ltyp <- rep(1:5, times=nc/5, each=1) # the line types matplot uses

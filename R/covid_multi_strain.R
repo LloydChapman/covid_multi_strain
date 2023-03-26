@@ -238,7 +238,7 @@ parameters_piecewise_linear <- function(date, value, dt) {
     if (length(date) < 2) {
         stop("Need at least two dates and values for a varying piecewise linear")
     }
-    # assert_sircovid_date(date)
+    # assert_covid_multi_strain_date(date)
     # assert_increasing(date)
     
     if (date[[1]] != 0) {
@@ -269,7 +269,7 @@ parameters_piecewise_constant <- function(date, value, dt) {
     if (length(date) != length(value)) {
         stop("'date' and 'value' must have the same length")
     }
-    # assert_sircovid_date(date)
+    # assert_covid_multi_strain_date(date)
     # assert_increasing(date)
     if (!is.null(date)) {
         if (date[1L] != 0) {
@@ -533,7 +533,7 @@ parameters_strain <- function(strain_transmission, strain_seed_date,
         if (length(strain_seed_size) != 1L) {
             stop("'strain_seed_size' must be a single value")
         }
-        # assert_sircovid_date(strain_seed_date)
+        # assert_covid_multi_strain_date(strain_seed_date)
         # assert_non_negative(strain_seed_size)
         # assert_positive(strain_seed_pattern)
         
@@ -1309,7 +1309,7 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     # Convert to data table
     inc_dt <- as.data.table(incidence_modelled)
     names(inc_dt) <- c("age_group","sample","date","value")
-    inc_dt[,date := sircovid_date_as_date(date)]
+    inc_dt[,date := covid_multi_strain_date_as_date(date)]
     inc_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
     if (vrble == "cases"){
         # Remove burn-in
@@ -1333,7 +1333,7 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     }
     inc_obs_dt <- as.data.table(incidence_observed[c("day_end",idx_obs)])
     inc_obs_dt <- melt(inc_obs_dt,measure.vars = patterns(vrble),variable.name = "age_group")
-    inc_obs_dt[,date := sircovid_date_as_date(day_end)]
+    inc_obs_dt[,date := covid_multi_strain_date_as_date(day_end)]
     inc_obs_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
     if (moving_avg){
         inc_obs_dt[,value := as.numeric(value)]
@@ -1385,7 +1385,7 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
     # Convert to data table
     sero_dt <- as.data.table(seroprev_modelled)
     names(sero_dt) <- c("age_group","sample","date","value")
-    sero_dt[,date := sircovid_date_as_date(date)]
+    sero_dt[,date := covid_multi_strain_date_as_date(date)]
     sero_dt[,age_group := sub("_","-",sub(paste0("sero_pos_1_"),"",age_group))]
     q_sero_dt <- sero_dt[,.(med = quantile(value,0.5),
                            q95l = quantile(value,0.025),
@@ -1408,7 +1408,7 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
     }
     sero_obs_dt <- as.data.table(seroprev_observed[c("day_end",idx_sero_obs,idx_sero_tot_obs)])
     sero_obs_dt <- melt(sero_obs_dt, measure.vars = patterns(positive = "sero_pos_1",total = "sero_tot_1"))
-    sero_obs_dt[,date := sircovid_date_as_date(day_end)]
+    sero_obs_dt[,date := covid_multi_strain_date_as_date(day_end)]
     # sero_obs_dt[,age_group := sub("_","-",sub(paste0("sero_pos_1_"),"",age_group))]
     sero_obs_dt[,age_group := sero_dt[,unique(age_group)][variable]]
     sero_obs_dt[!is.na(positive),`:=`(ci_lb = mapply(function(n,x) binom.test(n,x)$conf.int[1],positive,total),
@@ -1445,7 +1445,7 @@ plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,burnin = NULL,seed 
     # Convert to data table
     state_dt <- as.data.table(state)
     names(state_dt) <- c("age_group","sample","date","value")
-    state_dt[,date := sircovid_date_as_date(date)]
+    state_dt[,date := covid_multi_strain_date_as_date(date)]
     state_dt[,state := gsub("_[0-9a-z]+","",age_group)]
     state_dt[,age_group := sub("_","-",sub(".*_([0-9]+_[0-9a-z]+)","\\1",age_group))]
     # Aggregate cases in <40 year-olds
@@ -1539,7 +1539,7 @@ plot_transmission_rate <- function(pars,beta_type,beta_date,dt,end_date,burnin =
     beta_t <- seq(0,end_date,by = dt)
     beta_step <- as.data.table(apply(
         beta_step,2,function(x) parameters_expand_step(seq_along(beta_t),x)))
-    beta_step[,date := sircovid_date_as_date(beta_t)]
+    beta_step[,date := covid_multi_strain_date_as_date(beta_t)]
     p <- ggplot() + 
         geom_line(aes(x = date,y = `50%`,color = "Fitted"),beta_step) + 
         geom_ribbon(aes(x = date,ymin = `2.5%`,ymax = `97.5%`,fill = "Fitted"),beta_step,alpha = 0.5) + 
@@ -1626,7 +1626,7 @@ plot_immune_status <- function(output,pop,age_groups,burnin = NULL,n_smpls = 100
     names(S_R_by_vacc_inf_long) <- c("state","sample","date","value")
     
     # Convert dates
-    S_R_by_vacc_inf_long[, date := sircovid_date_as_date(date)]
+    S_R_by_vacc_inf_long[, date := covid_multi_strain_date_as_date(date)]
     
     # Add age and vaccination status variables
     S_R_by_vacc_inf_long[,age := sub("[A-Za-z]+_([0-9]+).*","\\1",state)]

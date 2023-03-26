@@ -328,9 +328,9 @@ simulate_future_scenario <- function(args, onward, new_strain = FALSE){
     
     step_start <- onward$step
     print(step_start)
-    date_start <- sircovid_date(onward$date)
+    date_start <- covid_multi_strain_date(onward$date)
     print(date_start)
-    end_date <- sircovid_date(args$end_date)
+    end_date <- covid_multi_strain_date(args$end_date)
     print(end_date)
     dates <- seq(date_start,end_date)
     print(dates)
@@ -433,7 +433,7 @@ simulate_pars_vaccination <- function(pop, args, onward, n_strain) {
     ## TODO: potential placeholder for manually setting
     ## vaccine_schedule$doses[, 3, ] to zero if we don't want to give boosters
     ## to all age groups
-    ## but probably better done inside sircovid::vaccine_schedule_scenario
+    ## but probably better done inside covid_multi_strain::vaccine_schedule_scenario
     # > vaccine_schedule$doses[1:17, 3, 0] <- 0
 
     # rel_list <- modify_severity(
@@ -476,7 +476,7 @@ simulate_pars_vaccination <- function(pop, args, onward, n_strain) {
     if (!is.null(args$strain_transmission)) {
         strain_params <- parameters_strain(
             args$strain_transmission,
-            sircovid_date(args$strain_seed_date),
+            covid_multi_strain_date(args$strain_seed_date),
             args$strain_seed_size,
             args$strain_seed_pattern,
             pars[[1]]$dt)
@@ -552,7 +552,7 @@ simulate_index <- function(info, keep, calculate_vaccination, multistrain) {
 setup_future_betas <- function(pars, step_current, step_end, dt) {
     # ## For seasonality, we assume a sine wave with a trough at day 228 = 15th Aug
     # ## (and a peak 6 months earlier on day 46 = 15th Feb)
-    # seasonality_date_peak <- sircovid::sircovid_date("2020-02-15")
+    # seasonality_date_peak <- covid_multi_strain::covid_multi_strain_date("2020-02-15")
     
     ## Past betas, as inferred from the pmcmc
     beta <- t(vapply(pars, "[[", numeric(length(pars[[1]]$beta_step)),
@@ -563,7 +563,7 @@ setup_future_betas <- function(pars, step_current, step_end, dt) {
     # beta <- array(beta, c(dim(pars), ncol(beta)))
     
     # rt <- vnapply(seq_along(pars), function(i)
-    #     sircovid::lancelot_Rt(step_current, S[, i, drop = FALSE], pars[[i]],
+    #     covid_multi_strain::lancelot_Rt(step_current, S[, i, drop = FALSE], pars[[i]],
     #                           type = rt_type, R = R[, i, drop = FALSE],
     #                           prob_strain = prob_strain[, i, drop = FALSE],
     #                           weight_Rt = FALSE)[[rt_type]][1])
@@ -572,7 +572,7 @@ setup_future_betas <- function(pars, step_current, step_end, dt) {
     # for (region_index in seq_len(ncol(pars))) {
     #     r <- colnames(pars)[[region_index]]
     #     rt_future_r <- rt_future[rt_future$region == r, ]
-    #     rt_future_r$step_start <- sircovid::sircovid_date(rt_future_r$date) / dt
+    #     rt_future_r$step_start <- covid_multi_strain::covid_multi_strain_date(rt_future_r$date) / dt
     #     rt_future_r$step_end <- c(rt_future_r$step_start[-1L] - 1L, step_end)
     #     
     #     for (i in seq_rows(rt_future_r)) {

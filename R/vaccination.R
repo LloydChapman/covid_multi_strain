@@ -381,7 +381,7 @@ vaccine_priority_population <- function(pop,
 ##'
 ##' @title Create vaccination schedule
 ##'
-##' @param start Either a [sircovid_date] object corresponding to the
+##' @param start Either a [covid_multi_strain_date] object corresponding to the
 ##'   first date in daily_doses_value, or a [vaccine_schedule] object
 ##'   corresponding to previously carried out vaccination.
 ##'
@@ -642,7 +642,7 @@ vaccine_schedule_from_data <- function(data, age_start, pop, uptake) {
               all(data[, dose_cols] >= 0 | is.na(data[, dose_cols])))
     
     # ## First aggregate all the 70+ into one group
-    data$date <- as_sircovid_date(data$date)
+    data$date <- as_covid_multi_strain_date(data$date)
     data$age_band_min <- pmin(data$age_band_min, 70)
     data$age_band_min[is.na(data$age_band_min)] <- Inf
     data <- stats::aggregate(data[dose_cols],
@@ -763,14 +763,14 @@ vaccine_schedule_scenario <- function(schedule_past, doses_future, end_date,
     i <- utils::tail(seq_len(dim(schedule_past$doses)[[3]]), 7)
     mean_doses_last <- sum(schedule_past$doses[, , i], na.rm = TRUE) / length(i)
     
-    end_date <- as_sircovid_date(end_date)
+    end_date <- as_covid_multi_strain_date(end_date)
     
     if (length(doses_future) == 0 && length(boosters_future) == 0) {
         if (end_date < date_end_past) {
             stop(sprintf(
                 "'end_date' must be at least %s (previous end date) but was %s",
-                sircovid_date_as_date(date_end_past),
-                sircovid_date_as_date(end_date)))
+                covid_multi_strain_date_as_date(date_end_past),
+                covid_multi_strain_date_as_date(end_date)))
         }
         stop("Does not support 'doses_future' and 'boosters_future' both being
          NULL")
@@ -787,7 +787,7 @@ vaccine_schedule_scenario <- function(schedule_past, doses_future, end_date,
             if (boosters_prepend_zero) {
                 boosters_future <- c(0, boosters_future)
                 names(boosters_future)[1] <-
-                    as.character(sircovid_date_as_date(date_end_past))
+                    as.character(covid_multi_strain_date_as_date(date_end_past))
                 boosters_future <- boosters_future[!duplicated(boosters_future)]
             }
             tmp <- check_doses_boosters_future(boosters_future, end_date,
@@ -890,7 +890,7 @@ check_doses_boosters_future <- function(doses, end, end_past) {
     }
     # assert_date_string(names(doses), name = sprintf("names(%s)",
     #                                                 deparse(substitute(doses))))
-    doses_future_date <- sircovid_date(names(doses))
+    doses_future_date <- covid_multi_strain_date(names(doses))
     # assert_increasing(doses_future_date,
     #                   name = sprintf("names(%s)",
     #                                  deparse(substitute(doses))))
@@ -900,7 +900,7 @@ check_doses_boosters_future <- function(doses, end, end_past) {
             "'end_date' must be at least %s (last %s date) but was %s",
             last(names(doses)),
             deparse(substitute(doses)),
-            sircovid_date_as_date(end)))
+            covid_multi_strain_date_as_date(end)))
     }
     
     if (doses_future_date[[1]] < end_past) {

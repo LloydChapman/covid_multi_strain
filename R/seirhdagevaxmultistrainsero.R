@@ -297,7 +297,7 @@ strain_parameters <- function(strain_transmission, strain_seed_date,
         if (length(strain_seed_size) != 1L) {
             stop("'strain_seed_size' must be a single value")
         }
-        # assert_sircovid_date(strain_seed_date)
+        # assert_covid_multi_strain_date(strain_seed_date)
         # assert_non_negative(strain_seed_size)
         # assert_positive(strain_seed_pattern)
         
