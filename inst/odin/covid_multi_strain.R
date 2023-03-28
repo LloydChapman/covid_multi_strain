@@ -134,14 +134,14 @@ n_EV_skip[, , ] <- rbinom(E[i,j,k] - n_EI[i,j,k] - n_EV[i,j,k], p_EV_skip[i,j,k]
 n_I_PI_C[, , ] <- rbinom(I_P[i,j,k], p_I_PI_C)
 # vaccination
 n_I_PV[, , ] <- rbinom(I_P[i,j,k] - n_I_PI_C[i,j,k], p_I_PV[i,j,k])
-n_I_PV_skip[, , ] <- rbinom(I_P[i,j,k] - n_I_PI_C[i,j,k], p_I_PV_skip[i,j,k])
+n_I_PV_skip[, , ] <- rbinom(I_P[i,j,k] - n_I_PI_C[i,j,k] - n_I_PV[i,j,k], p_I_PV_skip[i,j,k])
 
 # Flow out of I_A:
 # progression
 n_I_AR[, , ] <- rbinom(I_A[i,j,k], p_I_AR)
 # vaccination
 n_I_AV[, , ] <- rbinom(I_A[i,j,k] - n_I_AR[i,j,k], p_I_AV[i,j,k])
-n_I_AV_skip[, , ] <- rbinom(I_A[i,j,k] - n_I_AR[i,j,k], p_I_AV_skip[i,j,k])
+n_I_AV_skip[, , ] <- rbinom(I_A[i,j,k] - n_I_AR[i,j,k] - n_I_AV[i,j,k], p_I_AV_skip[i,j,k])
 
 # Flow out of I_C:
 # progression
