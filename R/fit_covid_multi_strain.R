@@ -1,4 +1,4 @@
-fit_covid_multi_strain <- function(data_raw,schedule,pop,age_groups,u,n_iters,run,deterministic = TRUE,Rt = FALSE,thinning = 1){
+fit_covid_multi_strain <- function(data_raw,schedule,pop,age_groups,vaccine_progression_rate,u,n_iters,run,deterministic = TRUE,Rt = FALSE,thinning = 1){
     #### Set up model and parameters ####
     if (n_iters < 100){
         stop("n_iters must be at least 100")
@@ -188,7 +188,7 @@ fit_covid_multi_strain <- function(data_raw,schedule,pop,age_groups,u,n_iters,ru
     # Vaccination parameters
     # vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(67.7/82.8)/(105-25)) # (Stowe Nat Comm 2022 Table S11)
     # # vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(66/89)/((5-1)*30) # (Ferdinands BMJ 2022))
-    vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(0.923)/140) # (Barnard Nat Comm 2022 Table S4)
+    # vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(0.923)/140) # (Barnard Nat Comm 2022 Table S4)
     
     vaccine_index_dose2 <- 2L
     vaccine_index_booster <- 4L

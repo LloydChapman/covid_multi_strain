@@ -59,6 +59,10 @@ schedule <- vaccination_data(vax,delay_dose1,delay_dose2,pop,age_groups_vax,
 vaccination_coverage_plot(schedule,age_groups,vax,pop)
 ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
 
+# Set progression rates between different vaccine strata
+# vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(0.923)/140) # (Barnard Nat Comm 2022 Table S4)
+vaccine_progression_rate <- c(0,0,1/(26*7),0,-log(67.7/82.8)/(105-25)) # (Stowe Nat Comm 2022 Table S11)
+
 # Fit covid_multi_strain to FP data
 # u <- 1:9 # all parameters
 # u <- 1:4 # only beta parameters
@@ -69,11 +73,11 @@ u <- c(1:5,7:9,12:13) # beta parameters, seed date, strain seed date, IHR scalin
 # u <- c(1:10,12:14,17) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, observation parameters for case data
 # u <- c(1:7,9:11,14) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, observation parameters for case data
 n_iters <- 5e4 #1e3 #2e4 #1e4 #200 #
-run <- 77 #75 #76 #
+run <- 78 #77 #75 #76 #
 deterministic <- T # flag for whether to use "deterministic particle filter" or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state"
 thinning <- 10
-fit_covid_multi_strain(data_raw,schedule,pop,age_groups,u,n_iters,run,deterministic,Rt,thinning)
+fit_covid_multi_strain(data_raw,schedule,pop,age_groups,vaccine_progression_rate,u,n_iters,run,deterministic,Rt,thinning)
 
 # Post processing
 # Set output to use
