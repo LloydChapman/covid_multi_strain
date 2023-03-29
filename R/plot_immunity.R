@@ -13,7 +13,7 @@ pop <- fread("data/population.csv")
 # Set age groups
 age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
 
-run <- 77
+run <- 77 #78
 
 # Set output to use
 output <- paste0("output/MCMCoutput",run,".RData")
