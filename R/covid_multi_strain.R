@@ -641,7 +641,9 @@ index <- function(info, min_ages = seq(0,70,by = 10), Rt = TRUE){
     # R states (age x (total) strain x vacc class)
     index_R <- calculate_index(index, "R", list(S = n_tot_strains, 
                                                 V = n_vacc_classes), suffix)
+    # index_N_tot <- index[["N_tot"]]
     
+    # index_state <- c(index_run, index_effective_susceptible, index_N_tot)
     index_state <- c(index_run, index_effective_susceptible)
     # index_state <- c(index_run, index_effective_susceptible,
     #                  index_new_infections, index_new_reinfections)
@@ -919,7 +921,7 @@ compare <- function(state, observed, pars){
     ll_sero_pos_1_50_59 <- ll_binom(observed$sero_pos_1_50_59,observed$sero_tot_1_50_59,model_sero_prob_pos_1_50_59)
     ll_sero_pos_1_60_69 <- ll_binom(observed$sero_pos_1_60_69,observed$sero_tot_1_60_69,model_sero_prob_pos_1_60_69)
     ll_sero_pos_1_70_plus <- ll_binom(observed$sero_pos_1_70_plus,observed$sero_tot_1_70_plus,model_sero_prob_pos_1_70_plus)
-    
+
     # Log-likelihood for variant proportion
     ll_strain <- ll_binom(observed$strain_non_variant,observed$strain_tot,model_strain_prob_pos)
     
@@ -928,7 +930,8 @@ compare <- function(state, observed, pars){
     # ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
     # ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
     # ll_hosps_70_plus + ll_deaths_70_plus
-    # ll_hosps + ll_deaths + ll_sero_pos_1 + ll_strain +
+    # ll_hosps + ll_deaths + ll_sero_pos_1 + 
+    ll_strain +
     1*(ll_cases_0_9 + ll_cases_10_19 + ll_cases_20_29 + ll_cases_30_39 + ll_cases_40_49 + ll_cases_50_59 + ll_cases_60_69 + ll_cases_70_plus) +
         1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
         1*(ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus) + 
