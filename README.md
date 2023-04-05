@@ -25,12 +25,16 @@ remotes::install_github(c(
 
 Clone/download this project onto your machine.
 
-The odin model code is contained in [covid_multi_strain.R](inst/odin/covid_multi_strain.R).
-
 ## Data
 All data required to run the code are contained in the [data](data) folder and are also available on Zenodo: [doi:10.5281/zenodo.7790839](https://doi.org/10.5281/zenodo.7790839)
 
 ## Running the code
+
+The odin model code is contained in [covid_multi_strain.R](inst/odin/covid_multi_strain.R). If required, the model can be modified by editing this code, and then recompiled by calling 
+```R
+odin_dust("inst/odin/covid_multi_strain.R")
+```
+as in [fit_covid_multi_strain.R](R/fit_covid_multi_strain.R).
 
 The workflow is as follows. The model can be fit to the data for French Polynesia using the adaptive MCMC algorithm in [pmcmc.R](R/pmcmc.R) by running:
 ```R
@@ -70,5 +74,5 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 ## References
 1. Aubry M, Maset N, Chapman L, Simon A, Olivier S, Bos R, Chung K, Teiti I, Kucharski A, Mallet H-P, Cao-Lormeau V-M. Seroprevalence of sars-cov-2 antibodies in french polynesia and perspective for vaccine strategies. Preprints, 2022. [doi:10.20944/preprints202212.0386.v1](https://doi.org/10.20944/preprints202212.0386.v1)
 
-2. FitzJohn RG, Knock ES, Whittles LK, Perez-Guzman PN, Bhatia S, Guntoro F, Watson OJ, Whittaker C, Ferguson NM, Cori A, Baguelin M, and Lees JA. Reproducible parallel inference and simulation of stochastic state space models using odin, dust, and mcstate. Wellcome Open Research, 5:288, 12 2021. [doi:10.12688/wellcomeopenres.16466.1](https://doi.org/10.12688/wellcomeopenres.16466.1)
+2. FitzJohn RG, Knock ES, Whittles LK, Perez-Guzman PN, Bhatia S, Guntoro F, Watson OJ, Whittaker C, Ferguson NM, Cori A, Baguelin M, and Lees JA. Reproducible parallel inference and simulation of stochastic state space models using odin, dust, and mcstate. Wellcome Open Research, 5:288, 12 2021. [doi:10.12688/wellcomeopenres.16466.2](https://doi.org/10.12688/wellcomeopenres.16466.2)
 
