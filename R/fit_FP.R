@@ -57,6 +57,7 @@ schedule <- vaccination_data(vax,delay_dose1,delay_dose2,pop,age_groups_vax,
 
 # Plot vaccination coverage by age
 vaccination_coverage_plot(schedule,age_groups,vax,pop)
+dir.create("output")
 ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
 
 # Set progression rates between different vaccine strata
