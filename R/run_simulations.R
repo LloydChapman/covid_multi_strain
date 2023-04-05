@@ -28,12 +28,12 @@ pop <- fread("data/population.csv")
 covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Set MCMC output
-mcmc_run <- 77 #78 #75 #76 #
-output <- paste0("output/MCMCoutput",mcmc_run,".RData")
+run <- 77 #78 #75 #76 #
+output <- paste0("output/MCMCoutput",run,".RData")
 
 ## Run counterfactual simulations
 # Set run number
-run <- 18 #19 #17 #16
+sim_run <- 18 #19 #17 #16
 # Set whether states required to calculate Rt have been output 
 Rt <- T
 # Set number of parameter samples and burn-in to remove
@@ -244,10 +244,10 @@ tbl <- total_outcomes[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                          `Hospital deaths` = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "signif"))]
 tbl[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
 tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
-write.csv(tbl[c(1,2,9,11),],paste0("output/table1_",run,".csv"),row.names = F)
+write.csv(tbl[c(1,2,9,11),],paste0("output/table1_",sim_run,".csv"),row.names = F)
 
-write.csv(tbl[c(1,9,11),],paste0("output/table1_vax_",run,".csv"),row.names = F)
-write.csv(tbl[c(1,3:8),],paste0("output/table1_lockdown_",run,".csv"),row.names = F)
+write.csv(tbl[c(1,9,11),],paste0("output/table1_vax_",sim_run,".csv"),row.names = F)
+write.csv(tbl[c(1,3:8),],paste0("output/table1_lockdown_",sim_run,".csv"),row.names = F)
 
 tbl1 <- q_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                                  Wave = wave,
@@ -256,7 +256,7 @@ tbl1 <- q_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(tt
                                  `Hospital deaths` = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 0,method = "round"))]
 tbl1[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
 tbl1 <- dcast(tbl1, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
-write.csv(tbl1, paste0("output/total_outcomes_averted_",run,".csv"),row.names = F)
+write.csv(tbl1, paste0("output/total_outcomes_averted_",sim_run,".csv"),row.names = F)
 
 tbl2 <- q_prop_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                                     Wave = wave,
@@ -265,7 +265,7 @@ tbl2 <- q_prop_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,nam
                                     `Hospital deaths` = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "round"))]
 tbl2[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
 tbl2 <- dcast(tbl2, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
-write.csv(tbl2,paste0("output/prop_total_outcomes_averted_",run,".csv"),row.names = F)
+write.csv(tbl2,paste0("output/prop_total_outcomes_averted_",sim_run,".csv"),row.names = F)
 
 # Plot counterfactuals
 
@@ -281,19 +281,19 @@ pp0 <- plot_grid(p_cases_lockdown + theme(legend.position = "none"),
                  p_hosps_lockdown + theme(legend.position = "none"),
                  p_deaths_lockdown + theme(legend.position = "none"), nrow = 1)
 l0 <- get_legend(p_deaths_lockdown)
-ggsave(paste0("output/cntfctl_cases_hosps_and_deaths_lockdown",run,".pdf"),plot_grid(pp0,l0,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 3)
+ggsave(paste0("output/cntfctl_cases_hosps_and_deaths_lockdown",sim_run,".pdf"),plot_grid(pp0,l0,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 3)
 
 # Alternative lockdown timing counterfactuals
 idx <- 2:7
 # Cases
 p_cases <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"cases","Cases",ttls[names(ttls) %in% idx])
-ggsave(paste0("output/cntfctl_cases",run,".pdf"),p_cases,width = 8,height = 5.2)
+ggsave(paste0("output/cntfctl_cases",sim_run,".pdf"),p_cases,width = 8,height = 5.2)
 # Hospitalisations
 p_hosps <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"hosps","Hospitalisations",ttls[names(ttls) %in% idx])
-ggsave(paste0("output/cntfctl_hosps",run,".pdf"),p_hosps,width = 8,height = 5.2)
+ggsave(paste0("output/cntfctl_hosps",sim_run,".pdf"),p_hosps,width = 8,height = 5.2)
 # Deaths in hospital
 p_deaths <- plot_counterfactuals(q_outcomes[cntfctl %in% idx],q_outcomes_cntfctl[cntfctl %in% idx],"deaths","Hospital deaths",ttls[names(ttls) %in% idx])
-ggsave(paste0("output/cntfctl_deaths",run,".pdf"),p_deaths,width = 8,height = 5.2)
+ggsave(paste0("output/cntfctl_deaths",sim_run,".pdf"),p_deaths,width = 8,height = 5.2)
 
 # No vaccination counterfactual
 idx <- 8
@@ -305,7 +305,7 @@ pp <- plot_grid(p_cases_vax + theme(legend.position = "none"),
                 p_hosps_vax + theme(legend.position = "none"),
                 p_deaths_vax + theme(legend.position = "none"), nrow = 1)
 l <- get_legend(p_deaths_vax)
-ggsave(paste0("output/cntfctl_hosps_and_deaths_vax",run,".pdf"),plot_grid(pp,l,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 3)
+ggsave(paste0("output/cntfctl_hosps_and_deaths_vax",sim_run,".pdf"),plot_grid(pp,l,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 3)
 
 # No boosters counterfactual
 idx <- 10 #8:9
@@ -317,14 +317,14 @@ pp1 <- plot_grid(p_cases_booster + theme(legend.position = "none"),
                  p_hosps_booster + theme(legend.position = "none"),
                  p_deaths_booster + theme(legend.position = "none"), nrow = 1)
 l1 <- get_legend(p_deaths_booster)
-ggsave(paste0("output/cntfctl_hosps_and_deaths_booster",run,".pdf"),plot_grid(pp1,l1,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 3)
+ggsave(paste0("output/cntfctl_hosps_and_deaths_booster",sim_run,".pdf"),plot_grid(pp1,l1,nrow = 2,rel_heights = c(1,0.1)),width = 9,height = 3)
 
 # pp2 <- plot_grid(pp0,pp,pp1,l1,nrow = 4,ncol = 1,rel_heights = c(1,1,1,0.1),width = 9, height = 10)
 outcome <- c("cases","hosps","deaths")
 ttls1 <- c("Cases","Hospitalisations","Hospital deaths")
 names(ttls1) <- outcome
 p_cntfctl <- plot_counterfactuals_together(q_outcomes[cntfctl %in% c(1,8,10)],q_outcomes_cntfctl[cntfctl %in% c(1,8,10)],outcome,ttls1,ttls[names(ttls) %in% c(1,8,10)])
-ggsave(paste0("output/cntfctl_cases_hosps_and_deaths",run,".pdf"),p_cntfctl,width = 9,height = 3)
+ggsave(paste0("output/cntfctl_cases_hosps_and_deaths",sim_run,".pdf"),p_cntfctl,width = 9,height = 3)
 
-save.image(paste0("output/cntfctl_output",run,".RData"))
+save.image(paste0("output/cntfctl_output",sim_run,".RData"))
 
