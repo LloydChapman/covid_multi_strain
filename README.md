@@ -30,13 +30,13 @@ All data required to run the code are contained in the [data](data) folder and a
 
 ## Running the code
 
-The odin model code is contained in [covid_multi_strain.R](inst/odin/covid_multi_strain.R). If required, the model can be modified by editing this code, and then recompiled by calling 
+The odin model code is contained in [inst/odin/covid_multi_strain.R](inst/odin/covid_multi_strain.R). If required, the model can be modified by editing this code, and then recompiled by calling 
 ```R
 odin_dust("inst/odin/covid_multi_strain.R")
 ```
 as in [fit_covid_multi_strain.R](R/fit_covid_multi_strain.R).
 
-The workflow is as follows. The model can be fit to the data for French Polynesia using the adaptive MCMC algorithm in [pmcmc.R](R/pmcmc.R) by running:
+The workflow for fitting the model and running counterfactual simulations is as follows. The model can be fit to the data for French Polynesia using the adaptive MCMC algorithm in [pmcmc.R](R/pmcmc.R) by running:
 ```R
 source("R/fit_FP.R")
 ```
