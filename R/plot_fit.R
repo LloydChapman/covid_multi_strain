@@ -27,9 +27,10 @@ plot_fit <- function(output,run,pop,burnin = NULL,moving_avg = FALSE,n_smpls = 1
     ggsave(paste0("output/outcomes_by_age",run,".pdf"),p_list$p,width = 9,height = 3)
     ggsave(paste0("output/prop_outcomes_by_age",run,".pdf"),p_list$p1,width = 9,height = 3)
     
-    res1 <- plot_transmission_rate(res$pars,beta_type,beta_date,dt,max(data$day_end),burnin = burnin)
+    base <- pars$base
+    res1 <- plot_transmission_rate(res$pars,base$beta_type,base$beta_date,base$dt,max(data$day_end),burnin = burnin)
     p <- res1$p
-    res2 <- plot_transmission_rate(res$pars[,c(1,3,5:14)],beta_type,beta_date[c(1,3,5)],dt,max(data$day_end),burnin = burnin)
+    res2 <- plot_transmission_rate(res$pars[,c(1,3,5:14)],base$beta_type,base$beta_date[c(1,3,5)],base$dt,max(data$day_end),burnin = burnin)
     beta_step <- res2$beta_step
     p1 <- p + geom_line(aes(x = date,y = `50%`,color = "No lockdowns"),beta_step) + 
         geom_ribbon(aes(x = date,ymin = `2.5%`,ymax = `97.5%`,fill = "No lockdowns"),beta_step,alpha = 0.5) + 
