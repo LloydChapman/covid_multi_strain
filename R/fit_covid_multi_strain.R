@@ -117,49 +117,4 @@ fit_covid_multi_strain <- function(data_raw,pars,u,n_iters,run,deterministic = T
     # Save output
     save(list = ls(all.names = T), file = paste0("output/MCMCoutput",run,".RData"), envir = environment())
     
-    # Plot p.w. constant beta to check it looks right
-    dt <- base$dt
-    beta_date <- base$beta_date
-    beta_t <- seq(0, beta_date[length(beta_date)], by = dt)
-    pdf(paste0("output/plots",run,".pdf")) # save all plots into one pdf
-    par(mfrow = c(1,1))
-    
-    n_smpls <- round(n_iters/thinning)
-    beta_value_post <- apply(res$pars[seq(round(n_smpls/10),n_smpls,by = min(round(n_smpls/10),10)),seq_along(beta_date)],2,median)
-    if (base$beta_type == "piecewise-linear") {
-        beta_step <- parameters_piecewise_linear(beta_date, 
-                                                 beta_value_post %||% 0.1, dt)
-    } else if (base$beta_type == "piecewise-constant") {
-        beta_step <- parameters_piecewise_constant(beta_date, 
-                                                   beta_value_post %||% 0.1, dt)
-    }
-    plot(covid_multi_strain_date_as_date(beta_t), beta_step, type = "o", cex = 0.25, xaxt = "n", xlab = "Date", ylab = "beta")
-    dates_plot <- seq.Date(covid_multi_strain_date_as_date(beta_t[1]),covid_multi_strain_date_as_date(beta_t[length(beta_t)]),by = 30)
-    axis(1, dates_plot, format(dates_plot,"%Y-%m-%d"))
-    
-    # Trace plots
-    par(mar = c(2.5,4,2,1), mfrow = c(ceiling(length(u)/2),2))
-    for (i in u){
-        plot(res$pars[,i],type = "l",xlab = "Iteration",ylab = names(pars_init)[i])
-    }
-    
-    # Scaling factor
-    par(mfrow = c(1,1))
-    plot(res$scaling_factor,type="l")
-    
-    par(mfrow = c(1,1))
-    # pairs(res$pars[seq(round(n_smpls/10),n_smpls,by=10), ],labels = names(pars_init))
-    pairs(res$pars[seq(round(n_smpls/10),n_smpls,by = min(round(n_smpls/10),10)),u],labels = names(pars_init)[u])
-    
-    # Plot fitted hospitalisations and deaths against data
-    print(plot_outcome(res$trajectories$state,data,"hosps",by_age = T))
-    print(plot_outcome(res$trajectories$state,data,"deaths",by_age = T))
-    print(plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"],by_age = T))
-    print(plot_sero(res$trajectories$state,data,pop[,.(population = sum(total)),by = .(age_group)],by_age = T))
-    print(plot_outcome(res$trajectories$state,data,"hosps"))
-    print(plot_outcome(res$trajectories$state,data,"deaths"))
-    print(plot_outcome(res$trajectories$state,data,"cases",res$pars[,"phi_cases"]))
-    
-    dev.off()
-    
 }
