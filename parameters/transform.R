@@ -1,0 +1,207 @@
+apply_assumptions <- function(baseline, assumptions){
+    stopifnot(assumptions %in% names(baseline$vaccine_progression_rate))
+    baseline$vaccine_progression_rate <-
+        baseline$vaccine_progression_rate[[assumptions]]
+    baseline
+}
+
+
+make_transform <- function(baseline){
+    
+    # Expected fixed parameters
+    expected <- c("dt",
+                  "age_groups",
+                  "n_age",
+                  "n_vax",
+                  "m",
+                  "beta_date",
+                  "beta_names",
+                  "beta_type",
+                  "gamma_E",
+                  "gamma_P",
+                  "gamma_A",
+                  "gamma_C",
+                  "gamma_H",
+                  "gamma_G",
+                  "gamma_pre_1",
+                  "gamma_P_1",
+                  "theta_A",
+                  "p_C",
+                  "p_H",
+                  "p_G",
+                  "p_D",
+                  "p_P_1",
+                  "population",
+                  "initial_seed_size",
+                  "initial_seed_pattern",
+                  "strain_seed_size",
+                  "strain_seed_pattern",
+                  "strain_rel_p_sympt",
+                  "strain_rel_p_hosp_if_sympt",
+                  "strain_rel_p_death",
+                  "rel_susceptibility",
+                  "rel_p_sympt",
+                  "rel_p_hosp_if_sympt",
+                  "rel_p_death",
+                  "rel_infectivity",
+                  "vaccine_progression_rate",
+                  "vaccine_schedule",
+                  "vaccine_index_dose2",
+                  "vaccine_index_booster",
+                  "vaccine_catchup_fraction",
+                  "n_doses",
+                  "vacc_skip_progression_rate",
+                  "vacc_skip_to",
+                  "vacc_skip_weight",
+                  "waning_rate",
+                  "cross_immunity",
+                  "start_date1",
+                  "strain_rel_p_sympt1",
+                  "strain_rel_p_hosp_if_sympt1",
+                  "strain_rel_p_death1",
+                  "rel_susceptibility1",
+                  "rel_p_sympt1",
+                  "rel_p_hosp_if_sympt1",
+                  "rel_p_death1",
+                  "rel_infectivity1",
+                  "cross_immunity1",
+                  "sero_sensitivity_1",
+                  "sero_specificity_1")
+    stopifnot(setequal(expected, names(baseline)))
+    
+    start_date1 <- baseline$start_date1
+    
+    # Expected parameters for fitting
+    expected <- c(baseline$beta_names,"start_date","rel_strain_transmission",
+                  "strain_seed_date","p_H_max","p_D_max",
+                  "rel_strain_transmission1","strain_seed_date1",
+                  "phi_cases","alpha_cases")
+    
+    function(pars){
+        stopifnot(setequal(expected, names(pars)))
+        beta_value <- unname(pars[baseline$beta_names])
+        start_date <- pars[["start_date"]]
+        rel_strain_transmission <- pars[["rel_strain_transmission"]]
+        strain_seed_date <- pars[["strain_seed_date"]]
+        p_H_max <- pars[["p_H_max"]]
+        p_D_max <- pars[["p_D_max"]]
+        rel_strain_transmission1 <- pars[["rel_strain_transmission1"]]
+        strain_seed_date1 <- pars[["strain_seed_date1"]]
+        phi_cases <- pars[["phi_cases"]]
+        kappa_cases <- 1/pars[["alpha_cases"]]
+        
+        # Parameters for 1st epoch
+        p <- parameters(baseline$dt,
+                        baseline$n_age,
+                        baseline$n_vax,
+                        baseline$m,
+                        baseline$beta_date,
+                        beta_value = beta_value,
+                        baseline$beta_type,
+                        baseline$gamma_E,
+                        baseline$gamma_P,
+                        baseline$gamma_A,
+                        baseline$gamma_C,
+                        baseline$gamma_H,
+                        baseline$gamma_G,
+                        baseline$gamma_pre_1,
+                        baseline$gamma_P_1,
+                        baseline$theta_A,
+                        baseline$p_C,
+                        p_H = p_H_max*baseline$p_H,
+                        baseline$p_G,
+                        p_D = p_D_max*baseline$p_D,
+                        baseline$p_P_1,
+                        baseline$population,
+                        start_date = start_date,
+                        baseline$initial_seed_size,
+                        baseline$initial_seed_pattern,
+                        strain_transmission = c(1,rel_strain_transmission),
+                        strain_seed_date = strain_seed_date,
+                        baseline$strain_seed_size,
+                        baseline$strain_seed_pattern,
+                        baseline$strain_rel_p_sympt,
+                        baseline$strain_rel_p_hosp_if_sympt,
+                        baseline$strain_rel_p_death,
+                        baseline$rel_susceptibility,
+                        baseline$rel_p_sympt,
+                        baseline$rel_p_hosp_if_sympt,
+                        baseline$rel_p_death,
+                        baseline$rel_infectivity,
+                        baseline$vaccine_progression_rate,
+                        baseline$vaccine_schedule,
+                        baseline$vaccine_index_dose2,
+                        baseline$vaccine_index_booster,
+                        baseline$vaccine_catchup_fraction,
+                        baseline$n_doses,
+                        baseline$vacc_skip_progression_rate,
+                        baseline$vacc_skip_to,
+                        baseline$vacc_skip_weight,
+                        baseline$waning_rate,
+                        baseline$cross_immunity,
+                        phi_cases = phi_cases,
+                        kappa_cases = kappa_cases,
+                        baseline$sero_sensitivity_1,
+                        baseline$sero_specificity_1)
+        
+        # Parameters for 2nd epoch
+        p1 <- parameters(baseline$dt,
+                         baseline$n_age,
+                         baseline$n_vax,
+                         baseline$m,
+                         baseline$beta_date,
+                         beta_value = beta_value,
+                         baseline$beta_type,
+                         baseline$gamma_E,
+                         baseline$gamma_P,
+                         baseline$gamma_A,
+                         baseline$gamma_C,
+                         baseline$gamma_H,
+                         baseline$gamma_G,
+                         baseline$gamma_pre_1,
+                         baseline$gamma_P_1,
+                         baseline$theta_A,
+                         baseline$p_C,
+                         p_H = p_H_max*baseline$p_H,
+                         baseline$p_G,
+                         p_D = p_D_max*baseline$p_D,
+                         baseline$p_P_1,
+                         baseline$population,
+                         start_date = start_date1,
+                         initial_seed_size = 0,
+                         baseline$initial_seed_pattern,
+                         strain_transmission = c(rel_strain_transmission,rel_strain_transmission1),
+                         strain_seed_date = strain_seed_date1,
+                         baseline$strain_seed_size,
+                         baseline$strain_seed_pattern,
+                         baseline$strain_rel_p_sympt1,
+                         baseline$strain_rel_p_hosp_if_sympt1,
+                         baseline$strain_rel_p_death1,
+                         baseline$rel_susceptibility1,
+                         baseline$rel_p_sympt1,
+                         baseline$rel_p_hosp_if_sympt1,
+                         baseline$rel_p_death1,
+                         baseline$rel_infectivity1,
+                         baseline$vaccine_progression_rate,
+                         baseline$vaccine_schedule,
+                         baseline$vaccine_index_dose2,
+                         baseline$vaccine_index_booster,
+                         baseline$vaccine_catchup_fraction,
+                         baseline$n_doses,
+                         baseline$vacc_skip_progression_rate,
+                         baseline$vacc_skip_to,
+                         baseline$vacc_skip_weight,
+                         baseline$waning_rate,
+                         baseline$cross_immunity1,
+                         phi_cases = phi_cases,
+                         kappa_cases = kappa_cases,
+                         baseline$sero_sensitivity_1,
+                         baseline$sero_specificity_1)
+        
+        epochs <- list(
+            multistage_epoch(start_date1, pars = p1, transform_state = transform_state)
+        )
+        p_multistage <- multistage_parameters(p, epochs)
+        p_multistage
+    }
+}

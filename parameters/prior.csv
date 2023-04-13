@@ -1,0 +1,15 @@
+"type","name","gamma_scale","gamma_shape","beta_shape1","beta_shape2"
+"gamma","beta1",0.005,4,NA,NA
+"gamma","beta2",0.005,4,NA,NA
+"gamma","beta3",0.005,4,NA,NA
+"gamma","beta4",0.005,4,NA,NA
+"gamma","beta5",0.005,4,NA,NA
+"null","rel_strain_transmission",NA,NA,NA,NA
+"null","start_date",NA,NA,NA,NA
+"null","strain_seed_date",NA,NA,NA,NA
+"beta","p_H_max",NA,NA,1,1
+"beta","p_D_max",NA,NA,1,1
+"null","rel_strain_transmission1",NA,NA,NA,NA
+"null","strain_seed_date1",NA,NA,NA,NA
+"beta","phi_cases",NA,NA,1,1
+"beta","alpha_cases",NA,NA,1,1

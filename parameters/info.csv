@@ -1,0 +1,15 @@
+"name","initial","min","max","integer"
+"beta1",0.025,0,1,FALSE
+"beta2",0.02,0,1,FALSE
+"beta3",0.024,0,1,FALSE
+"beta4",0.02,0,1,FALSE
+"beta5",0.024,0,1,FALSE
+"rel_strain_transmission",2.8,0.25,4,FALSE
+"start_date",1,1,10,TRUE
+"strain_seed_date",330,305,345,TRUE
+"p_H_max",0.2003133525,0,1,FALSE
+"p_D_max",0.316,0,1,FALSE
+"rel_strain_transmission1",3.5,2,6,FALSE
+"strain_seed_date1",505,500,512,TRUE
+"phi_cases",0.5,0,1,FALSE
+"alpha_cases",0.5,0,1,FALSE
