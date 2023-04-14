@@ -173,7 +173,6 @@ convert_eff_to_rel_param <- function(vax_eff,age_groups){
 # }
 
 
-# TODO: check this works for seiragevax
 build_rel_param <- function(rel_param, n_groups, n_strains, n_vacc_classes, name_param) {
     if (length(rel_param) == 1) {
         mat_rel_param <- array(rel_param, c(n_groups, n_strains, n_vacc_classes))
@@ -257,30 +256,32 @@ build_vaccine_progression_rate <- function(vaccine_progression_rate, n_groups, n
 ##'  5. all individuals 18+ years 
 ##' @title Compute vaccination order
 ##'
-##' @param uptake A vector of length 19 with fractional uptake per
+##' @param n_groups Number of age (and potentially risk) groups into which 
+##' population is split in the model
+##' 
+##' @param uptake A vector of length `n_groups` with fractional uptake per
 ##'   group. If a single number is given it is shared across all
 ##'   groups (note that this includes under-18s)
 ##'
 ##' @param prop_hcw Assumed fraction of healthcare workers in each
-##'   group (length 19) - if `NULL` we use a default that is a guess
+##'   group (length `n_groups`) - if `NULL` we use a default that is a guess
 ##'   with hopefully the right general shape.
 ##'
 ##' @param prop_very_vulnerable Assumed fraction "very vulnerable" in
-##'   each group (length 19) - if `NULL` we use a default that is a
+##'   each group (length `n_groups`) - if `NULL` we use a default that is a
 ##'   guess with hopefully the right general shape.
 ##'
-##' @param prop_underlying_condition Assumed fraction "underlying
-##'   condition" in each group (length 19) - if `NULL` we use a
+##' @param prop_underlying_condition Assumed fraction with "underlying
+##'   condition" in each group (length n_groups) - if `NULL` we use a
 ##'   default that is a guess with hopefully the right general shape.
 ##'
-##' @return A matrix with n_groups rows (19) and columns representing
-##'   priority groups, and element (i, j) is the proportion in group i
+##' @return A matrix with `n_groups` rows and columns representing
+##'   priority groups, and element (i,j) is the proportion in group i
 ##'   who should be vaccinated as part of priority group j, accounting
 ##'   for uptake so that the sum over the rows corresponds to the
-##'   total fractional uptake in that group. For
+##'   total fractional uptake in that group. In
 ##'   `vaccine_priority_population`, the total number of
-##'   individuals replaces the proportion (based on the demography
-##'   used by sircovid).
+##'   individuals replaces the proportion.
 ##'
 ##' @rdname vaccine_priority
 ##' @export
@@ -356,7 +357,7 @@ vaccine_priority_proportion <- function(n_groups,
 }
 
 
-##' @param pop Vector of total population numbers in groups
+##' @param pop Vector of total population numbers vaccinated by age group
 ##'
 ##' @rdname vaccine_priority
 ##' @export
@@ -536,16 +537,14 @@ vaccine_schedule_future <- function(start,
 ##' @param date A single date, representing the first day that
 ##'   vaccines will be given
 ##'
-##' @param doses A 3d array of doses representing (1) the model group
-##'   (19 rows for the lancelot model), (2) the dose (must be length
-##'   2 at present) and (3) time (can be anything nonzero). The values
-##'   represent the number of vaccine doses in that group for that
-##'   dose for that day. So for `doses[i, j, k]` then it is for the
+##' @param doses A 3d array of doses representing (1) the model group (rows),
+##'   (2) the dose (columns) and (3) time (can be anything nonzero) (layers). 
+##'   The values represent the number of vaccine doses in that group for that
+##'   dose for that day, so for `doses[i, j, k]` then it is for the
 ##'   ith group, the number of jth doses on day `(k - 1) + date`
 ##'
 ##' @param n_doses The number of doses in the schedule. Typically (and
-##'   by default) this will be 2, but if using booster doses 3 (and in
-##'   future we may extend further).
+##'   by default) this will be 2, but if using booster doses 3.
 ##'
 ##' @return A `vaccine_schedule` object
 ##' @export
@@ -589,11 +588,16 @@ vaccine_schedule <- function(date, doses, n_doses = 2L) {
 ##'   distributed across all ages according to priority after
 ##'   all age-specific doses have already been dealt with
 ##'
-##' @param region Region to use to get total population numbers
+##' @param age_start A vector of the minimum ages of the age groups 
+##'   in the model
+##'   
+##' @param pop A vector of the same length as `age_start` of the 
+##'   populations of the age groups in the model
 ##'
-##' @param uptake A matrix of 8 rows, and number of columns equal to
-##'   number of doses. The (i,j)th entry gives the fractional uptake
-##'   of dose j for group i. Should be non-increasing across rows
+##' @param uptake A matrix of `length(age_start)` rows, and number of 
+##'   columns equal to number of doses. The (i,j)th entry gives the 
+##'   fractional uptake of dose j for group i. Should be 
+##'   non-increasing across rows
 ##'
 ##' @return A [vaccine_schedule] object
 ##' @export
