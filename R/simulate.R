@@ -162,6 +162,7 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
     # Remove res object as it is very large
     rm(res)
     
+    # Extract baseline parameters from pars object
     base <- pars$base
     dt <- base$dt
     

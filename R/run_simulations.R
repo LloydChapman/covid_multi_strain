@@ -21,49 +21,21 @@ source("R/covid_multi_strain.R")
 source("R/simulate.R")
 
 ## Set MCMC output
-run <- 77 #78 #75 #76 #
+# Change run number for different assumption on booster waning rate
+run <- 77
+# run <- 78
 output <- paste0("output/MCMCoutput",run,".RData")
-
-# # ## Process FP data
-# # source("R/process_FP_data.R")
-# # Load vaccination and population data
-# vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
-# pop <- fread("data/population.csv")
-# 
-# # Create dust model generator
-# covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Run counterfactual simulations
 # Set run number
-sim_run <- 18 #19 #17 #16
+sim_run <- 18
+# sim_run <- 19
 # Set whether states required to calculate Rt have been output 
 Rt <- T
 # Set number of parameter samples and burn-in to remove
 n_smpls <- 500
-burnin <- 1500 #NULL #2000
+burnin <- 1500
 seed <- 1L
-
-# # Set end date for data
-# end_date <- as.Date("2022-05-06") # last death date in data files
-# 
-# # Set age groups
-# age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
-# min_ages <- get_min_age(age_groups)
-# 
-# # Create vaccination schedule
-# # Set delays for immune response to different vaccine doses
-# delay_dose1 <- 28
-# delay_dose2 <- 14
-# 
-# # Get vaccination age groups
-# age_groups_vax <- vax[,unique(age_group)]
-# 
-# # Matrix of uptake rates (age group x dose)
-# uptake <- matrix(1,nrow = length(age_groups),ncol = vax[,length(unique(dose))])
-# 
-# # Make vaccine schedule
-# schedule <- vaccination_data(vax,delay_dose1,delay_dose2,pop,age_groups_vax,
-#                              age_groups,end_date,uptake)
 
 # Set assumption for booster waning rate
 assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
@@ -80,13 +52,11 @@ assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table 
 # mcmc - initialisation object built from the above to pass to the mcmc
 pars <- fit_pars_load("parameters",assumptions)
 
+# Get minimum ages of age groups
 min_ages <- get_min_age(pars$base$age_groups)
 
 # Set probabilities for quantiles for outcomes
 probs <- c(0.025,0.5,0.975)
-
-# # Get tranmsmission matrix
-# transmission <- transmission_matrix("FRA",pop,age_groups)
 
 ## Lockdown counterfactuals
 beta_date <- pars$base$beta_date
@@ -158,7 +128,6 @@ for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ #
 
     ## Calculate total differences in outcomes over each wave
     # Set wave dates
-    # wave_date <- c(1,300,500,nlayer(states_cntfctl))
     wave_date <- c(1,347,500,nlayer(states_cntfctl)-1)
 
     q_outcomes_list[[i]] <- calculate_outcome_quantiles(states,info,min_ages,Rt)
