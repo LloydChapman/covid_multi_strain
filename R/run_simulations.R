@@ -15,21 +15,23 @@ library(abind)
 source("R/utils.R")
 source("R/date.R")
 source("R/vaccination.R")
+source("R/parameters.R")
+source("R/pars.R")
 source("R/covid_multi_strain.R")
 source("R/simulate.R")
-
-# ## Process FP data
-# source("R/process_FP_data.R")
-# Load vaccination and population data
-vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
-pop <- fread("data/population.csv")
-
-# Create dust model generator
-covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Set MCMC output
 run <- 77 #78 #75 #76 #
 output <- paste0("output/MCMCoutput",run,".RData")
+
+# # ## Process FP data
+# # source("R/process_FP_data.R")
+# # Load vaccination and population data
+# vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
+# pop <- fread("data/population.csv")
+# 
+# # Create dust model generator
+# covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
 
 ## Run counterfactual simulations
 # Set run number
@@ -41,40 +43,53 @@ n_smpls <- 500
 burnin <- 1500 #NULL #2000
 seed <- 1L
 
-# Set end date for data
-end_date <- as.Date("2022-05-06") # last death date in data files
+# # Set end date for data
+# end_date <- as.Date("2022-05-06") # last death date in data files
+# 
+# # Set age groups
+# age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
+# min_ages <- get_min_age(age_groups)
+# 
+# # Create vaccination schedule
+# # Set delays for immune response to different vaccine doses
+# delay_dose1 <- 28
+# delay_dose2 <- 14
+# 
+# # Get vaccination age groups
+# age_groups_vax <- vax[,unique(age_group)]
+# 
+# # Matrix of uptake rates (age group x dose)
+# uptake <- matrix(1,nrow = length(age_groups),ncol = vax[,length(unique(dose))])
+# 
+# # Make vaccine schedule
+# schedule <- vaccination_data(vax,delay_dose1,delay_dose2,pop,age_groups_vax,
+#                              age_groups,end_date,uptake)
 
-# Set age groups
-age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
-min_ages <- get_min_age(age_groups)
+# Set assumption for booster waning rate
+assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
+# assumptions <- "optimistic" # -log(0.923)/140 (Barnard Nat Com 2022 Table S4)
 
-# Create vaccination schedule
-# Set delays for immune response to different vaccine doses
-delay_dose1 <- 28
-delay_dose2 <- 14
+## Load parameters
+# Output pars is a list containing:
+# info - the loaded info.csv
+# prior - the loaded prior.csv
+# proposal - the loaded proposal.csv
+# transform - the functions in transform.R
+# raw - exact output of first 3 csvs, without any treatment
+# base - the base.rds object, which contains the fixed parameters
+# mcmc - initialisation object built from the above to pass to the mcmc
+pars <- fit_pars_load("parameters",assumptions)
 
-# Get vaccination age groups
-age_groups_vax <- vax[,unique(age_group)]
-
-# Matrix of uptake rates (age group x dose)
-uptake <- matrix(1,nrow = length(age_groups),ncol = vax[,length(unique(dose))])
-
-# Make vaccine schedule
-schedule <- vaccination_data(vax,delay_dose1,delay_dose2,pop,age_groups_vax,
-                             age_groups,end_date,uptake)
+min_ages <- get_min_age(pars$base$age_groups)
 
 # Set probabilities for quantiles for outcomes
 probs <- c(0.025,0.5,0.975)
 
-# Get tranmsmission matrix
-transmission <- transmission_matrix("FRA",pop,age_groups)
+# # Get tranmsmission matrix
+# transmission <- transmission_matrix("FRA",pop,age_groups)
 
 ## Lockdown counterfactuals
-# Make a list of alternatives for lockdown dates
-# intvtn_date <- as.Date(c(strt_date-1,"2020-10-24","2021-06-30","2021-08-12","2021-12-31","2022-02-15"))
-# intvtn_date <- as.Date(c(strt_date-1,"2020-10-24","2021-06-30","2021-08-12","2021-12-31"))
-intvtn_date <- as.Date(c("2020-08-27","2020-10-24","2021-06-01","2021-08-02","2021-11-15"))
-beta_date <- covid_multi_strain_date(intvtn_date) #as.integer(intvtn_date - min(intvtn_date))
+beta_date <- pars$base$beta_date
 beta_idx_list <- replicate(10,seq_along(beta_date),F)
 beta_date_cntfctl_list <- replicate(10,beta_date,F) #replicate(10,beta_date,F)
 
@@ -99,6 +114,7 @@ beta_date_cntfctl_list[[7]][3:4] <- beta_date[3:4] + 14
 
 ## Vaccination counterfactuals
 # Set counterfactual vaccine schedule
+schedule <- pars$base$vaccine_schedule
 schedule_cntfctl_list <- replicate(10,schedule,F) #replicate(10,schedule,F)
 # No vaccination in counterfactual
 schedule_cntfctl_list[[8]]$doses <- array(0,dim = dim(schedule$doses))
@@ -125,7 +141,7 @@ q_prop_total_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_lis
 
 # Run simulations
 for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ # 
-    out <- simulate_counterfactual(output,n_smpls,transmission,beta_date_cntfctl_list[[i]],beta_idx_list[[i]],
+    out <- simulate_counterfactual(output,n_smpls,beta_date_cntfctl_list[[i]],beta_idx_list[[i]],
                                    schedule_cntfctl_list[[i]],burnin = burnin,seed = seed,min_ages = min_ages)
     states_cntfctl <- out$states_cntfctl
     smpl <- out$smpl

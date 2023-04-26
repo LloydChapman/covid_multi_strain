@@ -137,7 +137,7 @@ change_booster_timing <- function(schedule, days_earlier){
 
 
 ## Run counterfactual simulations
-simulate_counterfactual <- function(output,n_smpls,transmission,beta_date_cntfctl,
+simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
                                     beta_idx,schedule_cntfctl,burnin = NULL,
                                     seed = 1L,min_ages = seq(0,70,by = 10)){
     # Load MCMC output
@@ -150,11 +150,11 @@ simulate_counterfactual <- function(output,n_smpls,transmission,beta_date_cntfct
         burnin <- round((n_iters/thinning)/10)
     }
     # Remove burn-in
-    pars <- res$pars[-(1:(burnin+1)),]
+    pars_mcmc <- res$pars[-(1:(burnin+1)),]
         
     out <- vector("list", n_smpls)
     set.seed(seed)
-    smpl <- sample.int(nrow(pars),n_smpls)
+    smpl <- sample.int(nrow(pars_mcmc),n_smpls)
     
     # Extract posterior samples of trajectories
     states <- res$trajectories$state[,burnin + 1 + smpl,]
@@ -162,18 +162,21 @@ simulate_counterfactual <- function(output,n_smpls,transmission,beta_date_cntfct
     # Remove res object as it is very large
     rm(res)
     
+    base <- pars$base
+    dt <- base$dt
+    
     for (i in seq_len(n_smpls)){
-        j <- smpl[i] #sample.int(nrow(pars),1)
-        pars_i <- pars[j,]
+        j <- smpl[i] #sample.int(nrow(pars_mcmc),1)
+        pars_i <- pars_mcmc[j,]
         if (is.null(names(pars_i))){
-            names(pars_i) <- names(init_pars)
+            names(pars_i) <- names(pars_init)
         }
         transform_pars <- transform(pars_i)
         # TODO: Make this work with one list for p rather than separate 
         # objects for each epoch, so it works for an arbitrary number of epochs
         if (class(transform_pars) == "multistage_parameters"){
             p <- lapply(transform_pars, function(x){
-                change_beta_value(x$pars, pars_i, beta_type, beta_date_cntfctl, beta_idx)
+                change_beta_value(x$pars, pars_i, base$beta_type, beta_date_cntfctl, beta_idx)
             })
             p <- lapply(p, function(x){
                 change_vaccine_schedule(x, schedule_cntfctl)
@@ -182,12 +185,14 @@ simulate_counterfactual <- function(output,n_smpls,transmission,beta_date_cntfct
             p1_i <- p[[2]]
         } else {
             p_i <- transform_pars
-            p_i <- change_beta_value(p_i, pars_i, beta_type, beta_date_cntfctl, beta_idx)
+            p_i <- change_beta_value(p_i, pars_i, base$beta_type, beta_date_cntfctl, beta_idx)
             p_i <- change_vaccine_schedule(p_i, schedule_cntfctl)
             p1_i <- NULL
             n_steps1 <- NULL
             transform_state <- NULL
         }
+        n_steps <- base$start_date1/dt
+        n_steps1 <- max(data_raw$day)/dt
         out[[i]] <- simulate(covid_multi_strain, p_i, n_steps, 
                              deterministic, keep_all_states = F,
                              min_ages = min_ages, Rt = Rt,
