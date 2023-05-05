@@ -1,5 +1,5 @@
 # Process MCMC output from fit_covid_multi_strain()
-process_fit <- function(samples,pars,data_raw,burnin = NULL, simulate_object = TRUE){
+fit_process <- function(samples,pars,data_raw,burnin = NULL, simulate_object = TRUE){
     
     covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
     info <- covid_multi_strain$new(pars$transform(samples$pars[1,])[[1]]$pars,step = 0,

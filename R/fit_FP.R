@@ -26,7 +26,7 @@ source("R/simulate.R")
 source("R/fit_covid_multi_strain.R")
 source("R/pmcmc.R")
 source("R/plot_fit.R")
-source("R/process_fit.R")
+source("R/fit_process.R")
 
 # Load data
 data_raw <- fread("data/data_cases_hosps_deaths_serology.csv")
@@ -72,7 +72,7 @@ samples <- fit_covid_multi_strain(data_raw,pars,u,n_iters,run,deterministic,Rt,t
 burnin <- 1500
 
 # Process MCMC output
-dat <- process_fit(samples,pars,data_raw,burnin,simulate_object = T)
+dat <- fit_process(samples,pars,data_raw,burnin,simulate_object = T)
 
 # Save output
 saveRDS(dat, paste0("output/MCMCoutput",run,".RDS"))
