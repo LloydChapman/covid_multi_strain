@@ -1553,20 +1553,18 @@ plot_transmission_rate <- function(pars,beta_type,beta_date,dt,end_date,burnin =
 
 
 plot_immune_status <- function(output,pop,age_groups,burnin = NULL,n_smpls = 1000,seed = 1){
-    load(output)
-    
-    state <- res$trajectories$state
-    
-    rm(res)
-    gc()
+    dat <- readRDS(output)
     
     if (is.null(burnin)){
-        burnin <- round(ncol(incidence_modelled)/10)
+        burnin <- round(ncol(dat$samples$trajectories$state)/10)
     }
     
     set.seed(seed)
-    smpl <- sample.int(ncol(state)-(burnin+1),n_smpls)
-    state <- state[,burnin + 1 + smpl,,drop = F]
+    smpl <- sample.int(ncol(dat$samples$trajectories$state)-(burnin+1),n_smpls)
+    state <- dat$samples$trajectories$state[,burnin + 1 + smpl,,drop = F]
+    
+    rm(dat)
+    gc()
     
     index_S <- grep("S_",dimnames(state)[[1]])
     nms_S <- dimnames(state)[[1]][index_S]
@@ -1590,6 +1588,9 @@ plot_immune_status <- function(output,pop,age_groups,burnin = NULL,n_smpls = 100
     index_S_R <- c(index_S,index_R)
     S_R <- state[index_S_R,,,drop = F]
     
+    rm(state)
+    gc()
+    
     S_R_by_vacc <- sapply(
         seq_len(dim(S_R)[3]),
         function(k) rowsum(S_R[,,k],names(index_S_R),reorder = F), 
@@ -1605,6 +1606,9 @@ plot_immune_status <- function(output,pop,age_groups,burnin = NULL,n_smpls = 100
     dimnames(inf)[[1]] <- paste0("Inf_",dimnames(inf)[[1]])
     
     S_R_by_vacc_inf <- abind1(S_R_by_vacc,inf)
+    
+    rm(S_R,S_R_by_vacc,inf,x)
+    gc()
     
     # med_S_R_by_vacc_inf <- apply(S_R_by_vacc_inf,c(1,3),median)
     # 
@@ -1625,7 +1629,7 @@ plot_immune_status <- function(output,pop,age_groups,burnin = NULL,n_smpls = 100
     # 
     # View(med_S_R_by_vacc_inf_long[time==657,])
     
-    S_R_by_vacc_inf_long <- data.table:::as.data.table.array(S_R_by_vacc_inf)
+    S_R_by_vacc_inf_long <- as.data.table(S_R_by_vacc_inf)
     names(S_R_by_vacc_inf_long) <- c("state","sample","date","value")
     
     # Convert dates

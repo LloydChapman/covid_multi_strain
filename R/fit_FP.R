@@ -62,14 +62,21 @@ run <- 77
 deterministic <- T # flag for whether to use deterministic model or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 thinning <- 10
-fit_covid_multi_strain(data_raw,pars,u,n_iters,run,deterministic,Rt,thinning)
+samples <- fit_covid_multi_strain(data_raw,pars,u,n_iters,run,deterministic,Rt,thinning)
 
 # Post processing
-# Set output to use
-output <- paste0("output/MCMCoutput",run,".RData")
+# # Set output to use
+# output <- paste0("output/MCMCoutput",run,".RData")
 
 # Set burn-in
 burnin <- 1500
+
+# Process MCMC output
+dat <- process_fit(samples,pars,data_raw,burnin,simulate_object = T)
+
+# Save output
+saveRDS(dat, paste0("output/MCMCoutput",run,".RDS"))
+
 
 # Set whether to plot moving average of data
 moving_avg <- F
@@ -77,12 +84,9 @@ moving_avg <- F
 # Set number of posterior samples for age-decomposition plots
 n_smpls <- 1000
 
-# Set seed for immune status plot
-seed <- 1L
-
 # Plot fit
-plot_fit(output,run,pop,burnin,moving_avg,n_smpls)
+plot_fit(dat,run,pop,u,burnin,moving_avg,n_smpls)
 
 # Process fit
-pars_qntls <- calculate_parameter_quantiles(output,burnin = burnin)
+pars_qntls <- calculate_parameter_quantiles(dat,burnin = burnin)
 write.csv(pars_qntls,paste0("output/parameter_quantiles",run,".csv"), row.names = F)

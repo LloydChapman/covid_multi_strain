@@ -115,6 +115,7 @@ fit_covid_multi_strain <- function(data_raw,pars,u,n_iters,run,deterministic = T
     print(tend - tstart)
     
     # Save output
-    save(list = ls(all.names = T), file = paste0("output/MCMCoutput",run,".RData"), envir = environment())
+    # save(list = ls(all.names = T), file = paste0("output/MCMCoutput",run,".RData"), envir = environment())
+    return(res)
     
 }

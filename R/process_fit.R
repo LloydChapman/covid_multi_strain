@@ -1,36 +1,59 @@
 # Process MCMC output from fit_covid_multi_strain()
-process_fit <- function(samples,init_pars,idx,n_steps,dt,transform,index,filter,date,
-                        beta_date,mean_days_between_doses,schedule,data,
-                        burnin = NULL, simulate_object = TRUE){
+process_fit <- function(samples,pars,data_raw,burnin = NULL, simulate_object = TRUE){
     
-    info <- covid_multi_strain$new(transform(samples$pars[1,]),step = 0,
+    covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
+    info <- covid_multi_strain$new(pars$transform(samples$pars[1,])[[1]]$pars,step = 0,
                                    n_particles = 1)$info() #filter$model$new(samples$pars[1,],0,1)$info()
+    
+    # Extract baseline parameters
+    base <- pars$base
+    
+    # Convert raw data to required format for particle filter
+    data <- particle_filter_data(data_raw,"day",1/base$dt)
+    
+    # Create particle filter object
+    if (deterministic){
+        n_particles <- 1
+        filter <- particle_deterministic$new(
+            data, covid_multi_strain, compare, 
+            index = function(info) 
+                index(info, min_ages = min_ages, Rt = Rt), 
+            initial = initial)
+    } else {
+        n_particles <- 200
+        filter <- particle_filter$new(
+            data, covid_multi_strain, n_particles, compare, 
+            index = function(info) 
+                index(info, min_ages = min_ages, Rt = Rt), 
+            initial = initial
+        )
+    }
     
     samples$predict <- list(transform = transform,
                             index = index(info)$state,
-                            rate = as.integer(1/dt),
+                            rate = as.integer(1/base$dt),
                             filter = filter)
     
     samples$info <- list(info = info,
-                         date = date,
+                         date = covid_multi_strain_date_as_date(dim(samples$trajectories$state)[3] - 1), # SORT THIS OUT, E.G. ADD end_date TO BASELINE PARS
                          multistrain = info$dim$prob_strain > 1,
-                         beta_date = beta_date,
-                         pars = names(init_pars))
+                         beta_date = base$beta_date,
+                         pars = pars$info$name)
     
     if (is.null(burnin)){
         burnin <- round((n_iters/thinning)/10)
     }
-    # Remove burn-in
-    idx_drop <- -(1:(burnin+1))
-    samples$pars <- samples$pars[idx_drop, ]
-    samples$probabilities <- samples$probabilities[idx_drop,]
-    samples$state <- samples$state[,idx_drop]
-    samples$trajectories$state <- samples$trajectories$state[,idx_drop,]
+    # # Remove burn-in
+    # idx_drop <- -(1:(burnin+1))
+    # samples$pars <- samples$pars[idx_drop, ]
+    # samples$probabilities <- samples$probabilities[idx_drop,]
+    # samples$state <- samples$state[,idx_drop]
+    # samples$trajectories$state <- samples$trajectories$state[,idx_drop,]
     
     samples$trajectories$date <- samples$trajectories$step/samples$trajectories$rate
     
-    samples$vaccine <- list(mean_days_between_doses = mean_days_between_doses,
-                            schedule = schedule)
+    # samples$vaccine <- list(mean_days_between_doses = mean_days_between_doses,
+    #                         schedule = schedule)
     
     if (simulate_object){
         start_date_sim <- "2021-11-21"
@@ -59,17 +82,15 @@ create_simulate_object <- function(samples,start_date_sim,date){
 }
 
 
-calculate_parameter_quantiles <- function(output, digits = 3, burnin = NULL){
-    load(output)
-    
+calculate_parameter_quantiles <- function(dat, digits = 3, burnin = NULL){
     if (is.null(burnin)){
-        burnin <- round((n_iters/thinning)/10)
+        burnin <- round(nrow(dat$samples$pars)/10)
     }
     # Remove burn-in
     idx_drop <- -(1:(burnin+1))
-    res$pars <- res$pars[idx_drop, ]
+    pars <- dat$samples$pars[idx_drop, ]
     
-    tmp <- signif(apply(res$pars, 2, calculate_median_and_ci),digits = digits)
+    tmp <- signif(apply(pars, 2, calculate_median_and_ci),digits = digits)
     tmp[,c("start_date","strain_seed_date","strain_seed_date1")] <- 
         apply(tmp[,c("start_date","strain_seed_date","strain_seed_date1")],2,
               function(x) as.character(covid_multi_strain_date_as_date(x)))
