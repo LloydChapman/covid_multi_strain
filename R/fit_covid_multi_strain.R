@@ -1,9 +1,40 @@
-fit_covid_multi_strain <- function(data_raw,pars,u,n_iters,run,deterministic = TRUE,Rt = FALSE,thinning = 1){
-    #### Set up model ####
+covid_multi_strain_particle_filter <- function(data, pars, deterministic = TRUE, Rt = FALSE){
+    base <- pars$base
+    min_ages <- get_min_age(base$age_groups)
     
+    # Compile model
+    covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
+    
+    # Convert raw data to required format for particle filter
+    data <- particle_filter_data(data,"day",1/base$dt)
+    
+    # Create particle filter object
+    if (deterministic){
+        n_particles <- 1
+        filter <- particle_deterministic$new(
+            data, covid_multi_strain, compare, 
+            index = function(info) 
+                index(info, min_ages = min_ages, Rt = Rt), 
+            initial = initial)
+    } else {
+        n_particles <- 200
+        filter <- particle_filter$new(
+            data, covid_multi_strain, n_particles, compare, 
+            index = function(info) 
+                index(info, min_ages = min_ages, Rt = Rt), 
+            initial = initial
+        )
+    }
+    return(filter)
+}
+
+
+fit_covid_multi_strain <- function(pars,filter,u,n_iters,deterministic = TRUE,Rt = FALSE,thinning = 1){
     if (n_iters < 100){
         stop("n_iters must be at least 100")
     }
+    
+    #### Set up model ####
     
     # Compile model
     covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
@@ -73,25 +104,8 @@ fit_covid_multi_strain <- function(data_raw,pars,u,n_iters,run,deterministic = T
     
     #### Fit to multiple age-stratified data streams ####
     
-    # Convert raw data to required format for particle filter
-    data <- particle_filter_data(data_raw,"day",1/base$dt)
-    
-    # Create particle filter object
     if (deterministic){
         n_particles <- 1
-        filter <- particle_deterministic$new(
-            data, covid_multi_strain, compare, 
-            index = function(info) 
-                index(info, min_ages = min_ages, Rt = Rt), 
-            initial = initial)
-    } else {
-        n_particles <- 200
-        filter <- particle_filter$new(
-            data, covid_multi_strain, n_particles, compare, 
-            index = function(info) 
-                index(info, min_ages = min_ages, Rt = Rt), 
-            initial = initial
-        )
     }
     
     # Extract objects required for MCMC from pars
@@ -114,8 +128,6 @@ fit_covid_multi_strain <- function(data_raw,pars,u,n_iters,run,deterministic = T
     tend <- Sys.time()
     print(tend - tstart)
     
-    # Save output
-    # save(list = ls(all.names = T), file = paste0("output/MCMCoutput",run,".RData"), envir = environment())
     return(res)
     
 }

@@ -1,5 +1,5 @@
 # Process MCMC output from fit_covid_multi_strain()
-fit_process <- function(samples,pars,data_raw,burnin = NULL, simulate_object = TRUE){
+fit_process <- function(samples,pars,data_raw,filter,burnin = NULL,simulate_object = TRUE){
     
     covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
     info <- covid_multi_strain$new(pars$transform(samples$pars[1,])[[1]]$pars,step = 0,
@@ -10,24 +10,6 @@ fit_process <- function(samples,pars,data_raw,burnin = NULL, simulate_object = T
     
     # Convert raw data to required format for particle filter
     data <- particle_filter_data(data_raw,"day",1/base$dt)
-    
-    # Create particle filter object
-    if (deterministic){
-        n_particles <- 1
-        filter <- particle_deterministic$new(
-            data, covid_multi_strain, compare, 
-            index = function(info) 
-                index(info, min_ages = min_ages, Rt = Rt), 
-            initial = initial)
-    } else {
-        n_particles <- 200
-        filter <- particle_filter$new(
-            data, covid_multi_strain, n_particles, compare, 
-            index = function(info) 
-                index(info, min_ages = min_ages, Rt = Rt), 
-            initial = initial
-        )
-    }
     
     samples$predict <- list(transform = transform,
                             index = index(info)$state,
@@ -40,9 +22,9 @@ fit_process <- function(samples,pars,data_raw,burnin = NULL, simulate_object = T
                          beta_date = base$beta_date,
                          pars = pars$info$name)
     
-    if (is.null(burnin)){
-        burnin <- round((n_iters/thinning)/10)
-    }
+    # if (is.null(burnin)){
+    #     burnin <- round(nrow(samples$pars)/10)
+    # }
     # # Remove burn-in
     # idx_drop <- -(1:(burnin+1))
     # samples$pars <- samples$pars[idx_drop, ]

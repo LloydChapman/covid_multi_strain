@@ -61,8 +61,13 @@ run <- 77
 # run <- 78
 deterministic <- T # flag for whether to use deterministic model or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
+
+# Construct particle filter
+filter <- covid_multi_strain_particle_filter(data_raw,pars,deterministic,Rt)
+
+# Run fitting
 thinning <- 10
-samples <- fit_covid_multi_strain(data_raw,pars,u,n_iters,run,deterministic,Rt,thinning)
+samples <- fit_covid_multi_strain(pars,filter,u,n_iters,deterministic,Rt,thinning)
 
 # Post processing
 # # Set output to use
@@ -72,7 +77,7 @@ samples <- fit_covid_multi_strain(data_raw,pars,u,n_iters,run,deterministic,Rt,t
 burnin <- 1500
 
 # Process MCMC output
-dat <- fit_process(samples,pars,data_raw,burnin,simulate_object = T)
+dat <- fit_process(samples,pars,data_raw,filter,burnin,simulate_object = T)
 
 # Save output
 saveRDS(dat, paste0("output/MCMCoutput",run,".RDS"))
