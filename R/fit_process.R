@@ -22,15 +22,15 @@ fit_process <- function(samples,pars,data_raw,filter,burnin = NULL,simulate_obje
                          beta_date = base$beta_date,
                          pars = pars$info$name)
     
-    # if (is.null(burnin)){
-    #     burnin <- round(nrow(samples$pars)/10)
-    # }
-    # # Remove burn-in
-    # idx_drop <- -(1:(burnin+1))
-    # samples$pars <- samples$pars[idx_drop, ]
-    # samples$probabilities <- samples$probabilities[idx_drop,]
-    # samples$state <- samples$state[,idx_drop]
-    # samples$trajectories$state <- samples$trajectories$state[,idx_drop,]
+    if (is.null(burnin)){
+        burnin <- round(nrow(samples$pars)/10)
+    }
+    # Remove burn-in
+    idx_drop <- -(1:(burnin+1))
+    samples$pars <- samples$pars[idx_drop, ]
+    samples$probabilities <- samples$probabilities[idx_drop,]
+    samples$state <- samples$state[,idx_drop]
+    samples$trajectories$state <- samples$trajectories$state[,idx_drop,]
     
     samples$trajectories$date <- samples$trajectories$step/samples$trajectories$rate
     
@@ -64,15 +64,8 @@ create_simulate_object <- function(samples,start_date_sim,date){
 }
 
 
-calculate_parameter_quantiles <- function(dat, digits = 3, burnin = NULL){
-    if (is.null(burnin)){
-        burnin <- round(nrow(dat$samples$pars)/10)
-    }
-    # Remove burn-in
-    idx_drop <- -(1:(burnin+1))
-    pars <- dat$samples$pars[idx_drop, ]
-    
-    tmp <- signif(apply(pars, 2, calculate_median_and_ci),digits = digits)
+calculate_parameter_quantiles <- function(dat,digits = 3){
+    tmp <- signif(apply(dat$samples$pars, 2, calculate_median_and_ci),digits = digits)
     tmp[,c("start_date","strain_seed_date","strain_seed_date1")] <- 
         apply(tmp[,c("start_date","strain_seed_date","strain_seed_date1")],2,
               function(x) as.character(covid_multi_strain_date_as_date(x)))

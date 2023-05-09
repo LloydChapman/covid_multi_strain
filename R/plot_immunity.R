@@ -18,9 +18,6 @@ run <- 77 #78
 # Set output to use
 output <- paste0("output/MCMCoutput",run,".RDS")
 
-# Set burn-in
-burnin <- 1500 #1 #
-
 # Set number of posterior samples for age-decomposition plots
 n_smpls <- 1000 #10 #
 
@@ -28,7 +25,7 @@ n_smpls <- 1000 #10 #
 seed <- 1L
 
 # Plot breakdown of immunity in the population over time
-res <- plot_immune_status(output,pop,age_groups,burnin,n_smpls,seed)
+res <- plot_immune_status(output,pop,age_groups,n_smpls,seed)
 p <- res$p
 ggsave(paste0("output/pop_immune_status_by_age",run,".pdf"),p,height = 5,width = 11)
 p1 <- res$p1

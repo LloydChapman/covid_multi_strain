@@ -68,11 +68,9 @@ filter <- covid_multi_strain_particle_filter(data_raw,pars,deterministic,Rt)
 # Run fitting
 thinning <- 10
 samples <- fit_covid_multi_strain(pars,filter,u,n_iters,deterministic,Rt,thinning)
+saveRDS(samples,paste0("output/MCMCsamples",run,".RDS"))
 
-# Post processing
-# # Set output to use
-# output <- paste0("output/MCMCoutput",run,".RData")
-
+## Post processing
 # Set burn-in
 burnin <- 1500
 
@@ -80,7 +78,7 @@ burnin <- 1500
 dat <- fit_process(samples,pars,data_raw,filter,burnin,simulate_object = T)
 
 # Save output
-saveRDS(dat, paste0("output/MCMCoutput",run,".RDS"))
+saveRDS(dat,paste0("output/MCMCoutput",run,".RDS"))
 
 
 # Set whether to plot moving average of data
@@ -90,8 +88,8 @@ moving_avg <- F
 n_smpls <- 1000
 
 # Plot fit
-plot_fit(dat,run,pop,u,burnin,moving_avg,n_smpls)
+plot_fit(dat,run,pop,u,moving_avg,n_smpls)
 
 # Process fit
-pars_qntls <- calculate_parameter_quantiles(dat,burnin = burnin)
+pars_qntls <- calculate_parameter_quantiles(dat)
 write.csv(pars_qntls,paste0("output/parameter_quantiles",run,".csv"), row.names = F)

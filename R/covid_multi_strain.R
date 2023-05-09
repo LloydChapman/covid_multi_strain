@@ -1295,11 +1295,8 @@ covid_multi_strain_transform_multistage <- function(dt,
 }
 
 
-plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, by_age = FALSE, burnin = NULL, moving_avg = FALSE){
+plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, by_age = FALSE, moving_avg = FALSE){
     # Extract modelled incidence for outcome vrble from output
-    if (is.null(burnin)){
-        burnin <- round(ncol(incidence_modelled)/10)
-    }
     nms <- dimnames(incidence_modelled)[[1]]
     if (by_age){
         idx <- grep(paste0(vrble,"_[0-9]+"),nms)
@@ -1307,16 +1304,12 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
         idx <- which(nms == vrble)
     }
     incidence_modelled <- incidence_modelled[idx,,,drop = F]
-    # Remove burn-in
-    incidence_modelled <- incidence_modelled[,-(1:(burnin+1)),,drop = F]
     # Convert to data table
     inc_dt <- as.data.table(incidence_modelled)
     names(inc_dt) <- c("age_group","sample","date","value")
     inc_dt[,date := covid_multi_strain_date_as_date(date)]
     inc_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
     if (vrble == "cases"){
-        # Remove burn-in
-        phi <- phi[-(1:(burnin+1))]
         # Convert to data table with sample number
         phi_dt <- data.table(sample = seq_along(phi),phi = phi)
         # Add phi to inc_dt
@@ -1371,11 +1364,8 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
 }
 
     
-plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age = FALSE, burnin = NULL){
+plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age = FALSE){
     # Extract modelled seroprevalence from output
-    if (is.null(burnin)){
-        burnin <- round(ncol(seroprev_modelled)/10)
-    }
     nms <- dimnames(seroprev_modelled)[[1]]
     if (by_age){
         idx_sero <- grep("sero_pos_1_",nms) 
@@ -1383,8 +1373,6 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
         idx_sero <- which(nms == "sero_pos_1")
     }
     seroprev_modelled <- seroprev_modelled[idx_sero,,,drop = F]
-    # Remove burn-in
-    seroprev_modelled <- seroprev_modelled[,-(1:(burnin+1)),,drop = F]
     # Convert to data table
     sero_dt <- as.data.table(seroprev_modelled)
     names(sero_dt) <- c("age_group","sample","date","value")
@@ -1432,19 +1420,14 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
 }
 
 
-plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,burnin = NULL,seed = 1){
+plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,seed = 1){
     # Extract modelled incidence for outcome vrble from output
-    if (is.null(burnin)){
-        burnin <- round(ncol(state)/10)
-    }
     nms <- dimnames(state)[[1]]
     idx <- grep(paste0(vrble,"_[0-9]+",collapse = "|"),nms)
     state <- state[idx,,,drop = F]
-    # Remove burn-in
-    # state <- state[,-(1:(burnin+1)),,drop = F]
     set.seed(1)
-    smpl <- sample.int(ncol(state)-(burnin+1),n_smpls) 
-    state <- state[,burnin + 1 + smpl,,drop = F]
+    smpl <- sample.int(ncol(state),n_smpls) 
+    state <- state[,smpl,,drop = F]
     # Convert to data table
     state_dt <- as.data.table(state)
     names(state_dt) <- c("age_group","sample","date","value")
@@ -1455,8 +1438,6 @@ plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,burnin = NULL,seed 
     state_dt[state == "cases" & get_min_age(age_group) < 40,age_group := "0-39"]
     state_dt <- state_dt[,.(value = sum(value)),by = .(state,age_group,sample,date)]
     if ("cases" %in% vrble){
-        # Remove burn-in
-        phi <- phi[-(1:(burnin+1))]
         # Convert to data table with sample number
         phi_dt <- data.table(sample = seq_along(phi),phi = phi)
         # Add phi to inc_dt
@@ -1522,11 +1503,8 @@ plot_cases <- function(cases_modelled, cases_observed, times){
 }
 
 
-plot_transmission_rate <- function(pars,beta_type,beta_date,dt,end_date,burnin = NULL){
-    if (is.null(burnin)){
-        burnin <- round(nrow(pars)/10)
-    }
-    beta_value_post <- t(apply(pars[-(1:(burnin+1)),seq_along(beta_date)],2,
+plot_transmission_rate <- function(pars,beta_type,beta_date,dt,end_date){
+    beta_value_post <- t(apply(pars[,seq_along(beta_date)],2,
                                function(x) quantile(x,probs = c(0.5,0.025,0.975))))
     if (beta_type == "piecewise-linear"){
         beta_step <- apply(
@@ -1552,16 +1530,12 @@ plot_transmission_rate <- function(pars,beta_type,beta_date,dt,end_date,burnin =
 }
 
 
-plot_immune_status <- function(output,pop,age_groups,burnin = NULL,n_smpls = 1000,seed = 1){
+plot_immune_status <- function(output,pop,age_groups,n_smpls = 1000,seed = 1){
     dat <- readRDS(output)
     
-    if (is.null(burnin)){
-        burnin <- round(ncol(dat$samples$trajectories$state)/10)
-    }
-    
     set.seed(seed)
-    smpl <- sample.int(ncol(dat$samples$trajectories$state)-(burnin+1),n_smpls)
-    state <- dat$samples$trajectories$state[,burnin + 1 + smpl,,drop = F]
+    smpl <- sample.int(ncol(dat$samples$trajectories$state),n_smpls)
+    state <- dat$samples$trajectories$state[,smpl,,drop = F]
     
     rm(dat)
     gc()
@@ -1747,12 +1721,8 @@ plot_traces <- function(pars,u){
 }
 
 
-plot_posteriors <- function(pars,u,priors,pars_min,pars_max,burnin = NULL){
-    if (is.null(burnin)){
-        burnin <- round(nrow(pars)/10)
-    }
-    # Remove burn-in
-    pars <- pars[-(1:(burnin+1)),u]
+plot_posteriors <- function(pars,u,priors,pars_min,pars_max){
+    pars <- pars[,u]
     pars_dt <- as.data.table(pars)
     pars_dt[,iter := seq_len(nrow(pars))]
     pars_long_dt <- melt(pars_dt,id.vars = "iter")
@@ -1785,12 +1755,8 @@ plot_posteriors <- function(pars,u,priors,pars_min,pars_max,burnin = NULL){
     return(p)
 }
 
-plot_pairwise_correlation <- function(pars,u,burnin = NULL){
-    if (is.null(burnin)){
-        burnin <- round(nrow(pars)/10)
-    }
-    # Remove burn-in
-    pars <- pars[-(1:(burnin+1)),u]
+plot_pairwise_correlation <- function(pars,u){
+    pars <- pars[,u]
     pars_dt <- as.data.table(pars)
     p <- ggpairs(pars_dt) + 
         theme_cowplot(font_size = 10) +
