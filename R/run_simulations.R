@@ -24,17 +24,21 @@ source("R/simulate.R")
 # Change run number for different assumption on booster waning rate
 run <- 77
 # run <- 78
-output <- paste0("output/MCMCoutput",run,".RData")
+# run <- 80
+output <- paste0("output/MCMCoutput",run,".RDS")
 
 ## Run counterfactual simulations
 # Set run number
 sim_run <- 18
 # sim_run <- 19
+# sim_run <- 20
 # Set whether states required to calculate Rt have been output 
 Rt <- T
+# Set whether model is deterministic or stochastic
+deterministic <- T 
 # Set number of parameter samples and burn-in to remove
 n_smpls <- 500
-burnin <- 1500
+# burnin <- 1500
 seed <- 1L
 
 # Set assumption for booster waning rate
@@ -112,7 +116,7 @@ q_prop_total_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_lis
 # Run simulations
 for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ # 
     out <- simulate_counterfactual(output,n_smpls,beta_date_cntfctl_list[[i]],beta_idx_list[[i]],
-                                   schedule_cntfctl_list[[i]],burnin = burnin,seed = seed,min_ages = min_ages)
+                                   schedule_cntfctl_list[[i]],deterministic,seed = seed,min_ages = min_ages)
     states_cntfctl <- out$states_cntfctl
     smpl <- out$smpl
     info <- out$info

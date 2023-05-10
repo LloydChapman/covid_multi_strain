@@ -138,40 +138,39 @@ change_booster_timing <- function(schedule, days_earlier){
 
 ## Run counterfactual simulations
 simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
-                                    beta_idx,schedule_cntfctl,burnin = NULL,
+                                    beta_idx,schedule_cntfctl,deterministic,
                                     seed = 1L,min_ages = seq(0,70,by = 10)){
     # Load MCMC output
-    load(output)
+    # load(output)
+    dat <- readRDS(output)
     
     # Initialise dust model generator
     covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
     
-    if (is.null(burnin)){
-        burnin <- round((n_iters/thinning)/10)
-    }
-    # Remove burn-in
-    pars_mcmc <- res$pars[-(1:(burnin+1)),]
+    pars_mcmc <- dat$samples$pars
         
     out <- vector("list", n_smpls)
     set.seed(seed)
     smpl <- sample.int(nrow(pars_mcmc),n_smpls)
     
     # Extract posterior samples of trajectories
-    states <- res$trajectories$state[,burnin + 1 + smpl,]
-    
-    # Remove res object as it is very large
-    rm(res)
+    states <- dat$samples$trajectories$state[,smpl,]
     
     # Extract baseline parameters from pars object
-    base <- pars$base
+    base <- environment(dat$samples$predict$transform)$baseline #pars$base
     dt <- base$dt
+    
+    transform <- dat$samples$predict$transform
+    
+    # Remove dat object as it is very large
+    rm(dat)
     
     for (i in seq_len(n_smpls)){
         j <- smpl[i] #sample.int(nrow(pars_mcmc),1)
         pars_i <- pars_mcmc[j,]
-        if (is.null(names(pars_i))){
-            names(pars_i) <- names(pars_init)
-        }
+        # if (is.null(names(pars_i))){
+        #     names(pars_i) <- names(pars_init)
+        # }
         transform_pars <- transform(pars_i)
         # TODO: Make this work with one list for p rather than separate 
         # objects for each epoch, so it works for an arbitrary number of epochs
@@ -193,7 +192,7 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
             transform_state <- NULL
         }
         n_steps <- base$start_date1/dt
-        n_steps1 <- max(data_raw$day)/dt
+        n_steps1 <- (dim(states)[3] - 1)/dt
         out[[i]] <- simulate(covid_multi_strain, p_i, n_steps, 
                              deterministic, keep_all_states = F,
                              min_ages = min_ages, Rt = Rt,
