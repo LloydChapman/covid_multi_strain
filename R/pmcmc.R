@@ -122,9 +122,14 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,idx,
                            log_likelihood = ll,
                            log_posterior = lpost)
     
+    if (class(transform_pars) == "multistage_parameters"){
+        dt <- transform_pars[[1]]$pars$dt
+    } else {
+        dt <- transform_pars$dt
+    }
     trajectories <- list(
-        step = as.integer((0:(nlayer(trajectories_state)-1))/transform_pars$dt),
-        rate = as.integer(1/transform_pars$dt),
+        step = as.integer((0:(nlayer(trajectories_state)-1))/dt),
+        rate = as.integer(1/dt),
         state = trajectories_state,
         predict = rep(F, nlayer(trajectories_state))
     )
