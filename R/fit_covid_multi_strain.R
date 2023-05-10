@@ -106,6 +106,8 @@ fit_covid_multi_strain <- function(pars,filter,u,n_iters,deterministic = TRUE,Rt
     
     if (deterministic){
         n_particles <- 1
+    } else {
+        n_particles <- filter$n_particles
     }
     
     # Extract objects required for MCMC from pars
