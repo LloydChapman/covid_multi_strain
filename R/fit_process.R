@@ -11,7 +11,7 @@ fit_process <- function(samples,pars,data_raw,filter,burnin = NULL,simulate_obje
     # Convert raw data to required format for particle filter
     data <- particle_filter_data(data_raw,"day",1/base$dt)
     
-    samples$predict <- list(transform = transform,
+    samples$predict <- list(transform = pars$transform,
                             index = index(info)$state,
                             rate = as.integer(1/base$dt),
                             filter = filter)
