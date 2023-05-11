@@ -29,7 +29,7 @@ covid_multi_strain_particle_filter <- function(data, pars, deterministic = TRUE,
 }
 
 
-fit_covid_multi_strain <- function(pars,filter,u,n_iters,deterministic = TRUE,Rt = FALSE,thinning = 1){
+fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,Rt = FALSE,thinning = 1){
     if (n_iters < 100){
         stop("n_iters must be at least 100")
     }

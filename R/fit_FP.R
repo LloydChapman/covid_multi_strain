@@ -23,7 +23,7 @@ source("R/parameters.R")
 source("R/pars.R")
 source("R/covid_multi_strain.R")
 source("R/simulate.R")
-source("R/fit_covid_multi_strain.R")
+source("R/fit.R")
 source("R/pmcmc.R")
 source("R/plot_fit.R")
 source("R/fit_process.R")
@@ -67,7 +67,7 @@ filter <- covid_multi_strain_particle_filter(data_raw,pars,deterministic,Rt)
 
 # Run fitting
 thinning <- 10
-samples <- fit_covid_multi_strain(pars,filter,u,n_iters,deterministic,Rt,thinning)
+samples <- fit_run(pars,filter,u,n_iters,deterministic,Rt,thinning)
 saveRDS(samples,paste0("output/MCMCsamples",run,".RDS"))
 
 ## Post processing
