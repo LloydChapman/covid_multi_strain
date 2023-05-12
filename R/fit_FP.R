@@ -59,7 +59,7 @@ n_iters <- 1e4 #5e4
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 83
+run <- 84
 deterministic <- T # flag for whether to use deterministic model or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 
