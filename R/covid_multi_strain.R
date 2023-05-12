@@ -103,6 +103,8 @@ parameters <- function(dt,
                        cross_immunity = 1,
                        phi_cases = 1,
                        kappa_cases = 2,
+                       kappa_hosp = 2,
+                       kappa_death = 2,
                        sero_sensitivity_1 = 0.9,
                        sero_specificity_1 = 0.99) {
     
@@ -206,6 +208,8 @@ parameters <- function(dt,
     # Observation parameters
     p$phi_cases <- phi_cases
     p$kappa_cases <- kappa_cases
+    p$kappa_hosp <- kappa_hosp
+    p$kappa_death <- kappa_death
     
     # Sensitivity and specificity of serological tests
     p$sero_sensitivity_1 <- sero_sensitivity_1

@@ -13,3 +13,5 @@
 "strain_seed_date1",505,500,512,TRUE
 "phi_cases",0.5,0,1,FALSE
 "alpha_cases",0.5,0,1,FALSE
+"alpha_hosp",0.5,0,1,FALSE
+"alpha_death",0.5,0,1,FALSE

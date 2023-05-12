@@ -75,7 +75,7 @@ make_transform <- function(baseline){
     expected <- c(baseline$beta_names,"start_date","rel_strain_transmission",
                   "strain_seed_date","p_H_max","p_D_max",
                   "rel_strain_transmission1","strain_seed_date1",
-                  "phi_cases","alpha_cases")
+                  "phi_cases","alpha_cases","alpha_hosp","alpha_death")
     
     function(pars){
         stopifnot(setequal(expected, names(pars)))
@@ -89,6 +89,8 @@ make_transform <- function(baseline){
         strain_seed_date1 <- pars[["strain_seed_date1"]]
         phi_cases <- pars[["phi_cases"]]
         kappa_cases <- 1/pars[["alpha_cases"]]
+        kappa_hosp <- 1/pars[["alpha_hosp"]]
+        kappa_death <- 1/pars[["alpha_death"]]
         
         # Parameters for 1st epoch
         p <- parameters(baseline$dt,
@@ -141,6 +143,8 @@ make_transform <- function(baseline){
                         baseline$cross_immunity,
                         phi_cases = phi_cases,
                         kappa_cases = kappa_cases,
+                        kappa_hosp = kappa_hosp,
+                        kappa_death = kappa_death,
                         baseline$sero_sensitivity_1,
                         baseline$sero_specificity_1)
         
@@ -195,6 +199,8 @@ make_transform <- function(baseline){
                          baseline$cross_immunity1,
                          phi_cases = phi_cases,
                          kappa_cases = kappa_cases,
+                         kappa_hosp = kappa_hosp,
+                         kappa_death = kappa_death,
                          baseline$sero_sensitivity_1,
                          baseline$sero_specificity_1)
         

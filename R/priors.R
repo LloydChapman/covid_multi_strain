@@ -33,6 +33,24 @@ create_priors <- function(beta_date,pars_info) {
         shape2 = 1
     )
     
+    hosp_obs_hps <- data.frame(
+        type = "beta",
+        name = "alpha_hosp",
+        scale = NA_real_,
+        shape = NA_real_,
+        shape1 = 1,
+        shape2 = 1
+    )
+    
+    death_obs_hps <- data.frame(
+        type = "beta",
+        name = "alpha_death",
+        scale = NA_real_,
+        shape = NA_real_,
+        shape1 = 1,
+        shape2 = 1
+    )
+    
     ret <- rbind(
         beta_hps,
         strain_hps[strain_hps$name %in% 
@@ -40,7 +58,9 @@ create_priors <- function(beta_date,pars_info) {
         p_hps,
         strain_hps[strain_hps$name %in%
                        c("rel_strain_transmission1","strain_seed_date1"),],
-        case_obs_hps)
+        case_obs_hps,
+        hosp_obs_hps,
+        death_obs_hps)
     names(ret)[match(c("scale","shape","shape1","shape2"),names(ret))] <- 
         c("gamma_scale","gamma_shape","beta_shape1","beta_shape2")
     
