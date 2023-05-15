@@ -4,7 +4,9 @@ create_proposal <- function(beta_date){
              "rel_strain_transmission","start_date","strain_seed_date",
              "p_H_max","p_D_max","rel_strain_transmission1","strain_seed_date1",
              "phi_cases","alpha_cases")
-    proposal_matrix <- 0.1*diag(c(rep(1e-7,n_beta),0.1^2,rep(2^2,2),rep(1e-5,2),0.1^2,2^2,1e-5,1e-5))
+    # proposal_matrix <- 0.1*diag(c(rep(1e-7,n_beta),0.1^2,rep(2^2,2),rep(1e-5,2),0.1^2,2^2,1e-5,1e-5))
+    dat <- readRDS("output/MCMCoutput77.RDS")
+    proposal_matrix <- dat$samples$proposal_matrix
     colnames(proposal_matrix) <- nms
     proposal <- cbind(names = nms, proposal_matrix)
 }
