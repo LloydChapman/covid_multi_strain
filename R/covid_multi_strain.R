@@ -731,12 +731,12 @@ test_prob_pos <- function(pos, neg, sensitivity, specificity, exp_noise) {
 # Define comparison function for age-stratified data
 compare <- function(state, observed, pars){
     if (is.null(pars$kappa_hosp)){
-        kappa_hosp <- 20
+        kappa_hosp <- 2 #20
     } else {
         kappa_hosp <- pars$kappa_hosp
     }
     if (is.null(pars$kappa_death)){
-        kappa_death <- 20
+        kappa_death <- 2 #20
     } else {
         kappa_death <- pars$kappa_death
     }
@@ -855,9 +855,10 @@ compare <- function(state, observed, pars){
         model_cases_non_variant,
         model_cases - model_cases_non_variant,
         1, 1, exp_noise)
+    model_confirmed_cases <- pars$phi_cases * model_cases
     
     # Log-likelihoods for deaths
-    # ll_hosps <- ll_nbinom(observed$hosps,model_hosps,kappa_hosp,exp_noise)
+    ll_hosps <- ll_nbinom(observed$hosps,model_hosps,kappa_hosp,exp_noise)
     ll_hosps_0_39 <- ll_nbinom(observed$hosps_0_39,model_hosps_0_39,kappa_hosp,exp_noise)
     ll_hosps_40_49 <- ll_nbinom(observed$hosps_40_49,model_hosps_40_49,kappa_hosp,exp_noise)
     ll_hosps_50_59 <- ll_nbinom(observed$hosps_50_59,model_hosps_50_59,kappa_hosp,exp_noise)
@@ -871,7 +872,7 @@ compare <- function(state, observed, pars){
     # ll_hosps <- ll_dirmnom(hosps_by_age,model_hosps_by_age,size_hosp,exp_noise)
     
     # Log-likelihoods for deaths
-    # ll_deaths <- ll_nbinom(observed$deaths,model_deaths,kappa_death,exp_noise)
+    ll_deaths <- ll_nbinom(observed$deaths,model_deaths,kappa_death,exp_noise)
     ll_deaths_0_39 <- ll_nbinom(observed$deaths_0_39,model_deaths_0_39,kappa_death,exp_noise)
     ll_deaths_40_49 <- ll_nbinom(observed$deaths_40_49,model_deaths_40_49,kappa_death,exp_noise)
     ll_deaths_50_59 <- ll_nbinom(observed$deaths_50_59,model_deaths_50_59,kappa_death,exp_noise)
@@ -904,6 +905,7 @@ compare <- function(state, observed, pars){
     # # ll_deaths_80_plus <- ll_pois(observed$deaths_80_plus,model_deaths_80_plus,exp_noise)
     
     # Log-likelihoods for cases
+    ll_cases <- ll_nbinom(observed$cases,model_confirmed_cases,pars$kappa_cases,exp_noise)
     ll_cases_0_9 <- ll_nbinom(observed$cases_0_9,model_confirmed_cases_0_9,pars$kappa_cases,exp_noise)
     ll_cases_10_19 <- ll_nbinom(observed$cases_10_19,model_confirmed_cases_10_19,pars$kappa_cases,exp_noise)
     ll_cases_20_29 <- ll_nbinom(observed$cases_20_29,model_confirmed_cases_20_29,pars$kappa_cases,exp_noise)
@@ -914,7 +916,7 @@ compare <- function(state, observed, pars){
     ll_cases_70_plus <- ll_nbinom(observed$cases_70_plus,model_confirmed_cases_70_plus,pars$kappa_cases,exp_noise)
     
     # Log-likelihoods for seroprevalence
-    # ll_sero_pos_1 <- ll_binom(observed$sero_pos_1,observed$sero_tot_1,model_sero_prob_pos_1)
+    ll_sero_pos_1 <- ll_binom(observed$sero_pos_1,observed$sero_tot_1,model_sero_prob_pos_1)
     ll_sero_pos_1_20_29 <- ll_binom(observed$sero_pos_1_20_29,observed$sero_tot_1_20_29,model_sero_prob_pos_1_20_29)
     ll_sero_pos_1_30_39 <- ll_binom(observed$sero_pos_1_30_39,observed$sero_tot_1_30_39,model_sero_prob_pos_1_30_39)
     ll_sero_pos_1_40_49 <- ll_binom(observed$sero_pos_1_40_49,observed$sero_tot_1_40_49,model_sero_prob_pos_1_40_49)
@@ -930,12 +932,13 @@ compare <- function(state, observed, pars){
     # ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
     # ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
     # ll_hosps_70_plus + ll_deaths_70_plus
-    # ll_hosps + ll_deaths + ll_sero_pos_1 + 
-    ll_strain +
-    1*(ll_cases_0_9 + ll_cases_10_19 + ll_cases_20_29 + ll_cases_30_39 + ll_cases_40_49 + ll_cases_50_59 + ll_cases_60_69 + ll_cases_70_plus) +
-        1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
-        1*(ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus) + 
-        ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus
+    ll_cases +
+    ll_hosps + ll_deaths + ll_sero_pos_1 +
+    ll_strain #+
+    # 1*(ll_cases_0_9 + ll_cases_10_19 + ll_cases_20_29 + ll_cases_30_39 + ll_cases_40_49 + ll_cases_50_59 + ll_cases_60_69 + ll_cases_70_plus) +
+    #     1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
+    #     1*(ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus) + 
+    #     ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus
 }
 
 

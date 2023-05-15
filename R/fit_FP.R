@@ -59,7 +59,7 @@ n_iters <- 100 #5e4
 # Change run number for different assumption on booster waning rate
 run <- 77
 # run <- 78
-run <- 87
+run <- 88
 deterministic <- F #T # flag for whether to use deterministic model or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 
@@ -86,7 +86,7 @@ saveRDS(dat,paste0("output/MCMCoutput",run,".RDS"))
 moving_avg <- F
 
 # Set number of posterior samples for age-decomposition plots
-n_smpls <- 100 #1000
+n_smpls <- 10 #1000
 
 # Plot fit
 plot_fit(dat,run,pop,u,moving_avg,n_smpls)
