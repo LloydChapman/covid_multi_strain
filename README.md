@@ -34,7 +34,7 @@ The odin model code is contained in [inst/odin/covid_multi_strain.R](inst/odin/c
 ```R
 odin_dust("inst/odin/covid_multi_strain.R")
 ```
-as in [fit_covid_multi_strain.R](R/fit_covid_multi_strain.R).
+as in [fit.R](R/fit.R).
 
 The workflow for fitting the model and running counterfactual simulations is as follows. The model can be fit to the data for French Polynesia using the adaptive MCMC algorithm in [pmcmc.R](R/pmcmc.R) by running:
 ```R
