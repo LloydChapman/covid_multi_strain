@@ -51,15 +51,15 @@ pars <- fit_pars_load("parameters",assumptions)
 # Plot vaccination coverage by age
 vaccination_coverage_plot(pars$base$vaccine_schedule,pars$base$age_groups,vax,pop)
 dir.create("output")
-ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
+# ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
 
 # Fit covid_multi_strain to FP data
-u <- c(1:5,7:9,12:16) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
-n_iters <- 1e4 #5e4
+u <- c(1:5,7:9,12,14:18) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
+n_iters <- 2e4 #5e4
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 84
+run <- 89
 deterministic <- T # flag for whether to use deterministic model or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 
@@ -73,7 +73,7 @@ saveRDS(samples,paste0("output/MCMCsamples",run,".RDS"))
 
 ## Post processing
 # Set burn-in
-burnin <- 500 #1000 #1500
+burnin <- 1000 #1500
 
 # Process MCMC output
 dat <- fit_process(samples,pars,data_raw,filter,burnin,simulate_object = T)
@@ -86,7 +86,7 @@ saveRDS(dat,paste0("output/MCMCoutput",run,".RDS"))
 moving_avg <- F
 
 # Set number of posterior samples for age-decomposition plots
-n_smpls <- 500 #1000
+n_smpls <- 1000
 
 # Plot fit
 plot_fit(dat,run,pop,u,moving_avg,n_smpls)

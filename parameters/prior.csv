@@ -11,6 +11,8 @@
 "beta","p_D_max",NA,NA,1,1
 "null","rel_strain_transmission1",NA,NA,NA,NA
 "null","strain_seed_date1",NA,NA,NA,NA
+"null","rel_strain_transmission2",NA,NA,NA,NA
+"null","strain_seed_date2",NA,NA,NA,NA
 "beta","phi_cases",NA,NA,1,1
 "beta","alpha_cases",NA,NA,1,1
 "beta","alpha_hosp",NA,NA,1,1

@@ -4,7 +4,8 @@ create_baseline <- function(){
     pop <- fread("data/population.csv")
     
     # Set epoch date
-    start_date1 <- as.Date("2021-12-01")
+    start_date1 <- as.Date("2021-11-21")
+    start_date2 <- as.Date("2021-12-16")
     
     # Set end date for data
     end_date <- as.Date("2022-05-06") # last death date in data files
@@ -62,11 +63,12 @@ create_baseline <- function(){
     vax_eff <- fread("data/vax_eff.csv",colClasses = c(alpha = "numeric"))
 
     # Melt to long format
-    vax_eff_long <- melt(vax_eff,measure.vars = c("alpha","delta","omicron"),variable.name = "variant")
+    vax_eff_long <- melt(vax_eff,measure.vars = c("alpha","delta","omicron","omicron_ba2"),variable.name = "variant")
     
     # Make vaccine efficacy data.tables for two-strain setup
-    vax_eff_long1 <- vax_eff_long[variant != "alpha"]
-    vax_eff_long <- vax_eff_long[variant != "omicron"]
+    vax_eff_long2 <- vax_eff_long[variant %in% c("omicron","omicron_ba2")]
+    vax_eff_long1 <- vax_eff_long[variant %in% c("delta","omicron")]
+    vax_eff_long <- vax_eff_long[variant %in% c("alpha","delta")]
     
     # Calculate relative susceptibility and infectiousness, and conditional 
     # probabilities of symptoms, hospitalisation and death in different vaccination 
@@ -74,9 +76,12 @@ create_baseline <- function(){
     # variants
     # Delta relative to WT/Alpha
     rel_params <- convert_eff_to_rel_param(vax_eff_long,age_groups)
-    # Omicron relative to Delta
+    # Omicron BA.1 relative to Delta
     rel_params1 <- convert_eff_to_rel_param(vax_eff_long1,age_groups)
     names(rel_params1) <- paste0(names(rel_params1),"1")
+    # Omicron BA.2 relative to Omicron BA.1
+    rel_params2 <- convert_eff_to_rel_param(vax_eff_long2,age_groups)
+    names(rel_params2) <- paste0(names(rel_params2),"2")
     
     # # Extract individual parameters
     # rel_susceptibility <- rel_params$rel_susceptibility
@@ -141,12 +146,17 @@ create_baseline <- function(){
     strain_rel_p_hosp_if_sympt1 <- c(1,strain_rel_p_hosp_if_sympt[2]*0.3) #c(1,1.85*0.3) #
     strain_rel_p_death1 <- 1
     
+    strain_rel_p_sympt2 <- 1
+    strain_rel_p_hosp_if_sympt2 <- 1
+    strain_rel_p_death2 <- 1
+    
     # Waning parameters
     waning_rate <- 1/(6*365)
     
     # Cross immunity parameters
     cross_immunity <- c(0.95,1) # 1 #
     cross_immunity1 <- c(0.55,1)
+    cross_immunity2 <- c(0.75,0.8) #c(0.5,0.8)
     
     # Sensitivity and specificity of serological tests
     sero_sensitivity_1 <- 1 #0.9
@@ -196,12 +206,17 @@ create_baseline <- function(){
         strain_rel_p_sympt1 = strain_rel_p_sympt1,
         strain_rel_p_hosp_if_sympt1 = strain_rel_p_hosp_if_sympt1,
         strain_rel_p_death1 = strain_rel_p_death1,
+        start_date2 = covid_multi_strain_date(start_date2),
+        strain_rel_p_sympt2 = strain_rel_p_sympt2,
+        strain_rel_p_hosp_if_sympt2 = strain_rel_p_hosp_if_sympt2,
+        strain_rel_p_death2 = strain_rel_p_death2,
         waning_rate = waning_rate,
         cross_immunity = cross_immunity,
         cross_immunity1 = cross_immunity1,
+        cross_immunity2 = cross_immunity2,
         sero_sensitivity_1 = sero_sensitivity_1,
         sero_specificity_1 = sero_specificity_1
     )
-    baseline <- c(baseline, rel_params, rel_params1)
+    baseline <- c(baseline, rel_params, rel_params1, rel_params2)
     
 }

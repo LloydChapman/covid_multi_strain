@@ -1,6 +1,7 @@
 simulate <- function(gen_mod, p, n_steps, deterministic = FALSE, 
                      keep_all_states = TRUE, min_ages = seq(0,70,by = 10), 
-                     Rt = FALSE, p1 = NULL, n_steps1 = NULL, transform = NULL){
+                     Rt = FALSE, p1 = NULL, n_steps1 = NULL, p2 = NULL,
+                     n_steps2 = NULL, transform = NULL){
     # TODO: Make this work with one list for p rather than separate 
     # objects for each epoch, so it works for an arbitrary number of epochs
     
@@ -22,13 +23,13 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
         x[ , ,t+1] <- mod$run(t)
     }
     
-    if (!is.null(p1)){
+    simulate_next_epoch <- function(mod,info,p,n_steps,n_steps1,x,transform){ 
         # Apply transform function to model state
         state <- mod$state()
         state1 <- transform(state,info)
         
         # Update model parameters and state
-        mod$update_state(pars = p1,state = state1)
+        mod$update_state(pars = p,state = state1)
         
         # Create data to be fitted to
         x1 <- array(NA, dim = c(info$len, 1, n_steps1-n_steps))
@@ -41,7 +42,21 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
         }
         
         # Join with first epoch
-        x <- array_bind(x,x1)        
+        x <- array_bind(x,x1)
+        
+        return(list(x = x,mod = mod))
+    }
+    
+    if (!is.null(p1)){
+        res <- simulate_next_epoch(mod,info,p1,n_steps,n_steps1,x,transform)
+        x <- res$x
+        mod <- res$mod
+    }
+    
+    if (!is.null(p2)){
+        res <- simulate_next_epoch(mod,info,p2,n_steps1,n_steps2,x,transform)
+        x <- res$x
+        mod <- res$mod
     }
     
     if (!keep_all_states){

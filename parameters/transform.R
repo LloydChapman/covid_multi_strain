@@ -65,16 +65,28 @@ make_transform <- function(baseline){
                   "rel_p_death1",
                   "rel_infectivity1",
                   "cross_immunity1",
+                  "start_date2",
+                  "strain_rel_p_sympt2",
+                  "strain_rel_p_hosp_if_sympt2",
+                  "strain_rel_p_death2",
+                  "rel_susceptibility2",
+                  "rel_p_sympt2",
+                  "rel_p_hosp_if_sympt2",
+                  "rel_p_death2",
+                  "rel_infectivity2",
+                  "cross_immunity2",
                   "sero_sensitivity_1",
                   "sero_specificity_1")
     stopifnot(setequal(expected, names(baseline)))
     
     start_date1 <- baseline$start_date1
+    start_date2 <- baseline$start_date2
     
     # Expected parameters for fitting
     expected <- c(baseline$beta_names,"start_date","rel_strain_transmission",
                   "strain_seed_date","p_H_max","p_D_max",
                   "rel_strain_transmission1","strain_seed_date1",
+                  "rel_strain_transmission2","strain_seed_date2",
                   "phi_cases","alpha_cases","alpha_hosp","alpha_death")
     
     function(pars){
@@ -87,6 +99,8 @@ make_transform <- function(baseline){
         p_D_max <- pars[["p_D_max"]]
         rel_strain_transmission1 <- pars[["rel_strain_transmission1"]]
         strain_seed_date1 <- pars[["strain_seed_date1"]]
+        rel_strain_transmission2 <- pars[["rel_strain_transmission2"]]
+        strain_seed_date2 <- pars[["strain_seed_date2"]]
         phi_cases <- pars[["phi_cases"]]
         kappa_cases <- 1/pars[["alpha_cases"]]
         kappa_hosp <- 1/pars[["alpha_hosp"]]
@@ -115,7 +129,7 @@ make_transform <- function(baseline){
                         p_D = p_D_max*baseline$p_D,
                         baseline$p_P_1,
                         baseline$population,
-                        start_date = start_date,
+                        start_date,
                         baseline$initial_seed_size,
                         baseline$initial_seed_pattern,
                         strain_transmission = c(1,rel_strain_transmission),
@@ -171,8 +185,8 @@ make_transform <- function(baseline){
                          p_D = p_D_max*baseline$p_D,
                          baseline$p_P_1,
                          baseline$population,
-                         start_date = start_date1,
-                         initial_seed_size = 0,
+                         start_date,
+                         baseline$initial_seed_size,
                          baseline$initial_seed_pattern,
                          strain_transmission = c(rel_strain_transmission,rel_strain_transmission1),
                          strain_seed_date = strain_seed_date1,
@@ -204,8 +218,65 @@ make_transform <- function(baseline){
                          baseline$sero_sensitivity_1,
                          baseline$sero_specificity_1)
         
+        # Parameters for 3rd epoch
+        p2 <- parameters(baseline$dt,
+                         baseline$n_age,
+                         baseline$n_vax,
+                         baseline$m,
+                         baseline$beta_date,
+                         beta_value = beta_value,
+                         baseline$beta_type,
+                         baseline$gamma_E,
+                         baseline$gamma_P,
+                         baseline$gamma_A,
+                         baseline$gamma_C,
+                         baseline$gamma_H,
+                         baseline$gamma_G,
+                         baseline$gamma_pre_1,
+                         baseline$gamma_P_1,
+                         baseline$theta_A,
+                         baseline$p_C,
+                         p_H = p_H_max*baseline$p_H,
+                         baseline$p_G,
+                         p_D = p_D_max*baseline$p_D,
+                         baseline$p_P_1,
+                         baseline$population,
+                         start_date,
+                         baseline$initial_seed_size,
+                         baseline$initial_seed_pattern,
+                         strain_transmission = c(rel_strain_transmission1,rel_strain_transmission2),
+                         strain_seed_date = strain_seed_date2,
+                         baseline$strain_seed_size,
+                         baseline$strain_seed_pattern,
+                         baseline$strain_rel_p_sympt2,
+                         baseline$strain_rel_p_hosp_if_sympt2,
+                         baseline$strain_rel_p_death2,
+                         baseline$rel_susceptibility2,
+                         baseline$rel_p_sympt2,
+                         baseline$rel_p_hosp_if_sympt2,
+                         baseline$rel_p_death2,
+                         baseline$rel_infectivity2,
+                         baseline$vaccine_progression_rate,
+                         baseline$vaccine_schedule,
+                         baseline$vaccine_index_dose2,
+                         baseline$vaccine_index_booster,
+                         baseline$vaccine_catchup_fraction,
+                         baseline$n_doses,
+                         baseline$vacc_skip_progression_rate,
+                         baseline$vacc_skip_to,
+                         baseline$vacc_skip_weight,
+                         baseline$waning_rate,
+                         baseline$cross_immunity2,
+                         phi_cases = phi_cases,
+                         kappa_cases = kappa_cases,
+                         kappa_hosp = kappa_hosp,
+                         kappa_death = kappa_death,
+                         baseline$sero_sensitivity_1,
+                         baseline$sero_specificity_1)
+        
         epochs <- list(
-            multistage_epoch(start_date1, pars = p1, transform_state = transform_state)
+            multistage_epoch(start_date1, pars = p1, transform_state = transform_state),
+            multistage_epoch(start_date2, pars = p2, transform_state = transform_state)
         )
         p_multistage <- multistage_parameters(p, epochs)
         p_multistage

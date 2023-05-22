@@ -17,7 +17,8 @@ create_priors <- function(beta_date,pars_info) {
     strain_hps <- data.frame(
         type = "null",
         name = c("rel_strain_transmission","start_date","strain_seed_date",
-                 "rel_strain_transmission1","strain_seed_date1"),
+                 "rel_strain_transmission1","strain_seed_date1",
+                 "rel_strain_transmission2","strain_seed_date2"),
         scale = NA_real_,
         shape = NA_real_,
         shape1 = NA_real_,
@@ -58,6 +59,8 @@ create_priors <- function(beta_date,pars_info) {
         p_hps,
         strain_hps[strain_hps$name %in%
                        c("rel_strain_transmission1","strain_seed_date1"),],
+        strain_hps[strain_hps$name %in% 
+                       c("rel_strain_transmission2","strain_seed_date2"),],
         case_obs_hps,
         hosp_obs_hps,
         death_obs_hps)
