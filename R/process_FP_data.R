@@ -309,6 +309,18 @@ print(binom.test(sero_pos_dt2[,sum(seropos)],sero_pos_dt2[,sum(n)]))
 
 sero_pos_dt <- rbind(sero_pos_dt1,sero_pos_dt2)
 
+## Variant sequencing
+variant_dt <- as.data.table(read_xlsx(paste0(filepath,"FP_processed_May_30/variant_screening.xlsx"),skip = 1))
+cols_to_keep <- c("Date","Week","ALPHA...3","DELTA...4","BA1...5","BA2...6","GAMMA...7","MU...8")
+variant_dt <- variant_dt[!is.na(Date),..cols_to_keep]
+setnames(variant_dt,cols_to_keep,tolower(sub("...[0-9]","",cols_to_keep)))
+variant_dt[,date := as.Date(date)]
+
+# Exclude values before 2022
+variant_dt <- variant_dt[date >= as.Date("2022-01-01")]
+variant_dt <- variant_dt[, `:=`(strain_tot = ba1 + ba2, strain_non_variant = ba1)]
+
+
 ## Make data table of hospitalisations, deaths, cases and seroprevalence for fitting 
 strt_date <- hosps_dt[,min(date,na.rm = T)] - 20 # 2020-07-20
 end_date <- as.Date("2022-05-06") # last death date in data files
@@ -340,8 +352,11 @@ base_dt_sero <- CJ(date = dates,age_group = age_groups[3:length(age_groups)])
 sero_pos_wide <- reformat_data(sero_pos_dt,base_dt_sero,"sero_pos_1")
 sero_tot_wide <- reformat_data(sero_pos_dt,base_dt_sero,"sero_tot_1")
 
+base_dt_vrnt <- data.table(date = dates)
+vrnt <- merge(base_dt_vrnt,variant_dt[,.(date,strain_tot,strain_non_variant)],by = "date",all.x = T)
+
 # Merge different data sources
-data_raw <- Reduce(function(...) merge(...,all = T), list(hosps_wide, deaths_wide, cases_wide, sero_pos_wide, sero_tot_wide))
+data_raw <- Reduce(function(...) merge(...,all = T), list(hosps_wide, deaths_wide, cases_wide, sero_pos_wide, sero_tot_wide, vrnt))
 
 data_raw[,day := as.integer(date - min(date) + 1L)]
 data_raw[,date := NULL]
@@ -354,8 +369,8 @@ data_raw[,deaths := deaths_0_39 + deaths_40_49 + deaths_50_59 + deaths_60_69 + d
 data_raw[,cases := cases_0_9 + cases_10_19 + cases_20_29 + cases_30_39 + cases_40_49 + cases_50_59 + cases_60_69 + cases_70_plus]
 data_raw[,sero_pos_1 := sero_pos_1_20_29 + sero_pos_1_30_39 + sero_pos_1_40_49 + sero_pos_1_50_59 + sero_pos_1_60_69 + sero_pos_1_70_plus]
 data_raw[,sero_tot_1 := sero_tot_1_20_29 + sero_tot_1_30_39 + sero_tot_1_40_49 + sero_tot_1_50_59 + sero_tot_1_60_69 + sero_tot_1_70_plus]
-data_raw[,strain_tot := NA]
-data_raw[,strain_non_variant := NA]
+# data_raw[,strain_tot := NA]
+# data_raw[,strain_non_variant := NA]
 write.csv(data_raw,"data/data_cases_hosps_deaths_serology.csv",row.names = F)
 
 ## Vaccinations

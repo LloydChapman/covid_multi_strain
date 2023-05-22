@@ -49,17 +49,17 @@ assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table 
 pars <- fit_pars_load("parameters",assumptions)
 
 # Plot vaccination coverage by age
-vaccination_coverage_plot(pars$base$vaccine_schedule,pars$base$age_groups,vax,pop)
+# vaccination_coverage_plot(pars$base$vaccine_schedule,pars$base$age_groups,vax,pop)
 dir.create("output")
 # ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
 
 # Fit covid_multi_strain to FP data
 u <- c(1:5,7:9,12,14:18) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
-n_iters <- 2e4 #5e4
+n_iters <- 3e4 #5e4 #2e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 89
+run <- 93
 deterministic <- T # flag for whether to use deterministic model or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 
