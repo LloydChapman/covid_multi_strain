@@ -5,7 +5,7 @@
 "beta4",0.02,0,1,FALSE
 "beta5",0.024,0,1,FALSE
 "rel_strain_transmission",2.8,0.25,4,FALSE
-"start_date",202,202,212,FALSE
+"start_date",197,183,213,FALSE
 "strain_seed_date",531,506,546,FALSE
 "p_H_max",0.2003133525,0,1,FALSE
 "p_D_max",0.316,0,1,FALSE

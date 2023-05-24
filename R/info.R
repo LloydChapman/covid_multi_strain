@@ -1,9 +1,9 @@
 create_info <- function(beta_date){
     n_beta <- length(beta_date)
     
-    start_date <- list(init = "2020-07-20",
-                       min = "2020-07-20",
-                       max = "2020-07-30")
+    start_date <- list(init = "2020-07-15",
+                       min = "2020-07-01",
+                       max = "2020-07-31")
     start_date <- lapply(start_date,covid_multi_strain_date)
     
     strain_seed_date <- list(init = "2021-06-14", 
