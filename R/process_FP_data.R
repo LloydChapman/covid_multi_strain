@@ -19,6 +19,7 @@ library(lubridate)
 library(ISOweek)
 
 source("R/utils.R")
+source("R/date.R")
 
 # Load data files ---------------------------------------------------------
 
@@ -358,7 +359,7 @@ vrnt <- merge(base_dt_vrnt,variant_dt[,.(date,strain_tot,strain_non_variant)],by
 # Merge different data sources
 data_raw <- Reduce(function(...) merge(...,all = T), list(hosps_wide, deaths_wide, cases_wide, sero_pos_wide, sero_tot_wide, vrnt))
 
-data_raw[,day := as.integer(date - min(date) + 1L)]
+data_raw[,day := covid_multi_strain_date(date)]
 data_raw[,date := NULL]
 
 # Add empty columns for total hospitalisations and deaths

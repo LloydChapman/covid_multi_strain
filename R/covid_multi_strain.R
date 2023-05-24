@@ -1301,17 +1301,18 @@ covid_multi_strain_transform_multistage <- function(dt,
 
 plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, by_age = FALSE, moving_avg = FALSE){
     # Extract modelled incidence for outcome vrble from output
-    nms <- dimnames(incidence_modelled)[[1]]
+    nms <- dimnames(incidence_modelled$state)[[1]]
     if (by_age){
         idx <- grep(paste0(vrble,"_[0-9]+"),nms)
     } else {
         idx <- which(nms == vrble)
     }
-    incidence_modelled <- incidence_modelled[idx,,,drop = F]
+    # Select variables to plot and drop initial conditions
+    state <- incidence_modelled$state[idx,,-1,drop = F]
     # Convert to data table
-    inc_dt <- as.data.table(incidence_modelled)
+    inc_dt <- as.data.table(state)
     names(inc_dt) <- c("age_group","sample","date","value")
-    inc_dt[,date := covid_multi_strain_date_as_date(date)]
+    inc_dt[,date := covid_multi_strain_date_as_date(incidence_modelled$date[date])]
     inc_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
     if (vrble == "cases"){
         # Convert to data table with sample number
@@ -1370,17 +1371,18 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     
 plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age = FALSE){
     # Extract modelled seroprevalence from output
-    nms <- dimnames(seroprev_modelled)[[1]]
+    nms <- dimnames(seroprev_modelled$state)[[1]]
     if (by_age){
         idx_sero <- grep("sero_pos_1_",nms) 
     } else {
         idx_sero <- which(nms == "sero_pos_1")
     }
-    seroprev_modelled <- seroprev_modelled[idx_sero,,,drop = F]
+    # Select variables to plot and drop initial conditions
+    state <- seroprev_modelled$state[idx_sero,,-1,drop = F]
     # Convert to data table
-    sero_dt <- as.data.table(seroprev_modelled)
+    sero_dt <- as.data.table(state)
     names(sero_dt) <- c("age_group","sample","date","value")
-    sero_dt[,date := covid_multi_strain_date_as_date(date)]
+    sero_dt[,date := covid_multi_strain_date_as_date(seroprev_modelled$date[date])]
     sero_dt[,age_group := sub("_","-",sub(paste0("sero_pos_1_"),"",age_group))]
     q_sero_dt <- sero_dt[,.(med = quantile(value,0.5),
                            q95l = quantile(value,0.025),

@@ -62,9 +62,10 @@ n_iters <- 3e4 #5e4 #2e4 #
 run <- 93
 deterministic <- T # flag for whether to use deterministic model or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
-
+initial_date <- pars$info$min[pars$info$name == "start_date"] - 1
+    
 # Construct particle filter
-filter <- covid_multi_strain_particle_filter(data_raw,pars,deterministic,Rt)
+filter <- covid_multi_strain_particle_filter(data_raw,pars,deterministic,Rt,initial_date)
 
 # Run fitting
 thinning <- 10

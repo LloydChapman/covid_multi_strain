@@ -1,6 +1,6 @@
 ##' We need to map "dates" onto [`dust::dust`]'s concept of model
-##' "step" and we do this by mapping a date such as `2020-07-20` into
-##' the number of days after 2020-07-19 (1 here, with the 20th July
+##' "step" and we do this by mapping a date such as `2020-01-01` into
+##' the number of days after 2019-12-31 (1 here, with the 1st January 2020
 ##' being day 1). We call this integer number a "covid_multi_strain date".
 ##'
 ##' There are several related functions here
@@ -47,7 +47,7 @@
 ##' covid_multi_strain::as_date("2020-03-01")
 ##' try(covid_multi_strain::as_date("03-01-2020"))
 covid_multi_strain_date <- function(date) {
-    days_into_2020 <- as.numeric(as_date(date) - as_date("2020-07-19"))
+    days_into_2020 <- as.numeric(as_date(date) - as_date("2019-12-31"))
     if (any(days_into_2020 < 0)) {
         stop("Negative dates, covid_multi_strain_date likely applied twice")
     }
@@ -59,7 +59,7 @@ covid_multi_strain_date <- function(date) {
 ##' @rdname covid_multi_strain_date
 covid_multi_strain_date_as_date <- function(date) {
     assert_covid_multi_strain_date(date)
-    as_date("2020-07-19") + date
+    as_date("2019-12-31") + date
 }
 
 

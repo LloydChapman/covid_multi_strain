@@ -1,12 +1,13 @@
-covid_multi_strain_particle_filter <- function(data, pars, deterministic = TRUE, Rt = FALSE){
+covid_multi_strain_particle_filter <- function(data, pars, deterministic = TRUE, Rt = FALSE, initial_date = 0){
     base <- pars$base
     min_ages <- get_min_age(base$age_groups)
+    initial_date <- as_covid_multi_strain_date(initial_date)
     
     # Compile model
     covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
     
     # Convert raw data to required format for particle filter
-    data <- particle_filter_data(data,"day",1/base$dt)
+    data <- particle_filter_data(data,"day",1/base$dt,initial_date)
     
     # Create particle filter object
     if (deterministic){
