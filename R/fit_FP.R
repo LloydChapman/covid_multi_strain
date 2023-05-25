@@ -54,12 +54,12 @@ dir.create("output")
 # ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
 
 # Fit covid_multi_strain to FP data
-u <- c(1:5,7:9,12,14:18) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
+u <- c(1:6,8:10,13,15:19) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
 n_iters <- 3e4 #5e4 #2e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 94
+run <- 95
 deterministic <- T # flag for whether to use deterministic model or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 initial_date <- pars$info$min[pars$info$name == "start_date"] - 1

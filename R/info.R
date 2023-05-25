@@ -27,7 +27,7 @@ create_info <- function(beta_date){
                  "p_H_max","p_D_max","rel_strain_transmission1","strain_seed_date1",
                  "rel_strain_transmission2","strain_seed_date2",
                  "phi_cases","alpha_cases","alpha_hosp","alpha_death"),
-        initial = c(0.025,0.02,0.024,0.02,0.024,2.8,start_date$init,strain_seed_date$init,0.400626705/2,0.316,3.5,strain_seed_date1$init,5.25,strain_seed_date2$init,0.5,0.5,0.5,0.5),
+        initial = c(0.025,0.022,0.02,0.024,0.02,0.024,2.8,start_date$init,strain_seed_date$init,0.400626705/2,0.316,3.5,strain_seed_date1$init,5.25,strain_seed_date2$init,0.5,0.5,0.5,0.5),
         min = c(rep(0,n_beta),0.25,start_date$min,strain_seed_date$min,0,0,2,strain_seed_date1$min,3,strain_seed_date2$min,0,0,0,0),
         max = c(rep(1,n_beta),4,start_date$max,strain_seed_date$max,1,1,6,strain_seed_date1$max,9,strain_seed_date2$max,1,1,1,1),
         integer = c(rep(F,n_beta),F,F,F,F,F,F,F,F,F,F,F,F,F)

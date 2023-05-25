@@ -23,7 +23,7 @@ create_baseline <- function(){
     m <- transmission_matrix("FRA", pop, age_groups)
     
     # Transmission and natural history parameters
-    intvtn_date <- as.Date(c("2020-08-27","2020-10-24","2021-06-01","2021-08-02","2021-11-15"))
+    intvtn_date <- as.Date(c("2020-08-27","2020-10-01","2020-10-24","2021-06-01","2021-08-02","2021-11-15"))
     beta_date <- covid_multi_strain_date(intvtn_date)
     beta_names <- sprintf("beta%d",seq_along(beta_date))
     beta_type <- "piecewise-linear"
@@ -61,7 +61,7 @@ create_baseline <- function(){
     
     # Vaccine efficacy
     vax_eff <- fread("data/vax_eff.csv",colClasses = c(alpha = "numeric"))
-
+    
     # Melt to long format
     vax_eff_long <- melt(vax_eff,measure.vars = c("alpha","delta","omicron","omicron_ba2"),variable.name = "variant")
     

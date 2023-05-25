@@ -4,6 +4,7 @@
 "gamma","beta3",0.005,4,NA,NA
 "gamma","beta4",0.005,4,NA,NA
 "gamma","beta5",0.005,4,NA,NA
+"gamma","beta6",0.005,4,NA,NA
 "null","rel_strain_transmission",NA,NA,NA,NA
 "null","start_date",NA,NA,NA,NA
 "null","strain_seed_date",NA,NA,NA,NA
