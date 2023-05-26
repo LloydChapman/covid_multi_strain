@@ -30,6 +30,9 @@ source("R/fit_process.R")
 
 # Load data
 data_raw <- fread("data/data_cases_hosps_deaths_serology.csv")
+data_raw <- data_raw[day < covid_multi_strain_date(as.Date("2021-06-01")),]
+cols <- setdiff(names(data_raw),"day")
+data_raw <- data_raw[!(day <= 213 | day >= covid_multi_strain_date(as.Date("2020-09-15"))),(cols):= NA]
 vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
 pop <- fread("data/population.csv")
 
@@ -54,12 +57,14 @@ dir.create("output")
 # ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
 
 # Fit covid_multi_strain to FP data
-u <- c(1:6,8:10,13,15:19) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
-n_iters <- 3e4 #5e4 #2e4 #
+# u <- c(1:6,8:10,13,15:19) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
+u <- c(1:3,8,10,13,16:19)
+# u <- c(2:3,8,10,13,16:19)
+n_iters <- 1e4 #3e4 #5e4 #2e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 95
+run <- 98
 deterministic <- T # flag for whether to use deterministic model or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 initial_date <- pars$info$min[pars$info$name == "start_date"] - 1
@@ -74,7 +79,7 @@ saveRDS(samples,paste0("output/MCMCsamples",run,".RDS"))
 
 ## Post processing
 # Set burn-in
-burnin <- 1000 #1500
+burnin <- 500 #1000 #1500
 
 # Process MCMC output
 dat <- fit_process(samples,pars,data_raw,filter,burnin,simulate_object = T)
@@ -87,7 +92,7 @@ saveRDS(dat,paste0("output/MCMCoutput",run,".RDS"))
 moving_avg <- F
 
 # Set number of posterior samples for age-decomposition plots
-n_smpls <- 1000
+n_smpls <- 500 #1000
 
 # Plot fit
 plot_fit(dat,run,pop,u,moving_avg,n_smpls)
