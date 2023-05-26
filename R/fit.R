@@ -1,4 +1,4 @@
-covid_multi_strain_particle_filter <- function(data, pars, deterministic = TRUE, Rt = FALSE, initial_date = 0){
+covid_multi_strain_particle_filter <- function(data, pars, deterministic = TRUE, Rt = FALSE, initial_date = 0, n_particles = 200){
     base <- pars$base
     min_ages <- get_min_age(base$age_groups)
     initial_date <- as_covid_multi_strain_date(initial_date)
@@ -11,14 +11,12 @@ covid_multi_strain_particle_filter <- function(data, pars, deterministic = TRUE,
     
     # Create particle filter object
     if (deterministic){
-        n_particles <- 1
         filter <- particle_deterministic$new(
             data, covid_multi_strain, compare, 
             index = function(info) 
                 index(info, min_ages = min_ages, Rt = Rt), 
             initial = initial)
     } else {
-        n_particles <- 200
         filter <- particle_filter$new(
             data, covid_multi_strain, n_particles, compare, 
             index = function(info) 
