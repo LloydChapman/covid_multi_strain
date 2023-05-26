@@ -1338,7 +1338,7 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     inc_obs_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
     if (moving_avg){
         inc_obs_dt[,value := as.numeric(value)]
-        inc_obs_dt[,value := frollmean(value,7),by = .(age_group)]
+        inc_obs_dt[,value := frollmean(value,7,align = "center"),by = .(age_group)]
     }
     
     # Plot
