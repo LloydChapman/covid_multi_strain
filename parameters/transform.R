@@ -1,3 +1,26 @@
+compute_severity <- function(pars,severity,dt){
+    expected <- c("p_D","p_D_2","p_D_3")
+    stopifnot(all(expected %in% names(pars)))
+    
+    p_D <- pars["p_D"]
+    p_D_2 <- pars["p_D_2"]
+    p_D_3 <- pars["p_D_3"]
+    
+    # Probability of death given severe disease
+    p_D_date <- covid_multi_strain_date(c("2020-07-01","2021-07-01","2021-12-01"))
+    p_D_value <- c(p_D,p_D_2,p_D_3)
+    
+    # Probability of hospitalisation
+    p_H_max = pars["p_H_max"]
+    severity$p_H <- p_H_max * severity$p_H
+    
+    severity <- parameters_severity(
+        dt,
+        severity,
+        p_D = list(value = p_D_value,date = p_D_date))
+}
+
+
 apply_assumptions <- function(baseline, assumptions){
     stopifnot(assumptions %in% names(baseline$vaccine_progression_rate))
     baseline$vaccine_progression_rate <-
@@ -26,11 +49,7 @@ make_transform <- function(baseline){
                   "gamma_pre_1",
                   "gamma_P_1",
                   "theta_A",
-                  "p_C",
-                  "p_H",
-                  "p_G",
-                  "p_D",
-                  "p_P_1",
+                  "severity",
                   "population",
                   "initial_seed_size",
                   "initial_seed_pattern",
@@ -84,19 +103,22 @@ make_transform <- function(baseline){
     
     # Expected parameters for fitting
     expected <- c(baseline$beta_names,"start_date","rel_strain_transmission",
-                  "strain_seed_date","p_H_max","p_D_max",
+                  "strain_seed_date","p_H_max","p_D","p_D_2","p_D_3",
                   "rel_strain_transmission1","strain_seed_date1",
                   "rel_strain_transmission2","strain_seed_date2",
                   "phi_cases","alpha_cases","alpha_hosp","alpha_death")
     
     function(pars){
         stopifnot(setequal(expected, names(pars)))
+        
+        severity <- compute_severity(pars,baseline$severity,baseline$dt)
+        
         beta_value <- unname(pars[baseline$beta_names])
         start_date <- pars[["start_date"]]
         rel_strain_transmission <- pars[["rel_strain_transmission"]]
         strain_seed_date <- pars[["strain_seed_date"]]
-        p_H_max <- pars[["p_H_max"]]
-        p_D_max <- pars[["p_D_max"]]
+        # p_H_max <- pars[["p_H_max"]]
+        # p_D_max <- pars[["p_D_max"]]
         rel_strain_transmission1 <- pars[["rel_strain_transmission1"]]
         strain_seed_date1 <- pars[["strain_seed_date1"]]
         rel_strain_transmission2 <- pars[["rel_strain_transmission2"]]
@@ -123,11 +145,7 @@ make_transform <- function(baseline){
                         baseline$gamma_pre_1,
                         baseline$gamma_P_1,
                         baseline$theta_A,
-                        baseline$p_C,
-                        p_H = p_H_max*baseline$p_H,
-                        baseline$p_G,
-                        p_D = p_D_max*baseline$p_D,
-                        baseline$p_P_1,
+                        severity,
                         baseline$population,
                         start_date,
                         baseline$initial_seed_size,
@@ -179,11 +197,7 @@ make_transform <- function(baseline){
                          baseline$gamma_pre_1,
                          baseline$gamma_P_1,
                          baseline$theta_A,
-                         baseline$p_C,
-                         p_H = p_H_max*baseline$p_H,
-                         baseline$p_G,
-                         p_D = p_D_max*baseline$p_D,
-                         baseline$p_P_1,
+                         severity,
                          baseline$population,
                          start_date,
                          baseline$initial_seed_size,
@@ -235,11 +249,7 @@ make_transform <- function(baseline){
                          baseline$gamma_pre_1,
                          baseline$gamma_P_1,
                          baseline$theta_A,
-                         baseline$p_C,
-                         p_H = p_H_max*baseline$p_H,
-                         baseline$p_G,
-                         p_D = p_D_max*baseline$p_D,
-                         baseline$p_P_1,
+                         severity,
                          baseline$population,
                          start_date,
                          baseline$initial_seed_size,

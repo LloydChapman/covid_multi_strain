@@ -8,7 +8,7 @@ create_priors <- function(beta_date,pars_info) {
                            shape2 = NA_real_)
     
     p_hps <- data.frame(type = "beta",
-                        name = c("p_H_max","p_D_max"),
+                        name = c("p_H_max","p_D","p_D_2","p_D_3"),
                         scale = NA_real_,
                         shape = NA_real_,
                         shape1 = 1, 

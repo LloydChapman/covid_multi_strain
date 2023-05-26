@@ -69,11 +69,7 @@ parameters <- function(dt,
                        gamma_pre_1,
                        gamma_P_1,
                        theta_A,
-                       p_C,
-                       p_H,
-                       p_G,
-                       p_D,
-                       p_P_1,
+                       severity,
                        population,
                        start_date = 1L,
                        initial_seed_size = 10,
@@ -139,12 +135,7 @@ parameters <- function(dt,
               gamma_G = gamma_G,
               gamma_pre_1 = gamma_pre_1,
               gamma_P_1 = gamma_P_1,
-              theta_A = theta_A,
-              p_C = p_C,
-              p_H = p_H,
-              p_G = p_G,
-              p_D = p_D,
-              p_P_1 = p_P_1)
+              theta_A = theta_A)
     
     # Waning
     p$waning_rate <- waning_rate
@@ -216,7 +207,7 @@ parameters <- function(dt,
     p$sero_specificity_1 <- sero_specificity_1
     
     # Concatenate parameters into one list
-    p <- c(p,strain,vaccination,vacc_skip)
+    p <- c(p,severity,strain,vaccination,vacc_skip)
     
 }
 
@@ -314,6 +305,73 @@ process_strain_rel_p <- function(p, n_strains, n_real_strains) {
         }
     }
     p
+}
+
+
+parameters_severity <- function(dt,
+                                severity,
+                                p_D) {
+    
+    time_varying_severity <- list(D = p_D)
+    
+    get_p_step <- function(x, name) {
+        
+        p_name <- paste0("p_", name)
+        p <- x[[p_name]]
+        time_vary <- time_varying_severity[[name]]
+        
+        if (is.null(time_vary)) {
+            p_value <- NULL
+            p_date <- NULL
+        } else {
+            p_value <- time_vary$value
+            if ("date" %in% names(time_vary)) {
+                p_date <- time_vary$date
+            } else {
+                p_date <- NULL
+            }
+        }
+        
+        if (!is.null(p_value)) {
+            # assert_proportion(p_value, p_name)
+            if (length(p_value) == 1L) {
+                if (length(p_date) != 0) {
+                    stop(sprintf(
+                        "As '%s' has a single 'value', expected NULL or missing 'date'",
+                        p_name))
+                }
+            } else if (length(p_date) != length(p_value)) {
+                stop(sprintf("'date' and 'value' for '%s' must have the same length",
+                             p_name))
+            }
+        }
+        
+        if (all(p == 0)) {
+            psi <- p
+        } else {
+            psi <- p / max(p)
+        }
+        
+        if (is.null(p_value)) {
+            p_step <- max(p)
+        } else {
+            p_step <- parameters_piecewise_linear(p_date, p_value, dt)
+        }
+        
+        p_step <- outer(p_step, psi)
+        
+        x[[paste0(p_name, "_step")]] <- p_step
+        x[[paste0(p_name)]] <- NULL
+        x[[paste0("n_", p_name, "_steps")]] <- dim(p_step)[1]
+        
+        x
+    }
+    
+    for (name in names(time_varying_severity)) {
+        severity <- get_p_step(severity, name)
+    }
+    
+    severity
 }
 
 

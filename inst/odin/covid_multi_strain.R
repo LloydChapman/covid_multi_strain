@@ -75,7 +75,15 @@ p_RV_skip[, , ] <- p_V_skip[i,k]
 p_C[] <- user()
 p_H[] <- user()
 p_G[] <- user()
-p_D[] <- user()
+
+# Time-varying probabilities
+p_D_step[, ] <- user()
+n_p_D_steps <- user()
+p_D[, , ] <- if (as.integer(step) >= n_p_D_steps)
+    min(p_D_step[n_p_D_steps, i] * rel_p_death[i, j, k] *
+            strain_rel_p_death[j], as.numeric(1)) else
+                min(p_D_step[step + 1, i] * rel_p_death[i, j, k] *
+                        strain_rel_p_death[j], as.numeric(1))
 
 ## Compute the force of infection
 # Multiply numbers of infected individuals for each strain j in each vaccine 
@@ -155,8 +163,7 @@ n_I_CG[, , ] <- n_I_CHG[i,j,k] - n_I_CH[i,j,k]
 
 # Flow out of H:
 n_Hx[, , ] <- rbinom(H[i,j,k], p_Hx)
-n_HD[, , ] <- rbinom(n_Hx[i,j,k], min(rel_p_death[i,j,k]*
-                         strain_rel_p_death[j]*p_D[i], as.numeric(1)))
+n_HD[, , ] <- rbinom(n_Hx[i,j,k], p_D[i,j,k])
 n_HR[, , ] <- n_Hx[i,j,k] - n_HD[i,j,k]
 
 # Flow out of G:
@@ -668,7 +675,8 @@ dim(cross_immunity) <- n_real_strains
 dim(p_C) <- n_age
 dim(p_H) <- n_age
 dim(p_G) <- n_age
-dim(p_D) <- n_age
+dim(p_D_step) <- c(n_p_D_steps,n_age)
+dim(p_D) <- c(n_age,n_strains,n_vax)
 dim(rel_p_sympt) <- c(n_age,n_strains,n_vax)
 dim(rel_p_hosp_if_sympt) <- c(n_age,n_strains,n_vax)
 dim(rel_p_death) <- c(n_age,n_strains,n_vax)

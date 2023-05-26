@@ -9,7 +9,9 @@
 "start_date",197,183,213,FALSE
 "strain_seed_date",531,506,546,FALSE
 "p_H_max",0.2003133525,0,1,FALSE
-"p_D_max",0.316,0,1,FALSE
+"p_D",0.316,0,1,FALSE
+"p_D_2",0.316,0,1,FALSE
+"p_D_3",0.316,0,1,FALSE
 "rel_strain_transmission1",3.5,2,6,FALSE
 "strain_seed_date1",701,691,713,FALSE
 "rel_strain_transmission2",5.25,3,9,FALSE

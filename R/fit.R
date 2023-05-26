@@ -41,6 +41,7 @@ fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,Rt = FALSE,thinni
     # Construct parameters object for 1st epoch
     base <- pars$base
     init <- pars$mcmc$initial()
+    severity <- compute_severity(init,base$severity,base$dt)
     p <- parameters(base$dt,
                     base$n_age,
                     base$n_vax,
@@ -57,11 +58,7 @@ fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,Rt = FALSE,thinni
                     base$gamma_pre_1,
                     base$gamma_P_1,
                     base$theta_A,
-                    base$p_C,
-                    p_H = init["p_H_max"]*base$p_H,
-                    base$p_G,
-                    p_D = init["p_D_max"]*base$p_D,
-                    base$p_P_1,
+                    severity,
                     base$population,
                     start_date = init["start_date"],
                     base$initial_seed_size,

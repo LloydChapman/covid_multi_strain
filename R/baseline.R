@@ -48,13 +48,16 @@ create_baseline <- function(){
     p_H <- ihr/(p_C*(1-p_G))
     p_P_1 <- 0.85
     
-    # Get max values
-    p_D_max0 <- max(p_D)
-    p_H_max0 <- max(p_H)
-    
     # Normalise
     p_D <- p_D/max(p_D)
     p_H <- p_H/max(p_H)
+    
+    # Combine severity parameters into list
+    severity <- list(p_C = p_C,
+                     p_H = p_H,
+                     p_G = p_G,
+                     p_D = p_D,
+                     p_P_1 = p_P_1)
     
     # Get population
     population <- pop[,.(sum(total)),by = .(age_group)][,V1]
@@ -180,11 +183,7 @@ create_baseline <- function(){
         gamma_pre_1 = gamma_pre_1,
         gamma_P_1 = gamma_P_1,
         theta_A = theta_A,
-        p_C = p_C,
-        p_G = p_G,
-        p_H = p_H,
-        p_D = p_D,
-        p_P_1 = p_P_1,
+        severity = severity,
         population = population,
         initial_seed_size = initial_seed_size,
         initial_seed_pattern = initial_seed_pattern,
