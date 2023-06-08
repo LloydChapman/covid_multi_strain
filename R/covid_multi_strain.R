@@ -1484,18 +1484,19 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
 }
 
 
-plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,seed = 1){
+plot_outcome_by_age <- function(trajectories,vrble,phi,ttls,n_smpls,seed = 1){
     # Extract modelled incidence for outcome vrble from output
-    nms <- dimnames(state)[[1]]
+    nms <- dimnames(trajectories$state)[[1]]
     idx <- grep(paste0(vrble,"_[0-9]+",collapse = "|"),nms)
-    state <- state[idx,,,drop = F]
+    # Select variables to plot and drop initial values
+    state <- trajectories$state[idx,,-1,drop = F]
     set.seed(1)
     smpl <- sample.int(ncol(state),n_smpls) 
     state <- state[,smpl,,drop = F]
     # Convert to data table
     state_dt <- as.data.table(state)
     names(state_dt) <- c("age_group","sample","date","value")
-    state_dt[,date := covid_multi_strain_date_as_date(date)]
+    state_dt[,date := covid_multi_strain_date_as_date(trajectories$date[date])]
     state_dt[,state := gsub("_[0-9a-z]+","",age_group)]
     state_dt[,age_group := sub("_","-",sub(".*_([0-9]+_[0-9a-z]+)","\\1",age_group))]
     # Aggregate cases in <40 year-olds

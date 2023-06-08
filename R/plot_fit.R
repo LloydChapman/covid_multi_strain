@@ -19,7 +19,7 @@ plot_fit <- function(dat,run,pop,u,moving_avg = FALSE,n_smpls = 1000){
     vrble <- c("cases","hosps","deaths")
     ttls <- c("Cases","Hospitalisations","Hospital deaths")
     names(ttls) <- vrble
-    p_list <- plot_outcome_by_age(dat$samples$trajectories$state,vrble,dat$samples$pars[,"phi_cases"],ttls,n_smpls)
+    p_list <- plot_outcome_by_age(dat$samples$trajectories,vrble,dat$samples$pars[,"phi_cases"],ttls,n_smpls)
     ggsave(paste0("output/outcomes_by_age",run,".pdf"),p_list$p,width = 9,height = 3)
     ggsave(paste0("output/prop_outcomes_by_age",run,".pdf"),p_list$p1,width = 9,height = 3)
     
