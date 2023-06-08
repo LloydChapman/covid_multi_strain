@@ -39,63 +39,10 @@ fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,Rt = FALSE,thinni
     covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
     
     # Construct parameters object for 1st epoch
-    base <- pars$base
-    init <- pars$mcmc$initial()
-    severity <- compute_severity(init,base$severity,base$dt)
-    p <- parameters(base$dt,
-                    base$n_age,
-                    base$n_vax,
-                    base$m,
-                    base$beta_date,
-                    beta_value = init[grep("beta",pars$mcmc$names())],
-                    base$beta_type,
-                    base$gamma_E,
-                    base$gamma_P,
-                    base$gamma_A,
-                    base$gamma_C,
-                    base$gamma_H,
-                    base$gamma_G,
-                    base$gamma_pre_1,
-                    base$gamma_P_1,
-                    base$theta_A,
-                    severity,
-                    base$population,
-                    start_date = init["start_date"],
-                    base$initial_seed_size,
-                    base$initial_seed_pattern,
-                    strain_transmission = c(1,init["rel_strain_transmission"]),
-                    strain_seed_date = init["strain_seed_date"],
-                    base$strain_seed_size,
-                    base$strain_seed_pattern,
-                    base$strain_rel_p_sympt,
-                    base$strain_rel_p_hosp_if_sympt,
-                    base$strain_rel_p_death,
-                    base$rel_susceptibility,
-                    base$rel_p_sympt,
-                    base$rel_p_hosp_if_sympt,
-                    base$rel_p_death,
-                    base$rel_infectivity,
-                    base$vaccine_progression_rate,
-                    base$vaccine_schedule,
-                    base$vaccine_index_dose2,
-                    base$vaccine_index_booster,
-                    base$vaccine_catchup_fraction,
-                    base$n_doses,
-                    base$vacc_skip_progression_rate,
-                    base$vacc_skip_to,
-                    base$vacc_skip_weight,
-                    base$waning_rate,
-                    base$cross_immunity,
-                    phi_cases = init["phi_cases"],
-                    kappa_cases = 1/init["alpha_cases"],
-                    base$sero_sensitivity_1,
-                    base$sero_specificity_1)
+    p <- pars$mcmc$model(pars$mcmc$initial())
+    info <- filter$model$new(p[[1]]$pars,step = 0,n_particles = 1)$info()
     
-    mod <- covid_multi_strain$new(p,step = 0,n_particles = 1,seed = 1L,
-                                  deterministic = deterministic)
-    
-    info <- mod$info()
-    min_ages <- get_min_age(base$age_groups)
+    min_ages <- get_min_age(pars$base$age_groups)
     
     
     #### Fit to multiple age-stratified data streams ####
