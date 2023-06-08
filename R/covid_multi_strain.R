@@ -1537,6 +1537,35 @@ plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,seed = 1){
     return(list(p = p,p1 = p1))    
 }
 
+
+plot_variant_proportion <- function(trajectories, data, start_date, ylbl = "Variant proportion"){
+    # Select variables and drop initial conditions
+    state <- trajectories$state[c("cases","cases_non_variant"),,-1,drop = F]
+    # Convert to data table
+    state_dt <- as.data.table(state)
+    names(state_dt) <- c("state","sample","date","value")
+    state_dt[,date := covid_multi_strain_date_as_date(trajectories$date[date])]
+    state_dt <- dcast(state_dt,sample + date ~ state,value.var = "value")
+    state_dt[,vrnt_prop := 1 - cases_non_variant/cases]
+    
+    q_state_dt <- state_dt[,.(med = quantile(vrnt_prop,0.5),
+                            q95l = quantile(vrnt_prop,0.025),
+                            q95u = quantile(vrnt_prop,0.975)),
+                         by = .(date)]
+    
+    data_dt <- as.data.table(data[c("day_end","strain_non_variant","strain_tot")])
+    data_dt[,date := covid_multi_strain_date_as_date(day_end)]
+    
+    p <- ggplot() + 
+        geom_line(aes(x = date,y = med),q_state_dt[date > start_date,]) + 
+        geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u),q_state_dt[date > start_date],alpha = 0.5) +
+        geom_point(aes(x = date,y = 1 - strain_non_variant/strain_tot), data_dt[date > start_date], color = "red") + 
+        labs(x = "Date", y = ylbl) + 
+        theme_cowplot(font_size = 12)
+    return(p)
+}
+
+
 plot_cases <- function(cases_modelled, cases_observed, times){
     # par(mfrow = c(2,1), oma = c(2,3,0,0))
     par(mfrow = c(1,1))
