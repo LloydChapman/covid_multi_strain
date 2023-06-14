@@ -164,158 +164,105 @@ make_transform <- function(baseline){
         # kappa_hosp <- 1/pars[["alpha_hosp"]]
         # kappa_death <- 1/pars[["alpha_death"]]
         
+        stage_parameters <- function(strains){
+            
+            if (strains == "Wildtype_Delta"){
+                strain_transmission <- c(1,rel_strain_transmission)
+                strain_seed_date <- strain_seed_date
+                strain_rel_p_sympt <- baseline$strain_rel_p_sympt
+                strain_rel_p_hosp_if_sympt <- baseline$strain_rel_p_hosp_if_sympt
+                strain_rel_p_death <- baseline$strain_rel_p_death
+                rel_susceptibility <- baseline$rel_susceptibility
+                rel_p_sympt <- baseline$rel_p_sympt
+                rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt
+                rel_p_death <- baseline$rel_p_death
+                rel_infectivity <- baseline$rel_infectivity
+                cross_immunity <- baseline$cross_immunity
+            } else if (strains == "Delta_OmicronBA1"){
+                strain_transmission <- c(rel_strain_transmission,rel_strain_transmission1)
+                strain_seed_date <- strain_seed_date1
+                strain_rel_p_sympt <- baseline$strain_rel_p_sympt1
+                strain_rel_p_hosp_if_sympt <- baseline$strain_rel_p_hosp_if_sympt1
+                strain_rel_p_death <- baseline$strain_rel_p_death1
+                rel_susceptibility <- baseline$rel_susceptibility1
+                rel_p_sympt <- baseline$rel_p_sympt1
+                rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt1
+                rel_p_death <- baseline$rel_p_death1
+                rel_infectivity <- baseline$rel_infectivity1
+                cross_immunity <- baseline$cross_immunity1
+            } else if (strains == "OmicronBA1_OmicronBA2"){
+                strain_transmission <- c(rel_strain_transmission1,rel_strain_transmission2)
+                strain_seed_date <- strain_seed_date2
+                strain_rel_p_sympt <- baseline$strain_rel_p_sympt2
+                strain_rel_p_hosp_if_sympt <- baseline$strain_rel_p_hosp_if_sympt2
+                strain_rel_p_death <- baseline$strain_rel_p_death2
+                rel_susceptibility <- baseline$rel_susceptibility2
+                rel_p_sympt <- baseline$rel_p_sympt2
+                rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt2
+                rel_p_death <- baseline$rel_p_death2
+                rel_infectivity <- baseline$rel_infectivity2
+                cross_immunity <- baseline$cross_immunity2
+            }
+            
+            parameters(baseline$dt,
+                       baseline$n_age,
+                       baseline$n_vax,
+                       baseline$m,
+                       baseline$beta_date,
+                       beta_value = beta_value,
+                       baseline$beta_type,
+                       baseline$gamma_E,
+                       baseline$gamma_P,
+                       baseline$gamma_A,
+                       baseline$gamma_C,
+                       baseline$gamma_H,
+                       baseline$gamma_G,
+                       baseline$gamma_pre_1,
+                       baseline$gamma_P_1,
+                       baseline$theta_A,
+                       severity,
+                       baseline$population,
+                       start_date,
+                       baseline$initial_seed_size,
+                       baseline$initial_seed_pattern,
+                       strain_transmission = strain_transmission,
+                       strain_seed_date = strain_seed_date,
+                       baseline$strain_seed_size,
+                       baseline$strain_seed_pattern,
+                       strain_rel_p_sympt = strain_rel_p_sympt,
+                       strain_rel_p_hosp_if_sympt = strain_rel_p_hosp_if_sympt,
+                       strain_rel_p_death = strain_rel_p_death,
+                       rel_susceptibility = rel_susceptibility,
+                       rel_p_sympt = rel_p_sympt,
+                       rel_p_hosp_if_sympt = rel_p_hosp_if_sympt,
+                       rel_p_death = rel_p_death,
+                       rel_infectivity = rel_infectivity,
+                       baseline$vaccine_progression_rate,
+                       baseline$vaccine_schedule,
+                       baseline$vaccine_index_dose2,
+                       baseline$vaccine_index_booster,
+                       baseline$vaccine_catchup_fraction,
+                       baseline$n_doses,
+                       baseline$vacc_skip_progression_rate,
+                       baseline$vacc_skip_to,
+                       baseline$vacc_skip_weight,
+                       baseline$waning_rate,
+                       cross_immunity = cross_immunity,
+                       observation,
+                       baseline$sero_sensitivity_1,
+                       baseline$sero_specificity_1,
+                       baseline$test_sensitivity,
+                       baseline$test_specificity)
+        }
+        
         # Parameters for 1st epoch
-        p <- parameters(baseline$dt,
-                        baseline$n_age,
-                        baseline$n_vax,
-                        baseline$m,
-                        baseline$beta_date,
-                        beta_value = beta_value,
-                        baseline$beta_type,
-                        baseline$gamma_E,
-                        baseline$gamma_P,
-                        baseline$gamma_A,
-                        baseline$gamma_C,
-                        baseline$gamma_H,
-                        baseline$gamma_G,
-                        baseline$gamma_pre_1,
-                        baseline$gamma_P_1,
-                        baseline$theta_A,
-                        severity,
-                        baseline$population,
-                        start_date,
-                        baseline$initial_seed_size,
-                        baseline$initial_seed_pattern,
-                        strain_transmission = c(1,rel_strain_transmission),
-                        strain_seed_date = strain_seed_date,
-                        baseline$strain_seed_size,
-                        baseline$strain_seed_pattern,
-                        baseline$strain_rel_p_sympt,
-                        baseline$strain_rel_p_hosp_if_sympt,
-                        baseline$strain_rel_p_death,
-                        baseline$rel_susceptibility,
-                        baseline$rel_p_sympt,
-                        baseline$rel_p_hosp_if_sympt,
-                        baseline$rel_p_death,
-                        baseline$rel_infectivity,
-                        baseline$vaccine_progression_rate,
-                        baseline$vaccine_schedule,
-                        baseline$vaccine_index_dose2,
-                        baseline$vaccine_index_booster,
-                        baseline$vaccine_catchup_fraction,
-                        baseline$n_doses,
-                        baseline$vacc_skip_progression_rate,
-                        baseline$vacc_skip_to,
-                        baseline$vacc_skip_weight,
-                        baseline$waning_rate,
-                        baseline$cross_immunity,
-                        observation,
-                        baseline$sero_sensitivity_1,
-                        baseline$sero_specificity_1,
-                        baseline$test_sensitivity,
-                        baseline$test_specificity)
+        p <- stage_parameters("Wildtype_Delta")
         
         # Parameters for 2nd epoch
-        p1 <- parameters(baseline$dt,
-                         baseline$n_age,
-                         baseline$n_vax,
-                         baseline$m,
-                         baseline$beta_date,
-                         beta_value = beta_value,
-                         baseline$beta_type,
-                         baseline$gamma_E,
-                         baseline$gamma_P,
-                         baseline$gamma_A,
-                         baseline$gamma_C,
-                         baseline$gamma_H,
-                         baseline$gamma_G,
-                         baseline$gamma_pre_1,
-                         baseline$gamma_P_1,
-                         baseline$theta_A,
-                         severity,
-                         baseline$population,
-                         start_date,
-                         baseline$initial_seed_size,
-                         baseline$initial_seed_pattern,
-                         strain_transmission = c(rel_strain_transmission,rel_strain_transmission1),
-                         strain_seed_date = strain_seed_date1,
-                         baseline$strain_seed_size,
-                         baseline$strain_seed_pattern,
-                         baseline$strain_rel_p_sympt1,
-                         baseline$strain_rel_p_hosp_if_sympt1,
-                         baseline$strain_rel_p_death1,
-                         baseline$rel_susceptibility1,
-                         baseline$rel_p_sympt1,
-                         baseline$rel_p_hosp_if_sympt1,
-                         baseline$rel_p_death1,
-                         baseline$rel_infectivity1,
-                         baseline$vaccine_progression_rate,
-                         baseline$vaccine_schedule,
-                         baseline$vaccine_index_dose2,
-                         baseline$vaccine_index_booster,
-                         baseline$vaccine_catchup_fraction,
-                         baseline$n_doses,
-                         baseline$vacc_skip_progression_rate,
-                         baseline$vacc_skip_to,
-                         baseline$vacc_skip_weight,
-                         baseline$waning_rate,
-                         baseline$cross_immunity1,
-                         observation,
-                         baseline$sero_sensitivity_1,
-                         baseline$sero_specificity_1,
-                         baseline$test_sensitivity,
-                         baseline$test_specificity)
+        p1 <- stage_parameters("Delta_OmicronBA1")
         
         # Parameters for 3rd epoch
-        p2 <- parameters(baseline$dt,
-                         baseline$n_age,
-                         baseline$n_vax,
-                         baseline$m,
-                         baseline$beta_date,
-                         beta_value = beta_value,
-                         baseline$beta_type,
-                         baseline$gamma_E,
-                         baseline$gamma_P,
-                         baseline$gamma_A,
-                         baseline$gamma_C,
-                         baseline$gamma_H,
-                         baseline$gamma_G,
-                         baseline$gamma_pre_1,
-                         baseline$gamma_P_1,
-                         baseline$theta_A,
-                         severity,
-                         baseline$population,
-                         start_date,
-                         baseline$initial_seed_size,
-                         baseline$initial_seed_pattern,
-                         strain_transmission = c(rel_strain_transmission1,rel_strain_transmission2),
-                         strain_seed_date = strain_seed_date2,
-                         baseline$strain_seed_size,
-                         baseline$strain_seed_pattern,
-                         baseline$strain_rel_p_sympt2,
-                         baseline$strain_rel_p_hosp_if_sympt2,
-                         baseline$strain_rel_p_death2,
-                         baseline$rel_susceptibility2,
-                         baseline$rel_p_sympt2,
-                         baseline$rel_p_hosp_if_sympt2,
-                         baseline$rel_p_death2,
-                         baseline$rel_infectivity2,
-                         baseline$vaccine_progression_rate,
-                         baseline$vaccine_schedule,
-                         baseline$vaccine_index_dose2,
-                         baseline$vaccine_index_booster,
-                         baseline$vaccine_catchup_fraction,
-                         baseline$n_doses,
-                         baseline$vacc_skip_progression_rate,
-                         baseline$vacc_skip_to,
-                         baseline$vacc_skip_weight,
-                         baseline$waning_rate,
-                         baseline$cross_immunity2,
-                         observation,
-                         baseline$sero_sensitivity_1,
-                         baseline$sero_specificity_1,
-                         baseline$test_sensitivity,
-                         baseline$test_specificity)
+        p2 <- stage_parameters("OmicronBA1_OmicronBA2")
         
         epochs <- list(
             multistage_epoch(epoch_dates[1], pars = p1, transform_state = transform_state),
