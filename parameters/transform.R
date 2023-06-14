@@ -21,7 +21,6 @@ compute_severity <- function(pars,severity,dt){
 }
 
 
-
 compute_observation <- function(pars,model_type){
     if (model_type == "NB"){
         expected_model_specific <- c("phi_cases","alpha_cases")
@@ -58,6 +57,7 @@ make_transform <- function(baseline){
     
     # Expected fixed parameters
     expected <- c("model_type",
+                  "epoch_dates",
                   "dt",
                   "age_groups",
                   "n_age",
@@ -100,7 +100,6 @@ make_transform <- function(baseline){
                   "vacc_skip_weight",
                   "waning_rate",
                   "cross_immunity",
-                  "start_date1",
                   "strain_rel_p_sympt1",
                   "strain_rel_p_hosp_if_sympt1",
                   "strain_rel_p_death1",
@@ -110,7 +109,6 @@ make_transform <- function(baseline){
                   "rel_p_death1",
                   "rel_infectivity1",
                   "cross_immunity1",
-                  "start_date2",
                   "strain_rel_p_sympt2",
                   "strain_rel_p_hosp_if_sympt2",
                   "strain_rel_p_death2",
@@ -126,8 +124,7 @@ make_transform <- function(baseline){
                   "test_specificity")
     stopifnot(setequal(expected, names(baseline)))
     
-    start_date1 <- baseline$start_date1
-    start_date2 <- baseline$start_date2
+    epoch_dates <- baseline$epoch_dates
     
     # Expected parameters for fitting
     expected <- c(baseline$beta_names,"start_date","rel_strain_transmission",
@@ -321,8 +318,8 @@ make_transform <- function(baseline){
                          baseline$test_specificity)
         
         epochs <- list(
-            multistage_epoch(start_date1, pars = p1, transform_state = transform_state),
-            multistage_epoch(start_date2, pars = p2, transform_state = transform_state)
+            multistage_epoch(epoch_dates[1], pars = p1, transform_state = transform_state),
+            multistage_epoch(epoch_dates[2], pars = p2, transform_state = transform_state)
         )
         p_multistage <- multistage_parameters(p, epochs)
         p_multistage

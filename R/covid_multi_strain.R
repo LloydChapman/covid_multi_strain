@@ -1093,6 +1093,7 @@ plot_particle_filter <- function(history, true_history, times, idx, obs_end = NU
 }
 
 
+# Probably delete these transform functions as they're out of date now
 covid_multi_strain_transform <- function(dt,
                                          n_age,
                                          n_vax,

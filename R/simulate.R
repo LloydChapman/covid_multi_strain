@@ -206,7 +206,7 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
             n_steps1 <- NULL
             transform_state <- NULL
         }
-        n_steps <- base$start_date1/dt
+        n_steps <- base$epoch_dates[1]/dt
         n_steps1 <- (dim(states)[3] - 1)/dt
         out[[i]] <- simulate(covid_multi_strain, p_i, n_steps, 
                              deterministic, keep_all_states = F,

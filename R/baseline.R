@@ -1,11 +1,7 @@
-create_baseline <- function(model_type){
+create_baseline <- function(model_type,epoch_dates){
     # Load vaccination and population data
     vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
     pop <- fread("data/population.csv")
-    
-    # Set epoch date
-    start_date1 <- as.Date("2021-11-21")
-    start_date2 <- as.Date("2021-12-16")
     
     # Set end date for data
     end_date <- as.Date("2022-05-06") # last death date in data files
@@ -171,6 +167,7 @@ create_baseline <- function(model_type){
     
     baseline <- list(
         model_type = model_type,
+        epoch_dates = covid_multi_strain_date(epoch_dates),
         dt = dt,
         age_groups = age_groups,
         n_age  = n_age,
@@ -206,11 +203,9 @@ create_baseline <- function(model_type){
         strain_rel_p_sympt = strain_rel_p_sympt,
         strain_rel_p_hosp_if_sympt = strain_rel_p_hosp_if_sympt,
         strain_rel_p_death = strain_rel_p_death,
-        start_date1 = covid_multi_strain_date(start_date1),
         strain_rel_p_sympt1 = strain_rel_p_sympt1,
         strain_rel_p_hosp_if_sympt1 = strain_rel_p_hosp_if_sympt1,
         strain_rel_p_death1 = strain_rel_p_death1,
-        start_date2 = covid_multi_strain_date(start_date2),
         strain_rel_p_sympt2 = strain_rel_p_sympt2,
         strain_rel_p_hosp_if_sympt2 = strain_rel_p_hosp_if_sympt2,
         strain_rel_p_death2 = strain_rel_p_death2,
