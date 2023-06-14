@@ -1,4 +1,4 @@
-create_baseline <- function(){
+create_baseline <- function(model_type){
     # Load vaccination and population data
     vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
     pop <- fread("data/population.csv")
@@ -165,7 +165,12 @@ create_baseline <- function(){
     sero_sensitivity_1 <- 1 #0.9
     sero_specificity_1 <- 0.99
     
+    # Sensitivity and specificity of PCR and rapid Ag tests
+    test_sensitivity <- 1
+    test_specificity <- 1
+    
     baseline <- list(
+        model_type = model_type,
         dt = dt,
         age_groups = age_groups,
         n_age  = n_age,
@@ -214,7 +219,9 @@ create_baseline <- function(){
         cross_immunity1 = cross_immunity1,
         cross_immunity2 = cross_immunity2,
         sero_sensitivity_1 = sero_sensitivity_1,
-        sero_specificity_1 = sero_specificity_1
+        sero_specificity_1 = sero_specificity_1,
+        test_sensitivity =  test_sensitivity,
+        test_specificity = test_specificity
     )
     baseline <- c(baseline, rel_params, rel_params1, rel_params2)
     

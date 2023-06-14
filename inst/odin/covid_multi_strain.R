@@ -348,6 +348,11 @@ update(cases_inc) <- (
     if (step %% steps_per_day == 0) new_cases
     else cases_inc + new_cases)
 
+# initial(cases_inc_week) <- 0
+# update(cases_inc_week) <- (
+#     if (step %% 7*steps_per_day == 0) new_cases
+#     else cases_inc_week + new_cases)
+
 new_cases_non_variant <- sum(n_EI_P[,1, ]) +
     (if (n_real_strains == 2) sum(n_EI_P[,4, ]) else 0)
 initial(cases_non_variant_inc) <- 0

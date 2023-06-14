@@ -27,7 +27,7 @@ create_priors <- function(beta_date,pars_info) {
     
     case_obs_hps <- data.frame(
         type = "beta",
-        name = c("phi_cases","alpha_cases"),
+        name = c("phi_cases","alpha_cases","p_NC","rho_tests"),
         scale = NA_real_,
         shape = NA_real_,
         shape1 = 1,

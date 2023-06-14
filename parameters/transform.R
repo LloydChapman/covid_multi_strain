@@ -21,6 +21,31 @@ compute_severity <- function(pars,severity,dt){
 }
 
 
+
+compute_observation <- function(pars,model_type){
+    if (model_type == "NB"){
+        expected_model_specific <- c("phi_cases","alpha_cases")
+    } else if (model_type == "BB"){
+        expected_model_specific <- c("p_NC","rho_tests")
+    }
+    expected <- c("alpha_hosp","alpha_death",expected_model_specific)
+    stopifnot(all(expected %in% names(pars)))
+    
+    observation <- list()
+    if (model_type == "NB"){
+        observation$phi_cases <- pars[["phi_cases"]]
+        observation$kappa_cases <- 1/pars[["alpha_cases"]]    
+    } else if (model_type == "BB"){
+        observation$p_NC <- pars[["p_NC"]]
+        observation$rho_tests <- pars[["rho_tests"]]
+    }
+    observation$kappa_hosp <- 1/pars[["alpha_hosp"]]
+    observation$kappa_death <- 1/pars[["alpha_death"]]
+    
+    observation
+}
+
+
 apply_assumptions <- function(baseline, assumptions){
     stopifnot(assumptions %in% names(baseline$vaccine_progression_rate))
     baseline$vaccine_progression_rate <-
@@ -32,7 +57,8 @@ apply_assumptions <- function(baseline, assumptions){
 make_transform <- function(baseline){
     
     # Expected fixed parameters
-    expected <- c("dt",
+    expected <- c("model_type",
+                  "dt",
                   "age_groups",
                   "n_age",
                   "n_vax",
@@ -95,7 +121,9 @@ make_transform <- function(baseline){
                   "rel_infectivity2",
                   "cross_immunity2",
                   "sero_sensitivity_1",
-                  "sero_specificity_1")
+                  "sero_specificity_1",
+                  "test_sensitivity",
+                  "test_specificity")
     stopifnot(setequal(expected, names(baseline)))
     
     start_date1 <- baseline$start_date1
@@ -106,12 +134,18 @@ make_transform <- function(baseline){
                   "strain_seed_date","p_H_max","p_D","p_D_2","p_D_3",
                   "rel_strain_transmission1","strain_seed_date1",
                   "rel_strain_transmission2","strain_seed_date2",
-                  "phi_cases","alpha_cases","alpha_hosp","alpha_death")
+                  if (baseline$model_type == "NB"){
+                      c("phi_cases","alpha_cases")
+                  } else if (baseline$model_type == "BB") {
+                      c("p_NC","rho_tests")
+                  },
+                  "alpha_hosp","alpha_death")
     
     function(pars){
         stopifnot(setequal(expected, names(pars)))
         
         severity <- compute_severity(pars,baseline$severity,baseline$dt)
+        observation <- compute_observation(pars,baseline$model_type)
         
         beta_value <- unname(pars[baseline$beta_names])
         start_date <- pars[["start_date"]]
@@ -123,10 +157,15 @@ make_transform <- function(baseline){
         strain_seed_date1 <- pars[["strain_seed_date1"]]
         rel_strain_transmission2 <- pars[["rel_strain_transmission2"]]
         strain_seed_date2 <- pars[["strain_seed_date2"]]
-        phi_cases <- pars[["phi_cases"]]
-        kappa_cases <- 1/pars[["alpha_cases"]]
-        kappa_hosp <- 1/pars[["alpha_hosp"]]
-        kappa_death <- 1/pars[["alpha_death"]]
+        # if (baseline$model_type == "NB"){
+        #     phi_cases <- pars[["phi_cases"]]
+        #     kappa_cases <- 1/pars[["alpha_cases"]]    
+        # } else if (baseline$model_type == "BB"){
+        #     p_NC <- pars[["p_NC"]]
+        #     rho_tests <- pars[["rho_tests"]]
+        # }
+        # kappa_hosp <- 1/pars[["alpha_hosp"]]
+        # kappa_death <- 1/pars[["alpha_death"]]
         
         # Parameters for 1st epoch
         p <- parameters(baseline$dt,
@@ -173,12 +212,11 @@ make_transform <- function(baseline){
                         baseline$vacc_skip_weight,
                         baseline$waning_rate,
                         baseline$cross_immunity,
-                        phi_cases = phi_cases,
-                        kappa_cases = kappa_cases,
-                        kappa_hosp = kappa_hosp,
-                        kappa_death = kappa_death,
+                        observation,
                         baseline$sero_sensitivity_1,
-                        baseline$sero_specificity_1)
+                        baseline$sero_specificity_1,
+                        baseline$test_sensitivity,
+                        baseline$test_specificity)
         
         # Parameters for 2nd epoch
         p1 <- parameters(baseline$dt,
@@ -225,12 +263,11 @@ make_transform <- function(baseline){
                          baseline$vacc_skip_weight,
                          baseline$waning_rate,
                          baseline$cross_immunity1,
-                         phi_cases = phi_cases,
-                         kappa_cases = kappa_cases,
-                         kappa_hosp = kappa_hosp,
-                         kappa_death = kappa_death,
+                         observation,
                          baseline$sero_sensitivity_1,
-                         baseline$sero_specificity_1)
+                         baseline$sero_specificity_1,
+                         baseline$test_sensitivity,
+                         baseline$test_specificity)
         
         # Parameters for 3rd epoch
         p2 <- parameters(baseline$dt,
@@ -277,12 +314,11 @@ make_transform <- function(baseline){
                          baseline$vacc_skip_weight,
                          baseline$waning_rate,
                          baseline$cross_immunity2,
-                         phi_cases = phi_cases,
-                         kappa_cases = kappa_cases,
-                         kappa_hosp = kappa_hosp,
-                         kappa_death = kappa_death,
+                         observation,
                          baseline$sero_sensitivity_1,
-                         baseline$sero_specificity_1)
+                         baseline$sero_specificity_1,
+                         baseline$test_sensitivity,
+                         baseline$test_specificity)
         
         epochs <- list(
             multistage_epoch(start_date1, pars = p1, transform_state = transform_state),

@@ -97,12 +97,11 @@ parameters <- function(dt,
                        vacc_skip_weight = NULL,
                        waning_rate = 0,
                        cross_immunity = 1,
-                       phi_cases = 1,
-                       kappa_cases = 2,
-                       kappa_hosp = 2,
-                       kappa_death = 2,
+                       observation,
                        sero_sensitivity_1 = 0.9,
-                       sero_specificity_1 = 0.99) {
+                       sero_specificity_1 = 0.99,
+                       test_sensitivity = 0.99,
+                       test_specificity = 0.99) {
     
     n_real_strains <- length(strain_transmission)
     
@@ -196,18 +195,22 @@ parameters <- function(dt,
                                                  strain$n_strains,
                                                  n_real_strains)
     
-    # Observation parameters
-    p$phi_cases <- phi_cases
-    p$kappa_cases <- kappa_cases
-    p$kappa_hosp <- kappa_hosp
-    p$kappa_death <- kappa_death
+    # # Observation parameters
+    # p$phi_cases <- phi_cases
+    # p$kappa_cases <- kappa_cases
+    # p$kappa_hosp <- kappa_hosp
+    # p$kappa_death <- kappa_death
     
     # Sensitivity and specificity of serological tests
     p$sero_sensitivity_1 <- sero_sensitivity_1
     p$sero_specificity_1 <- sero_specificity_1
     
+    # Sensitivity and specificity of PCR and rapid Ag tests
+    p$test_sensitivity <- test_sensitivity
+    p$test_specificity <- test_specificity
+    
     # Concatenate parameters into one list
-    p <- c(p,severity,strain,vaccination,vacc_skip)
+    p <- c(p,severity,strain,vaccination,vacc_skip,observation)
     
 }
 
@@ -651,6 +654,7 @@ index <- function(info, min_ages = seq(0,70,by = 10), Rt = TRUE){
                    # deaths_70_79 = index[["D_inc_70_79"]],
                    # deaths_80_plus = index[["D_inc_80_plus"]]
                    cases = index[["cases_inc"]],
+                   # cases_week = index[["cases_inc_week"]],
                    cases_non_variant = index[["cases_non_variant_inc"]],
                    cases_0_9 = index[["cases_inc_0_9"]],
                    cases_10_19 = index[["cases_inc_10_19"]],
@@ -733,7 +737,7 @@ index <- function(info, min_ages = seq(0,70,by = 10), Rt = TRUE){
 }
 
 
-# log-likelihood of binomial proportion
+# log-likelihood of binomial count
 ll_binom <- function(data_x, data_size, model_prob) {
     if (is.na(data_x) || is.na(data_size)) {
         return(numeric(length(model_prob)))
@@ -760,6 +764,30 @@ ll_nbinom <- function(data, model, kappa, exp_noise){
     }
     mu <- model + rexp(length(model),rate = exp_noise)
     dnbinom(data, kappa, mu = mu, log = TRUE)
+}
+
+
+# log-likelihood of binomial count where success probability is beta-distributed
+ll_betabinom <- function(data_x, data_size, model_prob, rho) {
+    if (is.na(data_x) || is.na(data_size)) {
+        return(numeric(length(model_prob)))
+    }
+    dbetabinom(data_x, data_size, model_prob, rho, log = TRUE)
+}
+
+
+dbetabinom <- function(x, size, prob, rho, log = FALSE) {
+    
+    a <- prob * (1 / rho - 1)
+    b <- (1 - prob) * (1 / rho - 1)
+    
+    out <- lchoose(size, x) + lbeta(x + a, size - x + b) - lbeta(a, b)
+    
+    if (!log) {
+        out <- exp(out)
+    }
+    
+    out
 }
 
 
@@ -792,13 +820,23 @@ test_prob_pos <- function(pos, neg, sensitivity, specificity, exp_noise) {
 
 # Define comparison function for age-stratified data
 compare <- function(state, observed, pars){
+    if (is.null(pars$phi_cases)){
+        phi_cases <- 0.5
+    } else {
+        phi_cases <- pars$phi_cases
+    }
+    if (is.null(pars$kappa_cases)){
+        kappa_cases <- 2
+    } else {
+        kappa_cases <- pars$kappa_cases
+    }
     if (is.null(pars$kappa_hosp)){
-        kappa_hosp <- 20
+        kappa_hosp <- 2
     } else {
         kappa_hosp <- pars$kappa_hosp
     }
     if (is.null(pars$kappa_death)){
-        kappa_death <- 20
+        kappa_death <- 2
     } else {
         kappa_death <- pars$kappa_death
     }
@@ -848,14 +886,14 @@ compare <- function(state, observed, pars){
     model_cases_60_69 <- state["cases_60_69", ]
     model_cases_70_plus <- state["cases_70_plus", ]
     
-    model_confirmed_cases_0_9 <- pars$phi_cases * model_cases_0_9
-    model_confirmed_cases_10_19 <- pars$phi_cases * model_cases_10_19
-    model_confirmed_cases_20_29 <- pars$phi_cases * model_cases_20_29
-    model_confirmed_cases_30_39 <- pars$phi_cases * model_cases_30_39
-    model_confirmed_cases_40_49 <- pars$phi_cases * model_cases_40_49
-    model_confirmed_cases_50_59 <- pars$phi_cases * model_cases_50_59
-    model_confirmed_cases_60_69 <- pars$phi_cases * model_cases_60_69
-    model_confirmed_cases_70_plus <- pars$phi_cases * model_cases_70_plus
+    model_confirmed_cases_0_9 <- phi_cases * model_cases_0_9
+    model_confirmed_cases_10_19 <- phi_cases * model_cases_10_19
+    model_confirmed_cases_20_29 <- phi_cases * model_cases_20_29
+    model_confirmed_cases_30_39 <- phi_cases * model_cases_30_39
+    model_confirmed_cases_40_49 <- phi_cases * model_cases_40_49
+    model_confirmed_cases_50_59 <- phi_cases * model_cases_50_59
+    model_confirmed_cases_60_69 <- phi_cases * model_cases_60_69
+    model_confirmed_cases_70_plus <- phi_cases * model_cases_70_plus
     
     # Modelled seropositives
     # model_sero_pos_1 can go above N_tot (I think due to reinfection) so cap it to avoid probabilities > 1
@@ -918,6 +956,16 @@ compare <- function(state, observed, pars){
         model_cases - model_cases_non_variant,
         1, 1, exp_noise)
     
+    # Weekly modelled cases
+    # model_cases_week <- state["cases_week", ]
+    # test_negs <- pars$p_NC * (pars$N_tot - model_cases_week)
+    test_negs <- pars$p_NC * (sum(pars$N_tot) - model_cases)
+    model_test_prob_pos <- test_prob_pos(model_cases,
+                                         test_negs,
+                                         pars$test_sensitivity,
+                                         pars$test_specificity,
+                                         exp_noise)
+    
     # Log-likelihoods for deaths
     # ll_hosps <- ll_nbinom(observed$hosps,model_hosps,kappa_hosp,exp_noise)
     ll_hosps_0_39 <- ll_nbinom(observed$hosps_0_39,model_hosps_0_39,kappa_hosp,exp_noise)
@@ -966,14 +1014,14 @@ compare <- function(state, observed, pars){
     # # ll_deaths_80_plus <- ll_pois(observed$deaths_80_plus,model_deaths_80_plus,exp_noise)
     
     # Log-likelihoods for cases
-    ll_cases_0_9 <- ll_nbinom(observed$cases_0_9,model_confirmed_cases_0_9,pars$kappa_cases,exp_noise)
-    ll_cases_10_19 <- ll_nbinom(observed$cases_10_19,model_confirmed_cases_10_19,pars$kappa_cases,exp_noise)
-    ll_cases_20_29 <- ll_nbinom(observed$cases_20_29,model_confirmed_cases_20_29,pars$kappa_cases,exp_noise)
-    ll_cases_30_39 <- ll_nbinom(observed$cases_30_39,model_confirmed_cases_30_39,pars$kappa_cases,exp_noise)
-    ll_cases_40_49 <- ll_nbinom(observed$cases_40_49,model_confirmed_cases_40_49,pars$kappa_cases,exp_noise)
-    ll_cases_50_59 <- ll_nbinom(observed$cases_50_59,model_confirmed_cases_50_59,pars$kappa_cases,exp_noise)
-    ll_cases_60_69 <- ll_nbinom(observed$cases_60_69,model_confirmed_cases_60_69,pars$kappa_cases,exp_noise)
-    ll_cases_70_plus <- ll_nbinom(observed$cases_70_plus,model_confirmed_cases_70_plus,pars$kappa_cases,exp_noise)
+    ll_cases_0_9 <- ll_nbinom(observed$cases_0_9,model_confirmed_cases_0_9,kappa_cases,exp_noise)
+    ll_cases_10_19 <- ll_nbinom(observed$cases_10_19,model_confirmed_cases_10_19,kappa_cases,exp_noise)
+    ll_cases_20_29 <- ll_nbinom(observed$cases_20_29,model_confirmed_cases_20_29,kappa_cases,exp_noise)
+    ll_cases_30_39 <- ll_nbinom(observed$cases_30_39,model_confirmed_cases_30_39,kappa_cases,exp_noise)
+    ll_cases_40_49 <- ll_nbinom(observed$cases_40_49,model_confirmed_cases_40_49,kappa_cases,exp_noise)
+    ll_cases_50_59 <- ll_nbinom(observed$cases_50_59,model_confirmed_cases_50_59,kappa_cases,exp_noise)
+    ll_cases_60_69 <- ll_nbinom(observed$cases_60_69,model_confirmed_cases_60_69,kappa_cases,exp_noise)
+    ll_cases_70_plus <- ll_nbinom(observed$cases_70_plus,model_confirmed_cases_70_plus,kappa_cases,exp_noise)
     
     # Log-likelihoods for seroprevalence
     # ll_sero_pos_1 <- ll_binom(observed$sero_pos_1,observed$sero_tot_1,model_sero_prob_pos_1)
@@ -987,15 +1035,22 @@ compare <- function(state, observed, pars){
     # Log-likelihood for variant proportion
     ll_strain <- ll_binom(observed$strain_non_variant,observed$strain_tot,model_strain_prob_pos)
     
+    # Log-likelihood for positive tests
+    ll_tests <- ll_betabinom(observed$pos,
+                             observed$tot,
+                             model_test_prob_pos,
+                             pars$rho_tests)
+    # print(ll_tests)
+    
     # Calculate total log-likelihood
     # ll_hosps + ll_deaths
     # ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
     # ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
     # ll_hosps_70_plus + ll_deaths_70_plus
     # ll_hosps + ll_deaths + ll_sero_pos_1 + 
-    ll_strain +
+    ll_strain + ll_tests +
     1*(ll_cases_0_9 + ll_cases_10_19 + ll_cases_20_29 + ll_cases_30_39 + ll_cases_40_49 + ll_cases_50_59 + ll_cases_60_69 + ll_cases_70_plus) +
-        1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
+        1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) +
         1*(ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus) + 
         ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus
 }

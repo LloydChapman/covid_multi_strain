@@ -71,7 +71,7 @@ min_ages <- get_min_age(age_groups)
 # Population
 pop <- pop[country == "French Polynesia" & year == 2020]
 pop[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
-write.csv(pop,"data/population.csv",row.names = F)
+# write.csv(pop,"data/population.csv",row.names = F)
 
 ## Weekly data
 weekly_dt[,Date := sub(".*-","",Date)]
@@ -115,7 +115,7 @@ total_cases_dt[,date := ISOweek2date(paste0(iso_week,"-1"))]
 ggplot() + 
     geom_line(aes(x = date,y = cases),total_cases_dt) +
     geom_point(aes(x = Date,y = `Total nombre de nouveaux cas confirmés locaux`),weekly_dt,color = "red")
-ggsave("output/total_cases.pdf",width = 5,height = 4)
+# ggsave("output/total_cases.pdf",width = 5,height = 4)
 
 # Impute missing confirmation dates with dates of nearest cases
 cases_dt1 <- copy(cases_dt) 
@@ -128,7 +128,7 @@ total_cases_dt1[,date := ISOweek2date(paste0(iso_week,"-1"))]
 ggplot() + 
     geom_line(aes(x = date,y = cases),total_cases_dt1) +
     geom_point(aes(x = Date,y = `Total nombre de nouveaux cas confirmés locaux`),weekly_dt,color = "red")
-ggsave("output/total_cases_imputed_missing_dates.pdf",width = 5,height = 4)
+# ggsave("output/total_cases_imputed_missing_dates.pdf",width = 5,height = 4)
 # Most cases with missing dates are early in first wave, so use data with imputed missing dates
 
 # Aggregate cases by age group and date
@@ -145,6 +145,40 @@ cases1 <- cases_dt1[!is.na(age_group),.(cases = .N),by = .(age_group,date)]
 # Plot cases
 ggplot(cases1,aes(x = date,y = cases,group = age_group,color = age_group)) + 
     geom_line()
+
+## Tests
+ggplot(weekly_dt) + 
+    geom_point(aes(x = Date,y = `Nombre total de tests PCR  et/ou TDR Ag`)) +
+    geom_point(aes(x = Date,y = `Total nombre de nouveaux cas confirmés locaux`), color = "red")
+
+cols <- setdiff(names(weekly_dt),c("Année/ semaine","Date","Year"))
+cum_weekly_dt <- cbind(weekly_dt[,.(Date,`Année/ semaine`,Year)],weekly_dt[,lapply(.SD,cumsum),.SDcols = cols])
+# Move observations to end of week to reflect fact that they're total over week
+cum_weekly_dt[,Date := Date + 6]
+
+# Make dates vector for data
+dates <- seq.Date(from = weekly_dt[,min(Date)],to = cum_weekly_dt[,max(Date)],by = 1)
+base_dt <- data.table(date = dates)
+base_dt[, week := date2ISOweek(date)]
+cum_weekly_dt[,week := date2ISOweek(Date)]
+cols <- c("tot","pos")
+setnames(cum_weekly_dt,c("Nombre total de tests PCR  et/ou TDR Ag","Total nombre de nouveaux cas confirmés locaux"),cols)
+tests_dt <- merge(base_dt,cum_weekly_dt[,.(week,tot,pos)],by = "week",all = T)
+
+# Interpolate cumulative tests and cases
+tests_dt[1,(cols) := 0]
+tests_dt[,(cols) := lapply(.SD,function(x) spline(date,x,method = "hyman",xout = date)$y),.SDcols = cols]
+
+# Take difference to calculate daily cases and tests
+tests_dt[,(cols) := lapply(.SD,function(x) round(diff(c(0,x)))), .SDcols = cols]
+
+# Drop week variable
+tests_dt[,week := NULL]
+
+# Plot to check
+ggplot(tests_dt) + 
+    geom_line(aes(x = date,y = tests)) +
+    geom_line(aes(x = date,y = cases),color = "red")
 
 ## Hospitalisations
 # 1st wave 
@@ -204,7 +238,7 @@ ggplot() +
     geom_line(aes(x = date,y = hosps),total_hosps_by_hosp_dt[is.na(hospital) | hospital == "CHPF"]) +
     geom_point(aes(x = Date,y = `Nombre de nouvelles hospitalisations Covid CHPf Tahiti`),weekly_dt,color = "red") + 
     labs(title = "CHPF")
-ggsave("output/total_hosps_CHPF.pdf",width = 5,height = 4)
+# ggsave("output/total_hosps_CHPF.pdf",width = 5,height = 4)
 
 # hospitals <- total_hosps_by_hosp_dt[,unique(hospital)]
 # hospitals <- hospitals[!is.na(hospitals) & hospitals != "CHPF"]
@@ -225,7 +259,7 @@ total_hosps_dt[,date := ISOweek2date(paste0(iso_week,"-1"))]
 ggplot() + 
     geom_line(aes(x = date,y = hosps),total_hosps_dt) +
     geom_point(aes(x = Date,y = `Nombre total de nouvelles hospitalisations tous hôpitaux`),weekly_dt,color = "red")
-ggsave("output/total_hosps.pdf",width = 5,height = 4)
+# ggsave("output/total_hosps.pdf",width = 5,height = 4)
 
 # Add age groups
 age_groups_hosp <- c(paste0(min_ages[c(1,5:(length(min_ages)-1))],"-",min_ages[5:length(min_ages)]-1), paste0(min_ages[length(min_ages)],"+"))
@@ -265,7 +299,7 @@ ggplot() +
     geom_line(aes(x = date,y = deaths),total_deaths_by_hosp_dt[is.na(hospital) | hospital == "CHPF"]) +
     geom_point(aes(x = Date,y = `Nombre de décès CHPf`),weekly_dt,color = "red") + 
     labs(title = "CHPF")
-ggsave("output/total_deaths_CHPF.pdf",width = 5,height = 4)
+# ggsave("output/total_deaths_CHPF.pdf",width = 5,height = 4)
 
 total_deaths_dt <- deaths_dt[,.(deaths = .N),by = .(date = death_date)]
 total_deaths_dt[,iso_week := ISOweek(date)]
@@ -276,7 +310,7 @@ ggplot() +
     geom_line(aes(x = date,y = deaths),total_deaths_dt) + 
     geom_point(aes(x = Date,y = `Nombre total de décès`),weekly_dt,color = "blue") + 
     geom_point(aes(x = Date,y = `Nombre total de décès hospitaliers`),weekly_dt,color = "red")
-ggsave("output/total_deaths.pdf",width = 5, height = 4)
+# ggsave("output/total_deaths.pdf",width = 5, height = 4)
 
 ## Seroprevalence
 process_sero_data <- function(sero_dt,sample_date,age_groups,min_ages){
@@ -302,10 +336,10 @@ process_sero_data <- function(sero_dt,sample_date,age_groups,min_ages){
 }
 
 sero_pos_dt1 <- process_sero_data(sero_pos_dt1, as.Date("2021-02-14"), age_groups, min_ages)
-write.csv(sero_pos_dt1,"data/seroprev_feb21.csv",row.names = F)
+# write.csv(sero_pos_dt1,"data/seroprev_feb21.csv",row.names = F)
 print(binom.test(sero_pos_dt1[,sum(seropos)],sero_pos_dt1[,sum(n)]))
 sero_pos_dt2 <- process_sero_data(sero_pos_dt2, as.Date("2021-11-30"), age_groups, min_ages)
-write.csv(sero_pos_dt2,"data/seroprev_nov21.csv",row.names = F)
+# write.csv(sero_pos_dt2,"data/seroprev_nov21.csv",row.names = F)
 print(binom.test(sero_pos_dt2[,sum(seropos)],sero_pos_dt2[,sum(n)]))
 
 sero_pos_dt <- rbind(sero_pos_dt1,sero_pos_dt2)
@@ -323,9 +357,9 @@ variant_dt <- variant_dt[, `:=`(strain_tot = ba1 + ba2, strain_non_variant = ba1
 
 
 ## Make data table of hospitalisations, deaths, cases and seroprevalence for fitting 
-strt_date <- hosps_dt[,min(date,na.rm = T)] - 20 # 2020-07-20
-end_date <- as.Date("2022-05-06") # last death date in data files
-dates <- seq.Date(strt_date,end_date,by = 1)
+# strt_date <- hosps_dt[,min(date,na.rm = T)] - 20 # 2020-07-20
+# end_date <- as.Date("2022-05-06") # last death date in data files
+# dates <- seq.Date(strt_date,end_date,by = 1)
 base_dt <- CJ(date = dates,age_group = age_groups_hosp)
 
 reformat_data <- function(x, base_dt, vrbl, fillna = F){
@@ -357,7 +391,7 @@ base_dt_vrnt <- data.table(date = dates)
 vrnt <- merge(base_dt_vrnt,variant_dt[,.(date,strain_tot,strain_non_variant)],by = "date",all.x = T)
 
 # Merge different data sources
-data_raw <- Reduce(function(...) merge(...,all = T), list(hosps_wide, deaths_wide, cases_wide, sero_pos_wide, sero_tot_wide, vrnt))
+data_raw <- Reduce(function(...) merge(...,all = T), list(hosps_wide, deaths_wide, cases_wide, sero_pos_wide, sero_tot_wide, vrnt, tests_dt))
 
 data_raw[,day := covid_multi_strain_date(date)]
 data_raw[,date := NULL]
@@ -372,6 +406,11 @@ data_raw[,sero_pos_1 := sero_pos_1_20_29 + sero_pos_1_30_39 + sero_pos_1_40_49 +
 data_raw[,sero_tot_1 := sero_tot_1_20_29 + sero_tot_1_30_39 + sero_tot_1_40_49 + sero_tot_1_50_59 + sero_tot_1_60_69 + sero_tot_1_70_plus]
 # data_raw[,strain_tot := NA]
 # data_raw[,strain_non_variant := NA]
+if (model_type == "NB"){
+    data_raw[,c(paste0("cases_",c("0_9","10_19","20_29","30_39","40_49","50_59","60_69","70_plus")),"cases") := NA]
+} else if (model_type == "BB"){
+    data_raw[,c("pos","tot") := NA]
+}
 write.csv(data_raw,"data/data_cases_hosps_deaths_serology.csv",row.names = F)
 
 ## Vaccinations
@@ -389,10 +428,10 @@ vax[,dose := fcase(dose == "Primo injection","dose1",
 
 # Aggregate doses in the same age group on the same day
 vax <- vax[,.(number = sum(number)),by = .(date,dose,age_group)]
-write.csv(vax,"data/data_vaccination.csv",row.names = F)
+# write.csv(vax,"data/data_vaccination.csv",row.names = F)
 
 # Probability of death in the community given severe disease
 prob_death_community <- weekly_dt[
     ,sum(`Nombre de décès à domicile`,na.rm = T)/
         sum(`Nombre total de nouvelles hospitalisations tous hôpitaux`,na.rm = T)]
-write.csv(prob_death_community,"data/prob_death_community.csv",row.names = F)
+# write.csv(prob_death_community,"data/prob_death_community.csv",row.names = F)
