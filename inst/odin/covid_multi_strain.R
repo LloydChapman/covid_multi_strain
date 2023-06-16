@@ -50,10 +50,10 @@ update(N_tot[]) <- sum(S[i,]) + sum(E[i, , ]) + sum(I_P[i, , ]) +
 ## Individual probabilities of transition:
 # infection progression:
 p_SE[, ] <- 1 - exp(-sum(lambda_sus[i, ,j]) * dt) # S to E, sum susceptibility-weighted force of infection over strains
-p_EI <- 1 - exp(-gamma_E * dt) # E to I
-p_I_PI_C <- 1 - exp(-gamma_P * dt) # I_P to I_C
-p_I_Cx <- 1 - exp(-gamma_C * dt) # I_C to x
-p_I_AR <- 1 - exp(-gamma_A * dt) # I_A to R
+p_EI[] <- 1 - exp(-rel_gamma_E[i] * gamma_E * dt) # E to I
+p_I_PI_C[] <- 1 - exp(-rel_gamma_P[i] * gamma_P * dt) # I_P to I_C
+p_I_Cx[] <- 1 - exp(-rel_gamma_C[i] * gamma_C * dt) # I_C to x
+p_I_AR[] <- 1 - exp(-rel_gamma_A[i] * gamma_A * dt) # I_A to R
 p_Hx <- 1 - exp(-gamma_H * dt) # H to x
 p_GD <- 1 - exp(-gamma_G * dt) # G to D
 p_T_pre_1x <- 1 - exp(-gamma_pre_1 * dt) # T_pre_1 to x
@@ -129,7 +129,7 @@ n_SV_skip[, ] <- rbinom(S[i,j] - sum(n_SE[i, ,j]) - n_SV[i,j], p_SV_skip[i,j])
 
 # Flow out of E:
 # progression
-n_EI[, , ] <- rbinom(E[i,j,k], p_EI)
+n_EI[, , ] <- rbinom(E[i,j,k], p_EI[j])
 n_EI_P[, , ] <- rbinom(n_EI[i,j,k], min(rel_p_sympt[i,j,k]*
                            strain_rel_p_sympt[j]*p_C[i], as.numeric(1)))
 n_EI_A[, , ] <- n_EI[i,j,k] - n_EI_P[i,j,k]
@@ -139,21 +139,21 @@ n_EV_skip[, , ] <- rbinom(E[i,j,k] - n_EI[i,j,k] - n_EV[i,j,k], p_EV_skip[i,j,k]
 
 # Flow out of I_P:
 # progression
-n_I_PI_C[, , ] <- rbinom(I_P[i,j,k], p_I_PI_C)
+n_I_PI_C[, , ] <- rbinom(I_P[i,j,k], p_I_PI_C[j])
 # vaccination
 n_I_PV[, , ] <- rbinom(I_P[i,j,k] - n_I_PI_C[i,j,k], p_I_PV[i,j,k])
 n_I_PV_skip[, , ] <- rbinom(I_P[i,j,k] - n_I_PI_C[i,j,k] - n_I_PV[i,j,k], p_I_PV_skip[i,j,k])
 
 # Flow out of I_A:
 # progression
-n_I_AR[, , ] <- rbinom(I_A[i,j,k], p_I_AR)
+n_I_AR[, , ] <- rbinom(I_A[i,j,k], p_I_AR[j])
 # vaccination
 n_I_AV[, , ] <- rbinom(I_A[i,j,k] - n_I_AR[i,j,k], p_I_AV[i,j,k])
 n_I_AV_skip[, , ] <- rbinom(I_A[i,j,k] - n_I_AR[i,j,k] - n_I_AV[i,j,k], p_I_AV_skip[i,j,k])
 
 # Flow out of I_C:
 # progression
-n_I_Cx[, , ] <- rbinom(I_C[i,j,k], p_I_Cx)
+n_I_Cx[, , ] <- rbinom(I_C[i,j,k], p_I_Cx[j])
 n_I_CR[, , ] <- rbinom(n_I_Cx[i,j,k], 1 - min(rel_p_hosp_if_sympt[i,j,k]*
                            strain_rel_p_hosp_if_sympt[j]*p_H[i], as.numeric(1))) #
 n_I_CHG[, , ] <- n_I_Cx[i,j,k] - n_I_CR[i,j,k]
@@ -422,6 +422,10 @@ gamma_G <- user(1/3)
 gamma_pre_1 <- user(1/13)
 gamma_P_1 <- user(1/200)
 p_P_1 <- user(0.85)
+rel_gamma_E[] <- user()
+rel_gamma_P[] <- user()
+rel_gamma_C[] <- user()
+rel_gamma_A[] <- user()
 waning_rate <- user()
 theta_A <- user(0.5)
 m[, ] <- user() # age-structured contact matrix
@@ -677,6 +681,14 @@ dim(I_rel_inf) <- c(n_age,n_strains,n_vax)
 dim(rel_susceptibility) <- c(n_age,n_strains,n_vax)
 dim(rel_foi_strain) <- c(n_age,n_real_strains,n_vax)
 dim(cross_immunity) <- n_real_strains
+dim(p_EI) <- n_strains
+dim(p_I_PI_C) <- n_strains
+dim(p_I_Cx) <- n_strains
+dim(p_I_AR) <- n_strains
+dim(rel_gamma_E) <- n_strains
+dim(rel_gamma_P) <- n_strains
+dim(rel_gamma_C) <- n_strains
+dim(rel_gamma_A) <- n_strains
 dim(p_C) <- n_age
 dim(p_H) <- n_age
 dim(p_G) <- n_age

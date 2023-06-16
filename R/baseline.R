@@ -137,17 +137,50 @@ create_baseline <- function(model_type,epoch_dates){
     vacc_skip_weight <- c(0,0,1,0,0) #integer(n_vax) #
     
     # Relative probabilities of symptoms, hospitalisation and death for different strains
+    # Wildtype/Delta
     strain_rel_p_sympt <- 1
     strain_rel_p_hosp_if_sympt <- c(1,1.6*1.85) #1 #
     strain_rel_p_death <- 1
     
+    # Delta/Omicron BA.1
     strain_rel_p_sympt1 <- 1
     strain_rel_p_hosp_if_sympt1 <- c(1,strain_rel_p_hosp_if_sympt[2]*0.3) #c(1,1.85*0.3) #
     strain_rel_p_death1 <- 1
     
+    # Omicron BA.1/Omicron BA.2
     strain_rel_p_sympt2 <- 1
     strain_rel_p_hosp_if_sympt2 <- 1
     strain_rel_p_death2 <- 1
+    
+    # Relative duration of serial interval (compared to Wildtype)
+    # We assume Delta is 13% and Omicron BA.1 and BA.2 are 25% shorter than Wildtype (Perez-Guzman 2023)
+    # Wildtype
+    rel_si_wildtype <- 1
+    # Delta
+    rel_si_delta <- 0.87
+    # Omicron BA.1
+    rel_si_omicronba1 <- 0.75
+    # Omicron BA.2
+    rel_si_omicronba2 <- 0.75
+    
+    # Serial interval of variants
+    # Wildtype/Delta
+    rel_gamma_wildtype_delta <- list(E = c(1/rel_si_wildtype,1/rel_si_delta),
+                                     P = c(1/rel_si_wildtype,1/rel_si_delta),
+                                     C = c(1/rel_si_wildtype,1/rel_si_delta),
+                                     A = c(1/rel_si_wildtype,1/rel_si_delta))
+    
+    # Delta/Omicron BA.1
+    rel_gamma_delta_omicronba1 <- list(E = c(1/rel_si_delta,1/rel_si_omicronba1),
+                                       P = c(1/rel_si_delta,1/rel_si_omicronba1),
+                                       C = c(1/rel_si_delta,1/rel_si_omicronba1),
+                                       A = c(1/rel_si_delta,1/rel_si_omicronba1))
+    
+    # Omicron BA.1/Omicron BA.2
+    rel_gamma_omicronba1_omicronba2 <- list(E = c(1/rel_si_omicronba1,1/rel_si_omicronba2),
+                                            P = c(1/rel_si_omicronba1,1/rel_si_omicronba2),
+                                            C = c(1/rel_si_omicronba1,1/rel_si_omicronba2),
+                                            A = c(1/rel_si_omicronba1,1/rel_si_omicronba2))
     
     # Waning parameters
     waning_rate <- 1/(6*365)
@@ -209,6 +242,9 @@ create_baseline <- function(model_type,epoch_dates){
         strain_rel_p_sympt2 = strain_rel_p_sympt2,
         strain_rel_p_hosp_if_sympt2 = strain_rel_p_hosp_if_sympt2,
         strain_rel_p_death2 = strain_rel_p_death2,
+        rel_gamma_wildtype_delta = rel_gamma_wildtype_delta,
+        rel_gamma_delta_omicronba1 = rel_gamma_delta_omicronba1,
+        rel_gamma_omicronba1_omicronba2 = rel_gamma_omicronba1_omicronba2,
         waning_rate = waning_rate,
         cross_immunity = cross_immunity,
         cross_immunity1 = cross_immunity1,

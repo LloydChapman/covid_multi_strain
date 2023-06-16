@@ -81,6 +81,10 @@ parameters <- function(dt,
                        strain_rel_p_sympt = 1,
                        strain_rel_p_hosp_if_sympt = 1,
                        strain_rel_p_death = 1,
+                       strain_rel_gamma_E = 1,
+                       strain_rel_gamma_P = 1,
+                       strain_rel_gamma_C = 1,
+                       strain_rel_gamma_A = 1,
                        rel_susceptibility = 1,
                        rel_p_sympt = 1,
                        rel_p_hosp_if_sympt = 1,
@@ -194,6 +198,28 @@ parameters <- function(dt,
     p$strain_rel_p_death <- process_strain_rel_p(strain_rel_p_death,
                                                  strain$n_strains,
                                                  n_real_strains)
+    
+    # Strain-dependent progression rates
+    strain_rel_gammas <- list(E = strain_rel_gamma_E,
+                              P = strain_rel_gamma_P,
+                              C = strain_rel_gamma_C,
+                              A = strain_rel_gamma_A)
+    for (name in names(strain_rel_gammas)) {
+        rel_gamma <- strain_rel_gammas[[name]]
+        rel_gamma_name <- paste0("rel_gamma_", name)
+        if (is.null(rel_gamma)) {
+            p[[rel_gamma_name]] <- rep(1, strain$n_strains)
+        } else {
+            # rel_gamma <- recycle(assert_non_negative(rel_gamma),
+            #                      n_real_strains)
+            rel_gamma <- recycle(rel_gamma,n_real_strains)
+            if (length(rel_gamma) == 2) {
+                p[[rel_gamma_name]] <- mirror_strain(rel_gamma)
+            } else {
+                p[[rel_gamma_name]] <- rep(1, strain$n_strains)
+            }
+        }
+    }
     
     # # Observation parameters
     # p$phi_cases <- phi_cases

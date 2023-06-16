@@ -99,6 +99,7 @@ make_transform <- function(baseline){
                   "vacc_skip_to",
                   "vacc_skip_weight",
                   "waning_rate",
+                  "rel_gamma_wildtype_delta",
                   "cross_immunity",
                   "strain_rel_p_sympt1",
                   "strain_rel_p_hosp_if_sympt1",
@@ -108,6 +109,7 @@ make_transform <- function(baseline){
                   "rel_p_hosp_if_sympt1",
                   "rel_p_death1",
                   "rel_infectivity1",
+                  "rel_gamma_delta_omicronba1",
                   "cross_immunity1",
                   "strain_rel_p_sympt2",
                   "strain_rel_p_hosp_if_sympt2",
@@ -117,6 +119,7 @@ make_transform <- function(baseline){
                   "rel_p_hosp_if_sympt2",
                   "rel_p_death2",
                   "rel_infectivity2",
+                  "rel_gamma_omicronba1_omicronba2",
                   "cross_immunity2",
                   "sero_sensitivity_1",
                   "sero_specificity_1",
@@ -177,6 +180,7 @@ make_transform <- function(baseline){
                 rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt
                 rel_p_death <- baseline$rel_p_death
                 rel_infectivity <- baseline$rel_infectivity
+                strain_rel_gamma = baseline$rel_gamma_wildtype_delta
                 cross_immunity <- baseline$cross_immunity
             } else if (strains == "Delta_OmicronBA1"){
                 strain_transmission <- c(rel_strain_transmission,rel_strain_transmission1)
@@ -189,6 +193,7 @@ make_transform <- function(baseline){
                 rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt1
                 rel_p_death <- baseline$rel_p_death1
                 rel_infectivity <- baseline$rel_infectivity1
+                strain_rel_gamma = baseline$rel_gamma_delta_omicronba1
                 cross_immunity <- baseline$cross_immunity1
             } else if (strains == "OmicronBA1_OmicronBA2"){
                 strain_transmission <- c(rel_strain_transmission1,rel_strain_transmission2)
@@ -201,6 +206,7 @@ make_transform <- function(baseline){
                 rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt2
                 rel_p_death <- baseline$rel_p_death2
                 rel_infectivity <- baseline$rel_infectivity2
+                strain_rel_gamma = baseline$rel_gamma_omicronba1_omicronba2
                 cross_immunity <- baseline$cross_immunity2
             }
             
@@ -232,6 +238,10 @@ make_transform <- function(baseline){
                        strain_rel_p_sympt = strain_rel_p_sympt,
                        strain_rel_p_hosp_if_sympt = strain_rel_p_hosp_if_sympt,
                        strain_rel_p_death = strain_rel_p_death,
+                       strain_rel_gamma_E = strain_rel_gamma$E,
+                       strain_rel_gamma_P = strain_rel_gamma$P,
+                       strain_rel_gamma_C = strain_rel_gamma$C,
+                       strain_rel_gamma_A = strain_rel_gamma$A,
                        rel_susceptibility = rel_susceptibility,
                        rel_p_sympt = rel_p_sympt,
                        rel_p_hosp_if_sympt = rel_p_hosp_if_sympt,
