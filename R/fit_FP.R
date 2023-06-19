@@ -21,13 +21,13 @@ source("R/date.R")
 source("R/vaccination.R")
 source("R/parameters.R")
 source("R/pars.R")
+source("parameters/transform.R")
 source("R/covid_multi_strain.R")
 source("R/simulate.R")
 source("R/fit.R")
 source("R/pmcmc.R")
-source("R/plot_fit.R")
 source("R/fit_process.R")
-source("parameters/transform.R")
+source("R/plot_fit.R")
 
 # Load data
 data_raw <- fread("data/data_cases_hosps_deaths_serology.csv")
@@ -96,7 +96,7 @@ moving_avg <- F
 n_smpls <- 1000 #500 #
 
 # Plot fit
-plot_fit(dat,run,pop,u,moving_avg,n_smpls)
+plot_fit(dat,pars,run,pop,u,moving_avg,n_smpls)
 
 # Process fit
 pars_qntls <- calculate_parameter_quantiles(dat)
