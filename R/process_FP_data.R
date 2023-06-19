@@ -64,6 +64,12 @@ vax[,age_group := age_groups_vax[file]]
 vax[,file := NULL]
 
 # Process data ---------------------------------------------------------
+# Set model type
+# Negative binomial (NB) to use age-stratified case data
+# Beta-binomial (BB) to use overall testing data (positives and total tests conducted)
+# model_type <- "NB"
+model_type <- "BB"
+
 # Age groups
 age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
 min_ages <- get_min_age(age_groups)
@@ -177,8 +183,8 @@ tests_dt[,week := NULL]
 
 # Plot to check
 ggplot(tests_dt) + 
-    geom_line(aes(x = date,y = tests)) +
-    geom_line(aes(x = date,y = cases),color = "red")
+    geom_line(aes(x = date,y = tot)) +
+    geom_line(aes(x = date,y = pos),color = "red")
 
 ## Hospitalisations
 # 1st wave 
@@ -407,9 +413,9 @@ data_raw[,sero_tot_1 := sero_tot_1_20_29 + sero_tot_1_30_39 + sero_tot_1_40_49 +
 # data_raw[,strain_tot := NA]
 # data_raw[,strain_non_variant := NA]
 if (model_type == "NB"){
-    data_raw[,c(paste0("cases_",c("0_9","10_19","20_29","30_39","40_49","50_59","60_69","70_plus")),"cases") := NA]
-} else if (model_type == "BB"){
     data_raw[,c("pos","tot") := NA]
+} else if (model_type == "BB"){
+    data_raw[,c(paste0("cases_",c("0_9","10_19","20_29","30_39","40_49","50_59","60_69","70_plus")),"cases") := NA]
 }
 write.csv(data_raw,"data/data_cases_hosps_deaths_serology.csv",row.names = F)
 
