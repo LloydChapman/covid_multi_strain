@@ -1509,6 +1509,36 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
 }
 
     
+plot_tests <- function(trajectories, data, p_NC, population, moving_avg = F){
+    state <- trajectories$state
+    pos <- state["cases",,-1]
+    test_negs <- p_NC * (population - pos)
+    model_prob_pos <- test_prob_pos(pos,test_negs,1,1,1e6)
+    
+    q_model_prob_pos <- as.data.table(t(apply(model_prob_pos, 2, function(x) quantile(x,probs = c(0.025,0.5,0.975)))))
+    q_model_prob_pos[,date := covid_multi_strain_date_as_date(trajectories$date)]
+    
+    data_dt <- as.data.table(data[c("day_end","pos","tot")])
+    data_dt[,date := covid_multi_strain_date_as_date(day_end)]
+    data_dt[,prop_pos := pos/tot]
+    if (moving_avg){
+        data_dt[,prop_pos := frollmean(prop_pos,7,align = "center")]
+    }
+    
+    p <- ggplot()
+    if (moving_avg){
+        p <- p + geom_line(aes(x = date,y = prop_pos),data_dt,color = "red")
+    } else {
+        p <- p + geom_point(aes(x = date,y = prop_pos),data_dt,color = "red")
+    }
+    p <- p + geom_line(aes(x = date,y = `50%`),q_model_prob_pos) + 
+        geom_ribbon(aes(x = date,ymin = `2.5%`,ymax = `97.5%`),q_model_prob_pos,alpha = 0.5) + 
+        labs(x = "Date",y = "Proportion positive") + 
+        theme_cowplot(font_size = 12)
+    return(p)
+}
+
+
 plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age = FALSE){
     # Extract modelled seroprevalence from output
     nms <- dimnames(seroprev_modelled$state)[[1]]
@@ -1640,9 +1670,9 @@ plot_variant_proportion <- function(trajectories, data, start_date, ylbl = "Vari
     data_dt[,date := covid_multi_strain_date_as_date(day_end)]
     
     p <- ggplot() + 
-        geom_line(aes(x = date,y = med),q_state_dt[date > start_date,]) + 
-        geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u),q_state_dt[date > start_date],alpha = 0.5) +
         geom_point(aes(x = date,y = 1 - strain_non_variant/strain_tot), data_dt[date > start_date], color = "red") + 
+        geom_line(aes(x = date,y = med),q_state_dt[date > start_date,]) + 
+        geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u),q_state_dt[date > start_date],alpha = 0.5) + 
         labs(x = "Date", y = ylbl) + 
         theme_cowplot(font_size = 12)
     return(p)
