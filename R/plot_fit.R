@@ -21,8 +21,8 @@ plot_fit <- function(dat,pars,run,pop,u,moving_avg = FALSE,n_smpls = 1000){
     ggsave(paste0("output/hosps",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 2.7)
     plot_outcome(dat$samples$trajectories,dat$data,"deaths",moving_avg = moving_avg)
     ggsave(paste0("output/deaths",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 2.7)
-    plot_variant_proportion(dat$samples$trajectories,dat$data,as.Date("2022-01-01"),"Omicron BA.2 proportion")
-    ggsave(paste0("output/variant_proportion",run,".pdf"),width = 4,height = 2.7)
+    # plot_variant_proportion(dat$samples$trajectories,dat$data,as.Date("2022-01-01"),"Omicron BA.2 proportion")
+    # ggsave(paste0("output/variant_proportion",run,".pdf"),width = 4,height = 2.7)
     
     if (model_type == "NB"){
         vrble <- c("cases","hosps","deaths")

@@ -11,7 +11,7 @@ source("R/covid_multi_strain.R")
 model_type <- "BB"
 
 # Set epoch date
-epoch_dates <- c("2021-11-21","2021-12-16")
+epoch_dates <- "2021-11-21" #c("2021-11-21","2021-12-16")
 
 baseline <- create_baseline(model_type,epoch_dates)
 saveRDS(baseline,"parameters/base.rds")

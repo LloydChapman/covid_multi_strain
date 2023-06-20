@@ -133,7 +133,7 @@ make_transform <- function(baseline){
     expected <- c(baseline$beta_names,"start_date","rel_strain_transmission",
                   "strain_seed_date","p_H_max","p_D","p_D_2","p_D_3",
                   "rel_strain_transmission1","strain_seed_date1",
-                  "rel_strain_transmission2","strain_seed_date2",
+                  # "rel_strain_transmission2","strain_seed_date2",
                   if (baseline$model_type == "NB"){
                       c("phi_cases","alpha_cases")
                   } else if (baseline$model_type == "BB") {
@@ -151,21 +151,10 @@ make_transform <- function(baseline){
         start_date <- pars[["start_date"]]
         rel_strain_transmission <- pars[["rel_strain_transmission"]]
         strain_seed_date <- pars[["strain_seed_date"]]
-        # p_H_max <- pars[["p_H_max"]]
-        # p_D_max <- pars[["p_D_max"]]
         rel_strain_transmission1 <- pars[["rel_strain_transmission1"]]
         strain_seed_date1 <- pars[["strain_seed_date1"]]
-        rel_strain_transmission2 <- pars[["rel_strain_transmission2"]]
-        strain_seed_date2 <- pars[["strain_seed_date2"]]
-        # if (baseline$model_type == "NB"){
-        #     phi_cases <- pars[["phi_cases"]]
-        #     kappa_cases <- 1/pars[["alpha_cases"]]    
-        # } else if (baseline$model_type == "BB"){
-        #     p_NC <- pars[["p_NC"]]
-        #     rho_tests <- pars[["rho_tests"]]
-        # }
-        # kappa_hosp <- 1/pars[["alpha_hosp"]]
-        # kappa_death <- 1/pars[["alpha_death"]]
+        # rel_strain_transmission2 <- pars[["rel_strain_transmission2"]]
+        # strain_seed_date2 <- pars[["strain_seed_date2"]]
         
         stage_parameters <- function(strains){
             
@@ -182,7 +171,7 @@ make_transform <- function(baseline){
                 rel_infectivity <- baseline$rel_infectivity
                 strain_rel_gamma = baseline$rel_gamma_wildtype_delta
                 cross_immunity <- baseline$cross_immunity
-            } else if (strains == "Delta_OmicronBA1"){
+            } else if (strains == "Delta_Omicron"){
                 strain_transmission <- c(rel_strain_transmission,rel_strain_transmission1)
                 strain_seed_date <- strain_seed_date1
                 strain_rel_p_sympt <- baseline$strain_rel_p_sympt1
@@ -195,20 +184,35 @@ make_transform <- function(baseline){
                 rel_infectivity <- baseline$rel_infectivity1
                 strain_rel_gamma = baseline$rel_gamma_delta_omicronba1
                 cross_immunity <- baseline$cross_immunity1
-            } else if (strains == "OmicronBA1_OmicronBA2"){
-                strain_transmission <- c(rel_strain_transmission1,rel_strain_transmission2)
-                strain_seed_date <- strain_seed_date2
-                strain_rel_p_sympt <- baseline$strain_rel_p_sympt2
-                strain_rel_p_hosp_if_sympt <- baseline$strain_rel_p_hosp_if_sympt2
-                strain_rel_p_death <- baseline$strain_rel_p_death2
-                rel_susceptibility <- baseline$rel_susceptibility2
-                rel_p_sympt <- baseline$rel_p_sympt2
-                rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt2
-                rel_p_death <- baseline$rel_p_death2
-                rel_infectivity <- baseline$rel_infectivity2
-                strain_rel_gamma = baseline$rel_gamma_omicronba1_omicronba2
-                cross_immunity <- baseline$cross_immunity2
             }
+            
+            # } else if (strains == "Delta_OmicronBA1"){
+            #     strain_transmission <- c(rel_strain_transmission,rel_strain_transmission1)
+            #     strain_seed_date <- strain_seed_date1
+            #     strain_rel_p_sympt <- baseline$strain_rel_p_sympt1
+            #     strain_rel_p_hosp_if_sympt <- baseline$strain_rel_p_hosp_if_sympt1
+            #     strain_rel_p_death <- baseline$strain_rel_p_death1
+            #     rel_susceptibility <- baseline$rel_susceptibility1
+            #     rel_p_sympt <- baseline$rel_p_sympt1
+            #     rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt1
+            #     rel_p_death <- baseline$rel_p_death1
+            #     rel_infectivity <- baseline$rel_infectivity1
+            #     strain_rel_gamma = baseline$rel_gamma_delta_omicronba1
+            #     cross_immunity <- baseline$cross_immunity1
+            # } else if (strains == "OmicronBA1_OmicronBA2"){
+            #     strain_transmission <- c(rel_strain_transmission1,rel_strain_transmission2)
+            #     strain_seed_date <- strain_seed_date2
+            #     strain_rel_p_sympt <- baseline$strain_rel_p_sympt2
+            #     strain_rel_p_hosp_if_sympt <- baseline$strain_rel_p_hosp_if_sympt2
+            #     strain_rel_p_death <- baseline$strain_rel_p_death2
+            #     rel_susceptibility <- baseline$rel_susceptibility2
+            #     rel_p_sympt <- baseline$rel_p_sympt2
+            #     rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt2
+            #     rel_p_death <- baseline$rel_p_death2
+            #     rel_infectivity <- baseline$rel_infectivity2
+            #     strain_rel_gamma = baseline$rel_gamma_omicronba1_omicronba2
+            #     cross_immunity <- baseline$cross_immunity2
+            # }
             
             parameters(baseline$dt,
                        baseline$n_age,
@@ -269,15 +273,21 @@ make_transform <- function(baseline){
         p <- stage_parameters("Wildtype_Delta")
         
         # Parameters for 2nd epoch
-        p1 <- stage_parameters("Delta_OmicronBA1")
-        
-        # Parameters for 3rd epoch
-        p2 <- stage_parameters("OmicronBA1_OmicronBA2")
+        p1 <- stage_parameters("Delta_Omicron")
         
         epochs <- list(
-            multistage_epoch(epoch_dates[1], pars = p1, transform_state = transform_state),
-            multistage_epoch(epoch_dates[2], pars = p2, transform_state = transform_state)
+            multistage_epoch(epoch_dates[1], pars = p1, transform_state = transform_state)
         )
+        # # Parameters for 2nd epoch
+        # p1 <- stage_parameters("Delta_OmicronBA1")
+        # 
+        # # Parameters for 3rd epoch
+        # p2 <- stage_parameters("OmicronBA1_OmicronBA2")
+        # 
+        # epochs <- list(
+        #     multistage_epoch(epoch_dates[1], pars = p1, transform_state = transform_state),
+        #     multistage_epoch(epoch_dates[2], pars = p2, transform_state = transform_state)
+        # )
         p_multistage <- multistage_parameters(p, epochs)
         p_multistage
     }
