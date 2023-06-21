@@ -14,7 +14,7 @@
 "beta","p_D_3",NA,NA,1,1
 "null","rel_strain_transmission1",NA,NA,NA,NA
 "null","strain_seed_date1",NA,NA,NA,NA
-"beta","p_NC",NA,NA,1,1
-"beta","rho_tests",NA,NA,1,1
+"beta","phi_cases",NA,NA,1,1
+"beta","alpha_cases",NA,NA,1,1
 "beta","alpha_hosp",NA,NA,1,1
 "beta","alpha_death",NA,NA,1,1

@@ -7,8 +7,8 @@ source("R/proposal.R")
 source("R/vaccination.R")
 source("R/covid_multi_strain.R")
 
-# model_type <- "NB"
-model_type <- "BB"
+model_type <- "NB"
+# model_type <- "BB"
 
 # Set epoch date
 epoch_dates <- "2021-11-21" #c("2021-11-21","2021-12-16")

@@ -856,6 +856,16 @@ compare <- function(state, observed, pars){
     } else {
         kappa_cases <- pars$kappa_cases
     }
+    if (is.null(pars$p_NC)){
+        p_NC <- 0.002
+    } else {
+        p_NC <- pars$p_NC
+    }
+    if (is.null(pars$rho_tests)){
+        rho_tests <- 0.01
+    } else {
+        rho_tests <- pars$rho_tests
+    }
     if (is.null(pars$kappa_hosp)){
         kappa_hosp <- 2
     } else {
@@ -985,7 +995,7 @@ compare <- function(state, observed, pars){
     # Weekly modelled cases
     # model_cases_week <- state["cases_week", ]
     # test_negs <- pars$p_NC * (pars$N_tot - model_cases_week)
-    test_negs <- pars$p_NC * (sum(pars$N_tot) - model_cases)
+    test_negs <- p_NC * (sum(pars$N_tot) - model_cases)
     model_test_prob_pos <- test_prob_pos(model_cases,
                                          test_negs,
                                          pars$test_sensitivity,
@@ -1065,8 +1075,7 @@ compare <- function(state, observed, pars){
     ll_tests <- ll_betabinom(observed$pos,
                              observed$tot,
                              model_test_prob_pos,
-                             pars$rho_tests)
-    # print(ll_tests)
+                             rho_tests)
     
     # Calculate total log-likelihood
     # ll_hosps + ll_deaths
@@ -1077,7 +1086,7 @@ compare <- function(state, observed, pars){
     ll_strain + ll_tests +
     ll_cases_0_9 + ll_cases_10_19 + ll_cases_20_29 + ll_cases_30_39 + ll_cases_40_49 + ll_cases_50_59 + ll_cases_60_69 + ll_cases_70_plus +
         ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus +
-        ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus + 
+        ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus +
         ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus
 }
 

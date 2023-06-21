@@ -67,8 +67,8 @@ vax[,file := NULL]
 # Set model type
 # Negative binomial (NB) to use age-stratified case data
 # Beta-binomial (BB) to use overall testing data (positives and total tests conducted)
-# model_type <- "NB"
-model_type <- "BB"
+model_type <- "NB"
+# model_type <- "BB"
 
 # Age groups
 age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
@@ -410,8 +410,8 @@ data_raw[,deaths := deaths_0_39 + deaths_40_49 + deaths_50_59 + deaths_60_69 + d
 data_raw[,cases := cases_0_9 + cases_10_19 + cases_20_29 + cases_30_39 + cases_40_49 + cases_50_59 + cases_60_69 + cases_70_plus]
 data_raw[,sero_pos_1 := sero_pos_1_20_29 + sero_pos_1_30_39 + sero_pos_1_40_49 + sero_pos_1_50_59 + sero_pos_1_60_69 + sero_pos_1_70_plus]
 data_raw[,sero_tot_1 := sero_tot_1_20_29 + sero_tot_1_30_39 + sero_tot_1_40_49 + sero_tot_1_50_59 + sero_tot_1_60_69 + sero_tot_1_70_plus]
-# data_raw[,strain_tot := NA]
-# data_raw[,strain_non_variant := NA]
+data_raw[,strain_tot := NA]
+data_raw[,strain_non_variant := NA]
 if (model_type == "NB"){
     data_raw[,c("pos","tot") := NA]
 } else if (model_type == "BB"){
