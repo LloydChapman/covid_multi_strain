@@ -1,5 +1,19 @@
-# Process MCMC output from fit_covid_multi_strain()
-fit_process <- function(samples,pars,data_raw,filter,burnin = NULL,simulate_object = TRUE){
+remove_burnin <- function(samples,burnin = NULL){
+    if (is.null(burnin)){
+        burnin <- round(nrow(samples$pars)/10)
+    }
+    # Remove burn-in
+    idx_drop <- -(1:(burnin+1))
+    samples$pars <- samples$pars[idx_drop, ]
+    samples$probabilities <- samples$probabilities[idx_drop,]
+    samples$state <- samples$state[,idx_drop]
+    samples$trajectories$state <- samples$trajectories$state[,idx_drop,]
+    samples
+}
+
+
+# Process MCMC output from fit_run()
+fit_process <- function(samples,pars,data_raw,filter,simulate_object = TRUE){
     
     covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
     info <- covid_multi_strain$new(pars$transform(samples$pars[1,])[[1]]$pars,step = 0,
@@ -21,16 +35,6 @@ fit_process <- function(samples,pars,data_raw,filter,burnin = NULL,simulate_obje
                          multistrain = info$dim$prob_strain > 1,
                          beta_date = base$beta_date,
                          pars = pars$info$name)
-    
-    if (is.null(burnin)){
-        burnin <- round(nrow(samples$pars)/10)
-    }
-    # Remove burn-in
-    idx_drop <- -(1:(burnin+1))
-    samples$pars <- samples$pars[idx_drop, ]
-    samples$probabilities <- samples$probabilities[idx_drop,]
-    samples$state <- samples$state[,idx_drop]
-    samples$trajectories$state <- samples$trajectories$state[,idx_drop,]
     
     samples$trajectories$date <- samples$trajectories$step/samples$trajectories$rate
     

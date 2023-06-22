@@ -28,7 +28,7 @@ covid_multi_strain_particle_filter <- function(data, pars, deterministic = TRUE,
 }
 
 
-fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,Rt = FALSE,thinning = 1){
+fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,fixed_initial = T,Rt = FALSE,thinning = 1){
     if (n_iters < 100){
         stop("n_iters must be at least 100")
     }
@@ -54,9 +54,16 @@ fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,Rt = FALSE,thinni
     }
     
     # Extract objects required for MCMC from pars
-    transform <- pars$transform
+    transform <- pars$mcmc$model
     pars_info <- pars$info
-    pars_init <- pars$mcmc$initial()
+    if (fixed_initial){
+        pars_init <- pars$mcmc$initial()
+    } else {
+        pars_init <- mapply(sample_prior,
+                            split(pars$prior,pars$prior$name)[unique(pars$prior$name)],
+                            split(pars_info,pars_info$name)[unique(pars_info$name)],
+                            SIMPLIFY = T)
+    }
     priors <- lapply(pars$mcmc$.__enclos_env__$private$parameters,"[[","prior")
     pars_min <- pars_info$min
     pars_max <- pars_info$max

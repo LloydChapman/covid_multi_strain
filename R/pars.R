@@ -27,6 +27,26 @@ make_prior <- function(d) {
     }
 }
 
+sample_prior <- function(d,i){
+    if (d$type == "gamma"){
+        shape = d$gamma_shape
+        scale = d$gamma_scale
+        rgamma(1, shape = shape, scale = scale)
+    } else if (d$type == "beta"){
+        shape1 = d$beta_shape1
+        shape2 = d$beta_shape2
+        rbeta(1, shape1 = shape1, shape2 = shape2)
+    } else if (d$type == "null"){
+        if (i$integer){
+            sample(i$min:i$max, 1)
+        } else {
+            runif(1, min = i$min, max = i$max)    
+        }
+    } else {
+        stop("Unknown prior type")
+    }
+}
+
 pars_mcmc <- function(info, prior, proposal, transform) {
     pars_mcmc <- Map(
         pmcmc_parameter,

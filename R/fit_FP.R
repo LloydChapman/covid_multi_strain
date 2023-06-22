@@ -15,6 +15,7 @@ library(GGally)
 library(cowplot)
 library(MASS)
 library(abind)
+# library(doParallel)
 
 source("R/utils.R")
 source("R/date.R")
@@ -28,6 +29,8 @@ source("R/fit.R")
 source("R/pmcmc.R")
 source("R/fit_process.R")
 source("R/plot_fit.R")
+
+# registerDoParallel(2)
 
 # Load data
 data_raw <- fread("data/data_cases_hosps_deaths_serology.csv")
@@ -66,8 +69,10 @@ n_iters <- 5e4 #4e4 #2e4 #1e4 #3e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 104
+run <- 105
+n_chains <- 4
 deterministic <- T # flag for whether to use deterministic model or not
+fixed_initial <- F # flag for whether to use fixed initial values for MCMC chains or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 initial_date <- pars$info$min[pars$info$name == "start_date"] - 1
     
@@ -76,15 +81,28 @@ filter <- covid_multi_strain_particle_filter(data_raw,pars,deterministic,Rt,init
 
 # Run fitting
 thinning <- 10
-samples <- fit_run(pars,filter,u,n_iters,deterministic,Rt,thinning)
-saveRDS(samples,paste0("output/MCMCsamples",run,".RDS"))
+results <- as.list(paste0("output/MCMCsamples",run,"_",seq_len(n_chains),".RDS"))
+for (i in seq_len(n_chains)) {
+    set.seed(i)
+    samples <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning)    
+    saveRDS(samples,results[[i]])
+}
 
 ## Post processing
+# Get results
+samples <- lapply(results, readRDS)
+
 # Set burn-in
 burnin <- 1500 #500 #3000 #
 
+# Remove burn-in
+samples <- lapply(samples, function(x) remove_burnin(x,burnin))
+
+# Combine chains
+samples <- chains_combine(samples = samples)
+
 # Process MCMC output
-dat <- fit_process(samples,pars,data_raw,filter,burnin,simulate_object = T)
+dat <- fit_process(samples,pars,data_raw,filter,simulate_object = T)
 
 # Save output
 saveRDS(dat,paste0("output/MCMCoutput",run,".RDS"))
