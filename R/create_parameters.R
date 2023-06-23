@@ -1,3 +1,7 @@
+library(data.table)
+library(qs)
+library(abind)
+
 source("R/utils.R")
 source("R/date.R")
 source("R/baseline.R")

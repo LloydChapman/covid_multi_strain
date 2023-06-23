@@ -25,8 +25,8 @@ transmission_matrix <- function(country, pop, age_groups){
     # Take population-weighted average of mean number of contacts over "participant" age groups being aggregated
     contact2 <- contact1[,.(contacts = sum(contacts * population)/sum(population)), by = .(age_contactor,age_contactee)]
     
-    # Plot
-    ggplot(contact2,aes(x = age_contactee,y = age_contactor,fill = contacts)) + geom_tile()
+    # # Plot
+    # ggplot(contact2,aes(x = age_contactee,y = age_contactor,fill = contacts)) + geom_tile()
     
     # Convert the contact matrix to the "transmission matrix" (the contact matrix weighted by the population in each age group)
     contact_matrix <- matrix(contact2[,contacts],nrow = length(age_groups),ncol = length(age_groups), byrow = T) # N.B. individuals in rows, contacts in columns

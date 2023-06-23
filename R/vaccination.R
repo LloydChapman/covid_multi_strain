@@ -29,10 +29,10 @@ vaccination_data <- function(vax, delay_dose1, delay_dose2, pop, age_groups_vax,
     # Limit vaccine schedule to end date
     vax_dt <- vax_dt[date <= end_date]
     
-    # Plot to check
-    ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color = age_group)) +
-        geom_line() +
-        facet_wrap(~dose)
+    # # Plot to check
+    # ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color = age_group)) +
+    #     geom_line() +
+    #     facet_wrap(~dose)
     
     # # Check totals are the same
     # print(vax[,sum(number)]) # 465247
