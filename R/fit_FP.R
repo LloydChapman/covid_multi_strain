@@ -27,6 +27,7 @@ source("R/covid_multi_strain.R")
 source("R/simulate.R")
 source("R/fit.R")
 source("R/pmcmc.R")
+source("R/chains.R")
 source("R/fit_process.R")
 source("R/plot_fit.R")
 
@@ -70,9 +71,9 @@ n_iters <- 5e4 #4e4 #2e4 #1e4 #3e4 #
 # run <- 77
 # run <- 78
 run <- 105
-n_chains <- 4
+n_chains <- 1
 deterministic <- T # flag for whether to use deterministic model or not
-fixed_initial <- F # flag for whether to use fixed initial values for MCMC chains or not
+fixed_initial <- T # flag for whether to use fixed initial values for MCMC chains or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 initial_date <- pars$info$min[pars$info$name == "start_date"] - 1
     
