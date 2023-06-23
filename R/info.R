@@ -33,8 +33,8 @@ create_info <- function(beta_date,model_type){
                  },
                  "alpha_hosp","alpha_death"),
         initial = c(0.025,0.022,0.02,0.024,0.02,0.024,
-                    2.8,start_date$init,strain_seed_date$init,
-                    0.400626705/2,0.316,0.316,0.316,3.5,strain_seed_date1$init,
+                    2.7,start_date$init,strain_seed_date$init,
+                    0.400626705/2,0.316,0.316,0.316,3.2,strain_seed_date1$init,
                     # 3.5,strain_seed_date2$init,
                     if (model_type == "NB"){
                         c(0.5,0.5)

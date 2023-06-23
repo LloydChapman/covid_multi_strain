@@ -19,6 +19,8 @@ create_priors <- function(beta_date,pars_info) {
         name = c("rel_strain_transmission","start_date","strain_seed_date",
                  "rel_strain_transmission1","strain_seed_date1",
                  "rel_strain_transmission2","strain_seed_date2"),
+        # scale = c(rep(NA_real_,3),40,rep(NA_real_,3)),
+        # shape = c(rep(NA_real_,3),0.08,rep(NA_real_,3)),
         scale = NA_real_,
         shape = NA_real_,
         shape1 = NA_real_,
