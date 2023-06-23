@@ -62,7 +62,7 @@ dir.create("output")
 # ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
 
 # Fit covid_multi_strain to FP data
-u <- c(1:6,8:10,11:13,14,15,16:19) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
+u <- c(1:6,8:10,11:13,15,16:19) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
 # u <- c(1:6,8:10,11:13,15,16,17:21) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
 # u <- c(1:3,8,10,13,16:19)
 # u <- c(2:3,8,10,13,16:19)
@@ -70,13 +70,13 @@ n_iters <- 5e4 #4e4 #2e4 #1e4 #3e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 105
+run <- 106
 n_chains <- 1
 deterministic <- T # flag for whether to use deterministic model or not
 fixed_initial <- T # flag for whether to use fixed initial values for MCMC chains or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 initial_date <- pars$info$min[pars$info$name == "start_date"] - 1
-    
+
 # Construct particle filter
 filter <- covid_multi_strain_particle_filter(data_raw,pars,deterministic,Rt,initial_date)
 
@@ -87,6 +87,8 @@ for (i in seq_len(n_chains)) {
     set.seed(i)
     samples <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning)    
     saveRDS(samples,results[[i]])
+    plot_traces(samples$pars_full,u)
+    ggsave(paste0("output/par_traces",run,"_",i,".pdf"),width = 6,height = 6)
 }
 
 ## Post processing

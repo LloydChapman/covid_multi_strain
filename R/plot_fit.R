@@ -35,7 +35,7 @@ plot_fit <- function(dat,pars,run,pop,u,moving_avg = FALSE,n_smpls = 1000){
     p_list <- plot_outcome_by_age(dat$samples$trajectories,vrble,dat$samples$pars[,"phi_cases"],ttls,n_smpls)
     ggsave(paste0("output/outcomes_by_age",run,".pdf"),p_list$p,width = 9,height = 3)
     ggsave(paste0("output/prop_outcomes_by_age",run,".pdf"),p_list$p1,width = 9,height = 3)
-
+    
     base <- pars$base
     res1 <- plot_transmission_rate(dat$samples$pars,base$beta_type,base$beta_date,base$dt,max(dat$data$day_end))
     p <- res1$p
@@ -47,16 +47,16 @@ plot_fit <- function(dat,pars,run,pop,u,moving_avg = FALSE,n_smpls = 1000){
         scale_fill_manual(name = "",values = c("Fitted" = "black","No lockdowns" = "blue")) +
         theme(legend.position = "bottom")
     ggsave(paste0("output/transmission_rate",run,".pdf"),p1,width = 6,height = 6)
-
-    plot_traces(dat$samples$pars,u)
-    ggsave(paste0("output/par_traces",run,".pdf"),width = 6,height = 6)
-
+    
+    # plot_traces(dat$samples$pars,u)
+    # ggsave(paste0("output/par_traces",run,".pdf"),width = 6,height = 6)
+    
     priors <- lapply(pars$mcmc$.__enclos_env__$private$parameters,"[[","prior")
     pars_min <- pars$info$min
     pars_max <- pars$info$max
     plot_posteriors(dat$samples$pars,u,priors,pars_min,pars_max)
     ggsave(paste0("output/par_posteriors",run,".pdf"),width = 6,height = 6)
-
+    
     p2 <- plot_pairwise_correlation(dat$samples$pars,u)
     ggsave(paste0("output/par_pairwise_corr",run,".pdf"),p2,width = 10,height = 10)
 }
