@@ -70,10 +70,10 @@ n_iters <- 5e4 #4e4 #2e4 #1e4 #3e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 106
-n_chains <- 1
+run <- 108
+n_chains <- 2
 deterministic <- T # flag for whether to use deterministic model or not
-fixed_initial <- T # flag for whether to use fixed initial values for MCMC chains or not
+fixed_initial <- T #F # flag for whether to use fixed initial values for MCMC chains or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 initial_date <- pars$info$min[pars$info$name == "start_date"] - 1
 
@@ -85,21 +85,35 @@ thinning <- 10
 results <- as.list(paste0("output/MCMCsamples",run,"_",seq_len(n_chains),".RDS"))
 for (i in seq_len(n_chains)) {
     set.seed(i)
-    samples <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning)    
-    saveRDS(samples,results[[i]])
-    plot_traces(samples$pars_full,u)
+    tmp <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning)    
+    saveRDS(tmp,results[[i]])
+    plot_traces(tmp$pars_full,u)
     ggsave(paste0("output/par_traces",run,"_",i,".pdf"),width = 6,height = 6)
 }
+rm(tmp)
+gc()
 
 ## Post processing
-# Get results
-samples <- lapply(results, readRDS)
-
 # Set burn-in
-burnin <- 1500 #500 #3000 #
+burnin <- 4000 #500 #3000 #
 
-# Remove burn-in
-samples <- lapply(samples, function(x) remove_burnin(x,burnin))
+# Get results
+samples <- vector("list",n_chains)
+for (i in seq_len(n_chains)){
+    tmp <- readRDS(results[[i]])
+    tmp <- remove_burnin(tmp,burnin)
+    samples[[i]] <- tmp
+}
+rm(tmp)
+gc()
+
+# samples <- lapply(results, readRDS)
+# 
+# # Remove burn-in
+# for (i in seq_len(n_chains)){
+#     samples[[i]] <- remove_burnin(samples[[i]],burnin)
+# }
+# samples <- lapply(samples, function(x) remove_burnin(x,burnin))
 
 # Combine chains
 samples <- chains_combine(samples = samples)

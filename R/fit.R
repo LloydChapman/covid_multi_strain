@@ -55,14 +55,15 @@ fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,fixed_initial = T
     
     # Extract objects required for MCMC from pars
     transform <- pars$mcmc$model
+    pars_init <- pars$mcmc$initial()
     pars_info <- pars$info
     if (fixed_initial){
-        pars_init <- pars$mcmc$initial()
+        pars_init[u] <- pars$mcmc$propose(pars$mcmc$initial(),1000)[u]
     } else {
-        pars_init <- mapply(sample_prior,
+        pars_init[u] <- mapply(sample_prior,
                             split(pars$prior,pars$prior$name)[unique(pars$prior$name)],
                             split(pars_info,pars_info$name)[unique(pars_info$name)],
-                            SIMPLIFY = T)
+                            SIMPLIFY = T)[u]
     }
     priors <- lapply(pars$mcmc$.__enclos_env__$private$parameters,"[[","prior")
     pars_min <- pars_info$min
