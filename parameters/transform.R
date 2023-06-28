@@ -49,6 +49,83 @@ apply_assumptions <- function(baseline, assumptions){
     stopifnot(assumptions %in% names(baseline$vaccine_progression_rate))
     baseline$vaccine_progression_rate <-
         baseline$vaccine_progression_rate[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$waning_rate))
+    baseline$waning_rate <-
+        baseline$waning_rate[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$cross_immunity))
+    baseline$cross_immunity <-
+        baseline$cross_immunity[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$cross_immunity1))
+    baseline$cross_immunity1 <-
+        baseline$cross_immunity1[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$cross_immunity2))
+    baseline$cross_immunity2 <-
+        baseline$cross_immunity2[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_susceptibility))
+    baseline$rel_susceptibility <- 
+        baseline$rel_susceptibility[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_p_sympt))
+    baseline$rel_p_sympt <- 
+        baseline$rel_p_sympt[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_p_hosp_if_sympt))
+    baseline$rel_p_hosp_if_sympt <- 
+        baseline$rel_p_hosp_if_sympt[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_p_death))
+    baseline$rel_p_death <- 
+        baseline$rel_p_death[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_infectivity))
+    baseline$rel_infectivity <- 
+        baseline$rel_infectivity[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_susceptibility1))
+    baseline$rel_susceptibility1 <- 
+        baseline$rel_susceptibility1[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_p_sympt1))
+    baseline$rel_p_sympt1 <- 
+        baseline$rel_p_sympt1[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_p_hosp_if_sympt1))
+    baseline$rel_p_hosp_if_sympt1 <- 
+        baseline$rel_p_hosp_if_sympt1[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_p_death1))
+    baseline$rel_p_death1 <- 
+        baseline$rel_p_death1[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_infectivity1))
+    baseline$rel_infectivity1 <- 
+        baseline$rel_infectivity1[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_susceptibility2))
+    baseline$rel_susceptibility2 <- 
+        baseline$rel_susceptibility2[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_p_sympt2))
+    baseline$rel_p_sympt2 <- 
+        baseline$rel_p_sympt2[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_p_hosp_if_sympt2))
+    baseline$rel_p_hosp_if_sympt2 <- 
+        baseline$rel_p_hosp_if_sympt2[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_p_death2))
+    baseline$rel_p_death2 <- 
+        baseline$rel_p_death2[[assumptions]]
+    
+    stopifnot(assumptions %in% names(baseline$rel_infectivity2))
+    baseline$rel_infectivity2 <- 
+        baseline$rel_infectivity2[[assumptions]]
+    
     baseline
 }
 

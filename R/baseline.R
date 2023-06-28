@@ -59,28 +59,34 @@ create_baseline <- function(model_type,epoch_dates){
     population <- pop[,.(sum(total)),by = .(age_group)][,V1]
     
     # Vaccine efficacy
-    vax_eff <- fread("data/vax_eff.csv",colClasses = c(alpha = "numeric"))
+    vax_eff <- fread("data/vax_eff.csv",colClasses = c(alpha_central = "numeric"))
     
     # Melt to long format
-    vax_eff_long <- melt(vax_eff,measure.vars = c("alpha","delta","omicron","omicron_ba2"),variable.name = "variant")
+    vax_eff_long <- melt(vax_eff,measure.vars = patterns(central = "central",pessimistic = "pessimistic",optimistic = "optimistic"),variable.name = "variant")
+    variants <- c("alpha","delta","omicron","omicron_ba2")
+    vax_eff_long[, variant := variants[variant]]
     
     # Make vaccine efficacy data.tables for two-strain setup
     vax_eff_long2 <- vax_eff_long[variant %in% c("omicron","omicron_ba2")]
     vax_eff_long1 <- vax_eff_long[variant %in% c("delta","omicron")]
     vax_eff_long <- vax_eff_long[variant %in% c("alpha","delta")]
-    
+        
     # Calculate relative susceptibility and infectiousness, and conditional 
     # probabilities of symptoms, hospitalisation and death in different vaccination 
     # groups according to average vaccine effectiveness for different age groups and 
     # variants
     # Delta relative to WT/Alpha
     rel_params <- convert_eff_to_rel_param(vax_eff_long,age_groups)
+    rel_params <- reverse_list_structure(rel_params)
     # Omicron BA.1 relative to Delta
     rel_params1 <- convert_eff_to_rel_param(vax_eff_long1,age_groups)
+    rel_params1 <- reverse_list_structure(rel_params1)
     names(rel_params1) <- paste0(names(rel_params1),"1")
     # Omicron BA.2 relative to Omicron BA.1
     rel_params2 <- convert_eff_to_rel_param(vax_eff_long2,age_groups)
+    rel_params2 <- reverse_list_structure(rel_params2)
     names(rel_params2) <- paste0(names(rel_params2),"2")
+    
     
     # # Extract individual parameters
     # rel_susceptibility <- rel_params$rel_susceptibility
@@ -109,6 +115,7 @@ create_baseline <- function(model_type,epoch_dates){
     # Vaccination parameters
     vaccine_progression_rate <- list(
         central = c(0,0,1/(26*7),0,-log(67.7/82.8)/(105-25)), # (Stowe Nat Comm 2022 Table S11)
+        pessimistic = c(0,0,1/(26*7),0,-log(67.7/82.8)/(105-25)), # (Stowe Nat Comm 2022 Table S11)
         optimistic = c(0,0,1/(26*7),0,-log(0.923)/140) # (Barnard Nat Comm 2022 Table S4)
     )
     
@@ -183,12 +190,20 @@ create_baseline <- function(model_type,epoch_dates){
                                             A = c(1/rel_si_omicronba1,1/rel_si_omicronba2))
     
     # Waning parameters
-    waning_rate <- 1/(6*365)
+    waning_rate <- list(central = 1/(6*365),
+                        pessimistic = 1/(3*365),
+                        optimistic = 1/(6*365))
     
     # Cross immunity parameters
-    cross_immunity <- c(0.95,1) # 1 #
-    cross_immunity1 <- c(0.55,1)
-    cross_immunity2 <- c(0.75,0.8) #c(0.5,0.8)
+    cross_immunity <- list(central = c(0.95,1),
+                           pessimistic = c(0.75,1),
+                           optimistic = c(1,1))# 1 #
+    cross_immunity1 <- list(central = c(0.55,1),
+                            pessimistic = c(0.25,1),
+                            optimistic = c(0.55,1))
+    cross_immunity2 <- list(central = c(0.5,0.8),
+                            pessimistic = c(0.3,0.7),
+                            optimistic = c(0.75,1))
     
     # Sensitivity and specificity of serological tests
     sero_sensitivity_1 <- 1 #0.9
