@@ -42,8 +42,9 @@ vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
 pop <- fread("data/population.csv")
 
 # Set assumption for booster waning rate
-assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
+# assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
 # assumptions <- "optimistic" # -log(0.923)/140 (Barnard Nat Com 2022 Table S4)
+assumptions <- "pessimistic"
 
 ## Load parameters
 # Output pars is a list containing:
@@ -62,7 +63,7 @@ dir.create("output")
 # ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
 
 # Fit covid_multi_strain to FP data
-u <- c(1:5,7:9,10,14,15:18) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
+u <- c(1:5,7:9,10:12,14,15:18) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
 # u <- c(1:6,8:10,11:13,15,16,17:21) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
 # u <- c(1:3,8,10,13,16:19)
 # u <- c(2:3,8,10,13,16:19)
@@ -70,10 +71,10 @@ n_iters <- 5e4 #4e4 #2e4 #1e4 #3e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 112
+run <- 113
 n_chains <- 2 #1 #
 deterministic <- T # flag for whether to use deterministic model or not
-fixed_initial <- F #T # flag for whether to use fixed initial values for MCMC chains or not
+fixed_initial <- T #F # flag for whether to use fixed initial values for MCMC chains or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
 initial_date <- pars$info$min[pars$info$name == "start_date"] - 1
 
