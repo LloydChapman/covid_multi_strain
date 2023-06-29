@@ -384,8 +384,8 @@ parameters_severity <- function(dt,
         if (is.null(p_value)) {
             p_step <- max(p)
         } else {
-            p_step <- parameters_piecewise_constant(p_date, p_value, dt)
-            # p_step <- parameters_piecewise_linear(p_date, p_value, dt)
+            # p_step <- parameters_piecewise_constant(p_date, p_value, dt)
+            p_step <- parameters_piecewise_linear(p_date, p_value, dt)
         }
         
         p_step <- outer(p_step, psi)
