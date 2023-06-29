@@ -32,7 +32,7 @@ create_info <- function(beta_date,model_type){
                      c("p_NC","rho_tests")
                  },
                  "alpha_hosp","alpha_death"),
-        initial = c(0.025,0.022,0.02,0.024,0.02,0.024,
+        initial = c(0.025,0.02,0.024,0.02,0.024,
                     2.7,start_date$init,strain_seed_date$init,
                     0.400626705/2,0.316,0.316,0.316,3.2,strain_seed_date1$init,
                     # 3.5,strain_seed_date2$init,
