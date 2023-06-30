@@ -16,7 +16,7 @@ create_baseline <- function(model_type,epoch_dates){
     
     # Transmission matrix
     # FOR NOW: use contact matrix for France (is Fiji an alternative as a Pacific island?)
-    m <- transmission_matrix("FRA", pop, age_groups)
+    m <- transmission_matrix("FJI", pop, age_groups)
     
     # Transmission and natural history parameters
     intvtn_date <- as.Date(c("2020-08-27","2020-10-24","2021-06-01","2021-08-02","2021-11-15"))
@@ -146,12 +146,12 @@ create_baseline <- function(model_type,epoch_dates){
     # Relative probabilities of symptoms, hospitalisation and death for different strains
     # Wildtype/Delta
     strain_rel_p_sympt <- 1
-    strain_rel_p_hosp_if_sympt <- c(1,1.6*1.85) #1 #
+    strain_rel_p_hosp_if_sympt <- 1.6*1.85 #c(1,1.6*1.85) #1 #
     strain_rel_p_death <- 1
     
     # Delta/Omicron BA.1
     strain_rel_p_sympt1 <- 1
-    strain_rel_p_hosp_if_sympt1 <- c(1,strain_rel_p_hosp_if_sympt[2]*0.3) #c(1,1.85*0.3) #
+    strain_rel_p_hosp_if_sympt1 <- strain_rel_p_hosp_if_sympt*0.3 #c(1,strain_rel_p_hosp_if_sympt[2]*0.3) #c(1,1.85*0.3) #
     strain_rel_p_death1 <- 1
     
     # Omicron BA.1/Omicron BA.2
@@ -204,6 +204,12 @@ create_baseline <- function(model_type,epoch_dates){
     cross_immunity2 <- list(central = c(0.5,0.8),
                             pessimistic = c(0.3,0.7),
                             optimistic = c(0.75,1))
+    
+    severity_cross_multiplier_delta <- 0.85
+    severity_cross_multiplier_omicronba1 <- list(
+        rel_p_hosp_if_sympt = 0.55,
+        rel_p_death = 0.18
+    )
     
     # Sensitivity and specificity of serological tests
     sero_sensitivity_1 <- 1 #0.9
@@ -264,6 +270,8 @@ create_baseline <- function(model_type,epoch_dates){
         cross_immunity = cross_immunity,
         cross_immunity1 = cross_immunity1,
         cross_immunity2 = cross_immunity2,
+        severity_cross_multiplier_delta = severity_cross_multiplier_delta,
+        severity_cross_multiplier_omicronba1 = severity_cross_multiplier_omicronba1,
         sero_sensitivity_1 = sero_sensitivity_1,
         sero_specificity_1 = sero_specificity_1,
         test_sensitivity =  test_sensitivity,

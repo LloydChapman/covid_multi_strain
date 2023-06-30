@@ -182,6 +182,7 @@ make_transform <- function(baseline){
                   "waning_rate",
                   "rel_gamma_wildtype_delta",
                   "cross_immunity",
+                  "severity_cross_multiplier_delta",
                   "strain_rel_p_sympt1",
                   "strain_rel_p_hosp_if_sympt1",
                   "strain_rel_p_death1",
@@ -192,6 +193,7 @@ make_transform <- function(baseline){
                   "rel_infectivity1",
                   "rel_gamma_delta_omicronba1",
                   "cross_immunity1",
+                  "severity_cross_multiplier_omicronba1",
                   "strain_rel_p_sympt2",
                   "strain_rel_p_hosp_if_sympt2",
                   "strain_rel_p_death2",
@@ -243,7 +245,9 @@ make_transform <- function(baseline){
                 strain_transmission <- c(1,rel_strain_transmission)
                 strain_seed_date <- strain_seed_date
                 strain_rel_p_sympt <- baseline$strain_rel_p_sympt
-                strain_rel_p_hosp_if_sympt <- baseline$strain_rel_p_hosp_if_sympt
+                strain_rel_p_hosp_if_sympt <- c(1,baseline$strain_rel_p_hosp_if_sympt,
+                                                baseline$strain_rel_p_hosp_if_sympt*
+                                                    baseline$severity_cross_multiplier_delta,1)
                 strain_rel_p_death <- baseline$strain_rel_p_death
                 rel_susceptibility <- baseline$rel_susceptibility
                 rel_p_sympt <- baseline$rel_p_sympt
@@ -256,8 +260,14 @@ make_transform <- function(baseline){
                 strain_transmission <- c(rel_strain_transmission,rel_strain_transmission1)
                 strain_seed_date <- strain_seed_date1
                 strain_rel_p_sympt <- baseline$strain_rel_p_sympt1
-                strain_rel_p_hosp_if_sympt <- baseline$strain_rel_p_hosp_if_sympt1
-                strain_rel_p_death <- baseline$strain_rel_p_death1
+                strain_rel_p_hosp_if_sympt <- c(1,baseline$strain_rel_p_hosp_if_sympt1,
+                                                baseline$strain_rel_p_hosp_if_sympt1*
+                                                    baseline$severity_cross_multiplier_omicronba1$rel_p_hosp_if_sympt,
+                                                baseline$severity_cross_multiplier_delta)
+                strain_rel_p_death <- c(1,baseline$strain_rel_p_death1,
+                                        baseline$strain_rel_p_death1*
+                                            baseline$severity_cross_multiplier_omicronba1$rel_p_death,
+                                        1)
                 rel_susceptibility <- baseline$rel_susceptibility1
                 rel_p_sympt <- baseline$rel_p_sympt1
                 rel_p_hosp_if_sympt <- baseline$rel_p_hosp_if_sympt1
