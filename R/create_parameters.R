@@ -11,13 +11,22 @@ source("R/proposal.R")
 source("R/vaccination.R")
 source("R/covid_multi_strain.R")
 
+# Set model type
+# "NB" for fitting to cases with negative binomial likelihood
+# "BB" for fitting to testing data with beta-binomial likelihood
 model_type <- "NB"
 # model_type <- "BB"
 
 # Set epoch date
 epoch_dates <- "2021-11-21" #c("2021-11-21","2021-12-16")
 
-baseline <- create_baseline(model_type,epoch_dates)
+# Set assumptions
+# "central" for default central values
+# "alt_contact_matrix" for using alternative contact matrix for Fiji
+# assumptions <- "central"
+assumptions <- "alt_contact_matrix"
+
+baseline <- create_baseline(model_type,epoch_dates,assumptions)
 saveRDS(baseline,"parameters/base.rds")
 
 beta_date <- baseline$beta_date

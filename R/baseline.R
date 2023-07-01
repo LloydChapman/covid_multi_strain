@@ -1,4 +1,4 @@
-create_baseline <- function(model_type,epoch_dates){
+create_baseline <- function(model_type,epoch_dates,assumptions){
     # Load vaccination and population data
     vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
     pop <- fread("data/population.csv")
@@ -15,8 +15,12 @@ create_baseline <- function(model_type,epoch_dates){
     n_vax <- 5
     
     # Transmission matrix
-    # FOR NOW: use contact matrix for France (is Fiji an alternative as a Pacific island?)
-    m <- transmission_matrix("FJI", pop, age_groups)
+    # use contact matrix for Fiji as an alternative as it is the Pacific island with the most similar geographic and age structure
+    if (assumptions == "alt_contact_matrix"){
+        m <- transmission_matrix("FJI", pop, age_groups)    
+    } else { 
+        m <- transmission_matrix("FRA", pop, age_groups)
+    }
     
     # Transmission and natural history parameters
     intvtn_date <- as.Date(c("2020-08-27","2020-10-24","2021-06-01","2021-08-02","2021-11-15"))
