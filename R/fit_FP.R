@@ -42,9 +42,9 @@ vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
 pop <- fread("data/population.csv")
 
 # Set assumption for booster waning rate
-# assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
+assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
 # assumptions <- "optimistic" # -log(0.923)/140 (Barnard Nat Com 2022 Table S4)
-assumptions <- "pessimistic"
+# assumptions <- "pessimistic"
 
 ## Load parameters
 # Output pars is a list containing:
@@ -71,7 +71,7 @@ n_iters <- 5e4 #4e4 #2e4 #1e4 #3e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 114
+run <- 115
 n_chains <- 1 #2 #  
 deterministic <- T # flag for whether to use deterministic model or not
 fixed_initial <- T #F # flag for whether to use fixed initial values for MCMC chains or not
