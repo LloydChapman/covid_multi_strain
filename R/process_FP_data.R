@@ -163,8 +163,8 @@ cum_weekly_dt <- cbind(weekly_dt[,.(Date,`Année/ semaine`,Year)],weekly_dt[,lap
 cum_weekly_dt[,Date := Date + 6]
 
 # Make dates vector for data
-dates <- seq.Date(from = weekly_dt[,min(Date)],to = cum_weekly_dt[,max(Date)],by = 1)
-base_dt <- data.table(date = dates)
+test_dates <- seq.Date(from = weekly_dt[,min(Date)],to = cum_weekly_dt[,max(Date)],by = 1)
+base_dt <- data.table(date = test_dates)
 base_dt[, week := date2ISOweek(date)]
 cum_weekly_dt[,week := date2ISOweek(Date)]
 cols <- c("tot","pos")
@@ -364,8 +364,8 @@ variant_dt <- variant_dt[, `:=`(strain_tot = ba1 + ba2, strain_non_variant = ba1
 
 ## Make data table of hospitalisations, deaths, cases and seroprevalence for fitting 
 # strt_date <- hosps_dt[,min(date,na.rm = T)] - 20 # 2020-07-20
-# end_date <- as.Date("2022-05-06") # last death date in data files
-# dates <- seq.Date(strt_date,end_date,by = 1)
+end_date <- as.Date("2022-05-06") # last death date in data files
+dates <- seq.Date(min(test_dates),end_date,by = 1)
 base_dt <- CJ(date = dates,age_group = age_groups_hosp)
 
 reformat_data <- function(x, base_dt, vrbl, fillna = F){
@@ -400,6 +400,7 @@ vrnt <- merge(base_dt_vrnt,variant_dt[,.(date,strain_tot,strain_non_variant)],by
 data_raw <- Reduce(function(...) merge(...,all = T), list(hosps_wide, deaths_wide, cases_wide, sero_pos_wide, sero_tot_wide, vrnt, tests_dt))
 
 data_raw[,day := covid_multi_strain_date(date)]
+
 data_raw[,date := NULL]
 
 # Add empty columns for total hospitalisations and deaths
@@ -417,6 +418,9 @@ if (model_type == "NB"){
 } else if (model_type == "BB"){
     data_raw[,c(paste0("cases_",c("0_9","10_19","20_29","30_39","40_49","50_59","60_69","70_plus")),"cases") := NA]
 }
+# Limit data to end_date
+data_raw <- data_raw[day <= covid_multi_strain_date(end_date),]
+# Save
 write.csv(data_raw,"data/data_cases_hosps_deaths_serology.csv",row.names = F)
 
 ## Vaccinations
