@@ -88,7 +88,7 @@ for (i in seq_len(n_chains)) {
     set.seed(i)
     tmp <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning)    
     saveRDS(tmp,results[[i]])
-    plot_traces(tmp$pars_full,u)
+    plot_traces(tmp$pars,u)
     ggsave(paste0("output/par_traces",run,"_",i,".pdf"),width = 6,height = 6)
     rm(tmp)
     gc()
