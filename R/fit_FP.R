@@ -71,8 +71,8 @@ n_iters <- 5e4 #4e4 #2e4 #1e4 #3e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 116
-n_chains <- 1 #2 #  
+run <- 117
+n_chains <- 4 #2 #  
 deterministic <- T # flag for whether to use deterministic model or not
 fixed_initial <- T #F # flag for whether to use fixed initial values for MCMC chains or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
@@ -96,7 +96,7 @@ for (i in seq_len(n_chains)) {
 
 ## Post processing
 # Set burn-in
-burnin <- 3000 #4000 #500 #
+burnin <- 4000 #500 #3000 #
 
 # Get results
 samples <- vector("list",n_chains)

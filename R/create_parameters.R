@@ -23,8 +23,8 @@ epoch_dates <- "2021-11-21" #c("2021-11-21","2021-12-16")
 # Set assumptions
 # "central" for default central values
 # "alt_contact_matrix" for using alternative contact matrix for Fiji
-# assumptions <- "central"
-assumptions <- "alt_contact_matrix"
+assumptions <- "central"
+# assumptions <- "alt_contact_matrix"
 
 baseline <- create_baseline(model_type,epoch_dates,assumptions)
 saveRDS(baseline,"parameters/base.rds")
