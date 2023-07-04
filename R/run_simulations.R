@@ -22,20 +22,20 @@ source("R/simulate.R")
 
 ## Set MCMC output
 # Change run number for different assumption on booster waning rate
-run <- 77
+run <- 115 #77
 # run <- 78
 # run <- 80
 output <- paste0("output/MCMCoutput",run,".RDS")
 
 ## Run counterfactual simulations
 # Set run number
-sim_run <- 18
+sim_run <- 20 #18
 # sim_run <- 19
 # sim_run <- 20
-# Set whether states required to calculate Rt have been output 
-Rt <- T
 # Set whether model is deterministic or stochastic
 deterministic <- T 
+# Set whether states required to calculate Rt have been output 
+Rt <- T
 # Set number of parameter samples and burn-in to remove
 n_smpls <- 500
 # burnin <- 1500
@@ -44,6 +44,7 @@ seed <- 1L
 # Set assumption for booster waning rate
 assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
 # assumptions <- "optimistic" # -log(0.923)/140 (Barnard Nat Com 2022 Table S4)
+# assumptions <- "pessimistic"
 
 ## Load parameters
 # Output pars is a list containing:
@@ -58,6 +59,8 @@ pars <- fit_pars_load("parameters",assumptions)
 
 # Get minimum ages of age groups
 min_ages <- get_min_age(pars$base$age_groups)
+
+initial_date <- pars$info$min[pars$info$name == "start_date"] - 1
 
 # Set probabilities for quantiles for outcomes
 probs <- c(0.025,0.5,0.975)
@@ -116,7 +119,7 @@ q_prop_total_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_lis
 # Run simulations
 for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ # 
     out <- simulate_counterfactual(output,n_smpls,beta_date_cntfctl_list[[i]],beta_idx_list[[i]],
-                                   schedule_cntfctl_list[[i]],deterministic,seed = seed,min_ages = min_ages)
+                                   schedule_cntfctl_list[[i]],initial_date,deterministic,seed = seed,min_ages = min_ages)
     states_cntfctl <- out$states_cntfctl
     smpl <- out$smpl
     info <- out$info

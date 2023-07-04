@@ -1,4 +1,4 @@
-simulate <- function(gen_mod, p, n_steps, deterministic = FALSE, 
+simulate <- function(gen_mod, p, step, step1, n_steps, deterministic = FALSE, 
                      keep_all_states = TRUE, min_ages = seq(0,70,by = 10), 
                      Rt = FALSE, p1 = NULL, n_steps1 = NULL, p2 = NULL,
                      n_steps2 = NULL, transform = NULL){
@@ -12,18 +12,22 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
     info <- mod$info()
     initial_state <- initial(info, NULL, p)
     
-    mod$update_state(state = initial_state)
+    mod$update_state(state = initial_state, step = step)
     
     # Create an array to contain outputs after looping the model.
     x <- array(NA, dim = c(info$len, 1, n_steps+1))
     
     # For loop to run the model iteratively
     x[ , ,1] <- mod$state()
+    
+    # Run model up to step of start of day of first data point
+    mod$run(step1)
+    
     for (t in seq_len(n_steps)) {
-        x[ , ,t+1] <- mod$run(t)
+        x[ , ,t+1] <- mod$run(step1 + t)
     }
     
-    simulate_next_epoch <- function(mod,info,p,n_steps,n_steps1,x,transform){ 
+    simulate_next_epoch <- function(mod,info,p,n_steps,n_steps1,step,x,transform){ 
         # Apply transform function to model state
         state <- mod$state()
         state1 <- transform(state,info)
@@ -38,7 +42,7 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
         # x1[ , ,1] <- mod$state()
         for (t in seq_len(n_steps1-n_steps)) {
             # print(t)
-            x1[ , ,t] <- mod$run(n_steps+t)
+            x1[ , ,t] <- mod$run(step + n_steps + t)
         }
         
         # Join with first epoch
@@ -48,13 +52,13 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
     }
     
     if (!is.null(p1)){
-        res <- simulate_next_epoch(mod,info,p1,n_steps,n_steps1,x,transform)
+        res <- simulate_next_epoch(mod,info,p1,n_steps,n_steps1,step1,x,transform)
         x <- res$x
         mod <- res$mod
     }
     
     if (!is.null(p2)){
-        res <- simulate_next_epoch(mod,info,p2,n_steps1,n_steps2,x,transform)
+        res <- simulate_next_epoch(mod,info,p2,n_steps1,n_steps2,step1,x,transform)
         x <- res$x
         mod <- res$mod
     }
@@ -153,8 +157,9 @@ change_booster_timing <- function(schedule, days_earlier){
 
 ## Run counterfactual simulations
 simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
-                                    beta_idx,schedule_cntfctl,deterministic,
-                                    seed = 1L,min_ages = seq(0,70,by = 10)){
+                                    beta_idx,schedule_cntfctl,initial_date,
+                                    deterministic,seed = 1L,
+                                    min_ages = seq(0,70,by = 10)){
     # Load MCMC output
     # load(output)
     dat <- readRDS(output)
@@ -177,8 +182,11 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
     
     transform <- dat$samples$predict$transform
     
+    dates <- dat$samples$trajectories$date
+    
     # Remove dat object as it is very large
     rm(dat)
+    gc()
     
     for (i in seq_len(n_smpls)){
         j <- smpl[i] #sample.int(nrow(pars_mcmc),1)
@@ -206,9 +214,10 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
             n_steps1 <- NULL
             transform_state <- NULL
         }
-        n_steps <- base$epoch_dates[1]/dt
-        n_steps1 <- (dim(states)[3] - 1)/dt
-        out[[i]] <- simulate(covid_multi_strain, p_i, n_steps, 
+        n_steps <- (base$epoch_dates[1] - min(dates) + 1)/dt
+        n_steps1 <- (max(dates) - min(dates) + 1)/dt
+        out[[i]] <- simulate(covid_multi_strain, p_i, initial_date/dt, 
+                             (min(dates)-1)/dt, n_steps, 
                              deterministic, keep_all_states = F,
                              min_ages = min_ages, Rt = Rt,
                              p1 = p1_i, n_steps1 = n_steps1, 
@@ -225,6 +234,7 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
     
     return(list(states_cntfctl = states_cntfctl,states = states,smpl = smpl,info = info))
 }
+
 
 # calculate_quantiles <- function(x, probs = c(0.025,0.5,0.975)){
 #     q <- apply(x,1,function(y) quantile(y, probs = probs))
