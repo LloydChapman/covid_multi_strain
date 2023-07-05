@@ -86,7 +86,7 @@ thinning <- 10
 results <- as.list(paste0("output/MCMCsamples",run,"_",seq_len(n_chains),".RDS"))
 for (i in seq_len(n_chains)) {
     set.seed(i)
-    tmp <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning)    
+    tmp <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning)
     saveRDS(tmp,results[[i]])
     plot_traces(tmp$pars,u)
     ggsave(paste0("output/par_traces",run,"_",i,".pdf"),width = 6,height = 6)
@@ -120,7 +120,7 @@ for (i in seq_len(n_chains)){
 samples <- chains_combine(samples = samples)
 
 # Process MCMC output
-dat <- fit_process(samples,pars,data_raw,filter,simulate_object = T)
+dat <- fit_process(samples,pars,filter,simulate_object = T)
 
 # Save output
 saveRDS(dat,paste0("output/MCMCoutput",run,".RDS"))

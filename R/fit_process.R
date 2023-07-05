@@ -13,17 +13,19 @@ remove_burnin <- function(samples,burnin = NULL){
 
 
 # Process MCMC output from fit_run()
-fit_process <- function(samples,pars,data_raw,filter,simulate_object = TRUE){
+fit_process <- function(samples,pars,filter,simulate_object = TRUE){
     
-    covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
-    info <- covid_multi_strain$new(pars$transform(samples$pars[1,])[[1]]$pars,step = 0,
-                                   n_particles = 1)$info() #filter$model$new(samples$pars[1,],0,1)$info()
+    # covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
+    # info <- covid_multi_strain$new(pars$transform(samples$pars[1,])[[1]]$pars,step = 0,
+    #                                n_particles = 1)$info()
+    info <- filter$model$new(pars$transform(pars$mcmc$initial())[[1]]$pars,step = 0,n_particles = 1)$info()
     
     # Extract baseline parameters
     base <- pars$base
     
     # Convert raw data to required format for particle filter
-    data <- particle_filter_data(data_raw,"day",1/base$dt)
+    # data <- particle_filter_data(data_raw,"day",1/base$dt)
+    data <- filter$inputs()$data
     
     samples$predict <- list(transform = pars$transform,
                             index = index(info)$state,
@@ -31,7 +33,7 @@ fit_process <- function(samples,pars,data_raw,filter,simulate_object = TRUE){
                             filter = filter)
     
     samples$info <- list(info = info,
-                         date = covid_multi_strain_date_as_date(dim(samples$trajectories$state)[3] - 1), # SORT THIS OUT, E.G. ADD end_date TO BASELINE PARS
+                         date = base$end_date,
                          multistrain = info$dim$prob_strain > 1,
                          beta_date = base$beta_date,
                          pars = pars$info$name)
