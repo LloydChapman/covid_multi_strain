@@ -224,6 +224,7 @@ create_baseline <- function(model_type,epoch_dates,assumptions){
     test_specificity <- 1
     
     baseline <- list(
+        end_date = end_date,
         model_type = model_type,
         epoch_dates = covid_multi_strain_date(epoch_dates),
         dt = dt,

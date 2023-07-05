@@ -137,7 +137,8 @@ apply_assumptions <- function(baseline, assumptions){
 make_transform <- function(baseline){
     
     # Expected fixed parameters
-    expected <- c("model_type",
+    expected <- c("end_date",
+                  "model_type",
                   "epoch_dates",
                   "dt",
                   "age_groups",
