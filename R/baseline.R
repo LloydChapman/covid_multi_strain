@@ -150,7 +150,7 @@ create_baseline <- function(model_type,epoch_dates,assumptions){
     # Relative probabilities of symptoms, hospitalisation and death for different strains
     # Wildtype/Delta
     strain_rel_p_sympt <- 1
-    strain_rel_p_hosp_if_sympt <- 1.6*1.85 #c(1,1.6*1.85) #1 #
+    strain_rel_p_hosp_if_sympt <- 1.9 #1.6*1.85 #c(1,1.6*1.85) #1 #
     strain_rel_p_death <- 1
     
     # Delta/Omicron BA.1
