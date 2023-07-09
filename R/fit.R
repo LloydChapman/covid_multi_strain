@@ -33,13 +33,9 @@ fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,fixed_initial = T
         stop("n_iters must be at least 100")
     }
     
-    #### Set up model ####
-    
-    # Compile model
-    covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
-    
     # Construct parameters object for 1st epoch
     p <- pars$mcmc$model(pars$mcmc$initial())
+    # Get model info
     info <- filter$model$new(p[[1]]$pars,step = 0,n_particles = 1)$info()
     
     min_ages <- get_min_age(pars$base$age_groups)
