@@ -67,11 +67,11 @@ u <- c(1:5,7:9,10:12,14,15:19) # beta parameters, seed date, strain seed date, I
 # u <- c(1:6,8:10,11:13,15,16,17:21) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
 # u <- c(1:3,8,10,13,16:19)
 # u <- c(2:3,8,10,13,16:19)
-n_iters <- 2e4 #1e4 #3e4 #5e4 #4e4 #
+n_iters <- 3e4 #1e4 #3e4 #5e4 #4e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 119 #118 #117 #
+run <- 120 #118 #117 #
 n_chains <- 1 #4 #2 #  
 deterministic <- T # flag for whether to use deterministic model or not
 fixed_initial <- T #F # flag for whether to use fixed initial values for MCMC chains or not
@@ -96,7 +96,7 @@ for (i in seq_len(n_chains)) {
 
 ## Post processing
 # Set burn-in
-burnin <- 1000 #3000 #4000 #500 #3000 #
+burnin <- 2000 #3000 #4000 #500 #3000 #
 
 # Get results
 samples <- vector("list",n_chains)

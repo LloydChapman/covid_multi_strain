@@ -1,4 +1,23 @@
 transmission_matrix <- function(country, pop, age_groups){
+    # Get contact matrix of country
+    contact <- contact_matrix(country)
+    
+    # Convert contact matrix for country to one with population age structure pop
+    contact1 <- contact_matrix_density_correction(contact,country,pop)
+    
+    # Aggregate contacts over age groups
+    contact2 <- contact_matrix_aggregate_age_groups(contact1,age_groups,pop)
+    
+    # Convert the contact matrix to the "transmission matrix" (the contact matrix weighted by the population in each age group)
+    contact_matrix <- matrix(contact2[,contacts],nrow = length(age_groups),ncol = length(age_groups), byrow = T) # N.B. individuals in rows, contacts in columns
+    population <- pop[,.(sum(total)),by = .(age_group)][,V1]
+    transmission <- contact_matrix/rep(population, each = ncol(contact_matrix))
+    
+    transmission
+}
+
+
+contact_matrix <- function(country){
     # Load contact matrices
     contact_matrices <- fread("data/synthetic_contacts_2020.csv")
     setnames(contact_matrices,"age_cotactee","age_contactee")
@@ -7,7 +26,45 @@ transmission_matrix <- function(country, pop, age_groups){
     contact <- contact_matrices[iso3c == country & setting == "overall" & location_contact == "all"]
     age_cols <- names(contact)[grep("age",names(contact))]
     contact[,(paste0("min_",age_cols)):=lapply(.SD,function(x) as.numeric(sub("\\+","",sub(" to.*","",x)))),.SDcols = age_cols] 
+    # Convert age group columns to factors to maintain ordering 
+    contact[,`:=`(age_contactor = factor(age_contactor,levels = unique(age_contactor)),
+                  age_contactee = factor(age_contactee, levels = unique(age_contactee)))]
     
+    contact
+}
+
+
+contact_matrix_density_correction <- function(contact,cntry,pop){
+    min_ages_contact <- contact[,unique(min_age_contactee)]
+    age_groups_contact <- contact[,unique(age_contactee)]
+    
+    # Get population age structure of country with contact matrix
+    filepath <- "~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/"
+    pop_all <- qread(paste0(filepath,"unwpp_data.qs"))
+    
+    pop_contact <- pop_all[iso3 == cntry & year == 2020,]
+    pop_contact[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
+    pop_contact <- pop_contact[,.(population = sum(total)),by = .(age_group_contact)]
+    pop_contact <- pop_contact[,pop_prop := population/sum(population)]
+    
+    # Get population age structure of country without contact matrix (by contact age groups)
+    pop1 <- copy(pop)
+    pop1[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
+    pop1 <- pop1[,.(population = sum(total)),by = .(age_group_contact)]
+    pop1 <- pop1[,pop_prop := population/sum(population)]
+    
+    # Merge populations of country with contact matrix and country without with contact data
+    contact1 <- merge(contact,pop_contact,by.x = "age_contactee",by.y = "age_group_contact")
+    contact1 <- merge(contact1,pop1,by.x = "age_contactee",by.y = "age_group_contact")
+    
+    # Correct mean number of contacts by relative population densities
+    contact1[,mean_number_of_contacts := mean_number_of_contacts*pop_prop.y/pop_prop.x]
+    
+    contact1
+}
+
+
+contact_matrix_aggregate_age_groups <- function(contact,age_groups,pop){
     # Sum mean numbers of contacts over contact age groups being aggregated
     min_ages <- get_min_age(age_groups)
     contact[,age_contactee := cut(min_age_contactee,c(min_ages,Inf),labels = age_groups,right = F)]
@@ -15,23 +72,23 @@ transmission_matrix <- function(country, pop, age_groups){
     
     min_ages_contact <- contact[,unique(min_age_contactor)]
     age_groups_contact <- contact[,unique(age_contactor)]
-    pop_contact <- copy(pop)
-    pop_contact[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
-    pop_contact <- pop_contact[,.(population = sum(total)),by = .(age_group_contact)]
     
-    contact1 <- merge(contact1,pop_contact,by.x = "age_contactor",by.y = "age_group_contact")
+    # Get population age structure of country without contact matrix (by contactor age groups)
+    pop1 <- copy(pop)
+    pop1[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
+    pop1 <- pop1[,.(population = sum(total)),by = .(age_group_contact)]
+    pop1 <- pop1[,pop_prop := population/sum(population)]
+    
+    contact1 <- merge(contact1,pop1,by.x = "age_contactor",by.y = "age_group_contact")
     contact1[,age_contactor := cut(min_age_contactor,c(min_ages,Inf),labels = age_groups,right = F)]
     
-    # Take population-weighted average of mean number of contacts over "participant" age groups being aggregated
+    # Take population-weighted average of mean number of contacts over contactor age groups being aggregated
     contact2 <- contact1[,.(contacts = sum(contacts * population)/sum(population)), by = .(age_contactor,age_contactee)]
     
     # # Plot
     # ggplot(contact2,aes(x = age_contactee,y = age_contactor,fill = contacts)) + geom_tile()
     
-    # Convert the contact matrix to the "transmission matrix" (the contact matrix weighted by the population in each age group)
-    contact_matrix <- matrix(contact2[,contacts],nrow = length(age_groups),ncol = length(age_groups), byrow = T) # N.B. individuals in rows, contacts in columns
-    population <- pop[,.(sum(total)),by = .(age_group)][,V1]
-    transmission <- contact_matrix/rep(population, each = ncol(contact_matrix))
+    contact2
 }
 
 
@@ -238,6 +295,7 @@ parameters <- function(dt,
     # Concatenate parameters into one list
     p <- c(p,severity,strain,vaccination,vacc_skip,observation)
     
+    p
 }
 
 
