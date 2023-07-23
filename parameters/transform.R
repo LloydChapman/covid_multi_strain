@@ -164,7 +164,7 @@ make_transform <- function(baseline){
                   "strain_seed_size",
                   "strain_seed_pattern",
                   "strain_rel_p_sympt",
-                  "strain_rel_p_hosp_if_sympt",
+                  # "strain_rel_p_hosp_if_sympt",
                   "strain_rel_p_death",
                   "rel_susceptibility",
                   "rel_p_sympt",
@@ -218,6 +218,7 @@ make_transform <- function(baseline){
                   "strain_seed_date","p_H_max","p_D","p_D_2","p_D_3",
                   "rel_strain_transmission1","strain_seed_date1",
                   # "rel_strain_transmission2","strain_seed_date2",
+                  "strain_rel_p_hosp_if_sympt",
                   if (baseline$model_type == "NB"){
                       c("phi_cases","alpha_cases")
                   } else if (baseline$model_type == "BB") {
@@ -239,6 +240,7 @@ make_transform <- function(baseline){
         strain_seed_date1 <- pars[["strain_seed_date1"]]
         # rel_strain_transmission2 <- pars[["rel_strain_transmission2"]]
         # strain_seed_date2 <- pars[["strain_seed_date2"]]
+        strain_rel_p_hosp_if_sympt <- pars[["strain_rel_p_hosp_if_sympt"]]
         
         stage_parameters <- function(strains){
             
@@ -246,8 +248,8 @@ make_transform <- function(baseline){
                 strain_transmission <- c(1,rel_strain_transmission)
                 strain_seed_date <- strain_seed_date
                 strain_rel_p_sympt <- baseline$strain_rel_p_sympt
-                strain_rel_p_hosp_if_sympt <- c(1,baseline$strain_rel_p_hosp_if_sympt,
-                                                baseline$strain_rel_p_hosp_if_sympt*
+                strain_rel_p_hosp_if_sympt <- c(1,strain_rel_p_hosp_if_sympt,
+                                                strain_rel_p_hosp_if_sympt*
                                                     baseline$severity_cross_multiplier_delta,1)
                 strain_rel_p_death <- baseline$strain_rel_p_death
                 rel_susceptibility <- baseline$rel_susceptibility
@@ -261,7 +263,7 @@ make_transform <- function(baseline){
                 strain_transmission <- c(rel_strain_transmission,rel_strain_transmission1)
                 strain_seed_date <- strain_seed_date1
                 strain_rel_p_sympt <- baseline$strain_rel_p_sympt1
-                strain_rel_p_hosp_if_sympt <- c(1,baseline$strain_rel_p_hosp_if_sympt1,
+                strain_rel_p_hosp_if_sympt <- strain_rel_p_hosp_if_sympt * c(1,baseline$strain_rel_p_hosp_if_sympt1,
                                                 baseline$strain_rel_p_hosp_if_sympt1*
                                                     baseline$severity_cross_multiplier_omicronba1$rel_p_hosp_if_sympt,
                                                 baseline$severity_cross_multiplier_delta)

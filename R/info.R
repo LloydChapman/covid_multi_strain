@@ -25,6 +25,7 @@ create_info <- function(beta_date,model_type){
         name = c(paste0(rep("beta",n_beta),seq_len(n_beta)),
                  "rel_strain_transmission","start_date","strain_seed_date",
                  "p_H_max","p_D","p_D_2","p_D_3","rel_strain_transmission1","strain_seed_date1",
+                 "strain_rel_p_hosp_if_sympt",
                  # "rel_strain_transmission2","strain_seed_date2",
                  if (model_type == "NB"){
                      c("phi_cases","alpha_cases")
@@ -35,6 +36,7 @@ create_info <- function(beta_date,model_type){
         initial = c(0.025,0.02,0.024,0.02,0.024,
                     2.7,start_date$init,strain_seed_date$init,
                     0.400626705/2,0.316,0.316,0.316,3.2,strain_seed_date1$init,
+                    1.9,
                     # 3.5,strain_seed_date2$init,
                     if (model_type == "NB"){
                         c(0.5,0.5)
@@ -45,14 +47,17 @@ create_info <- function(beta_date,model_type){
         min = c(rep(0,n_beta),
                 0.25,start_date$min,strain_seed_date$min,0,0,0,0,2,strain_seed_date1$min,
                 # 3,strain_seed_date2$min,
+                0,
                 0,0,0,0),
         max = c(rep(1,n_beta),
                 4,start_date$max,strain_seed_date$max,1,1,1,1,6,strain_seed_date1$max,
                 # 9,strain_seed_date2$max,
+                3,
                 1,1,1,1),
         integer = c(rep(F,n_beta),
                     F,F,F,F,F,F,F,F,F,
                     # F,F,
+                    F,
                     F,F,F,F)
     )
     pars_info
