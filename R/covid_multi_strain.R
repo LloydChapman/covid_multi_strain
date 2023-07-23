@@ -39,8 +39,7 @@ contact_matrix_density_correction <- function(contact,cntry,pop){
     age_groups_contact <- contact[,unique(age_contactee)]
     
     # Get population age structure of country with contact matrix
-    filepath <- "~/OneDrive - London School of Hygiene and Tropical Medicine/LSHTM_RF/COVID/FrenchPolynesia/"
-    pop_all <- qread(paste0(filepath,"unwpp_data.qs"))
+    pop_all <- qread("data/unwpp_data.qs")
     
     pop_contact <- pop_all[iso3 == cntry & year == 2020,]
     pop_contact[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]

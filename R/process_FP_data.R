@@ -24,7 +24,7 @@ source("R/date.R")
 # Load data files ---------------------------------------------------------
 
 # Population
-pop <- qread(paste0(filepath,"unwpp_data.qs")) 
+pop_all <- qread("data/unwpp_data.qs") 
 
 # Weekly count data
 weekly_dt <- as.data.table(read_xlsx(paste0(filepath,"Weekly data summary.xlsx")))
@@ -75,7 +75,7 @@ age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
 min_ages <- get_min_age(age_groups)
 
 # Population
-pop <- pop[country == "French Polynesia" & year == 2020]
+pop <- pop_all[country == "French Polynesia" & year == 2020]
 pop[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
 # write.csv(pop,"data/population.csv",row.names = F)
 
