@@ -37,8 +37,9 @@ create_baseline <- function(model_type,epoch_dates,assumptions){
     gamma_P_1 <- -log(0.86)/365
     theta_A <- 0.5
     
-    sympt_frac <- qread("data/2-linelist_both_fit_fIa0.5-rbzvih.qs")
-    p_C <- unname(colMeans(sympt_frac[,13:20]))
+    # sympt_frac <- qread("data/2-linelist_both_fit_fIa0.5-rbzvih.qs")
+    # p_C <- unname(colMeans(sympt_frac[,13:20]))
+    p_C <- c((0.25+0.26875)/2,(0.325+0.41875)/2,rep(0.55,6))
     prob_death_given_hosp <- fread("data/prob_death_given_hosp_salje.csv")
     p_D <- prob_death_given_hosp[,median_perc_mean/100]
     IHR <- fread("data/ihr_salje.csv")
