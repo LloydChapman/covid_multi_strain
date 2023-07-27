@@ -22,7 +22,7 @@ source("R/simulate.R")
 
 ## Set MCMC output
 # Change run number for different assumption on booster waning rate
-run <- 115 #77
+run <- 122 #77
 # run <- 78
 # run <- 80
 output <- paste0("output/MCMCoutput",run,".RDS")
@@ -120,10 +120,13 @@ q_prop_total_outcomes_averted_list <- vector("list",length(beta_date_cntfctl_lis
 for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ # 
     out <- simulate_counterfactual(output,n_smpls,beta_date_cntfctl_list[[i]],beta_idx_list[[i]],
                                    schedule_cntfctl_list[[i]],initial_date,deterministic,seed = seed,min_ages = min_ages)
-    states_cntfctl <- out$states_cntfctl
+    # Extract state counts for counterfactual and actual scenarios
+    # Drop initial values (as they do not correspond to the time step before the first time step in the data)
+    states_cntfctl <- out$states_cntfctl[,,-1]
     smpl <- out$smpl
     info <- out$info
-    states <- out$states
+    states <- out$states[,,-1]
+    dates <- out$dates
     
     # Add row names to states_cntfctl array
     dimnames(states_cntfctl) <- list(names(index(info,min_ages,Rt)$state))
@@ -135,12 +138,15 @@ for (i in seq_along(beta_date_cntfctl_list)){ #9:10){ #
 
     ## Calculate total differences in outcomes over each wave
     # Set wave dates
-    wave_date <- c(1,347,500,nlayer(states_cntfctl)-1)
+    wave_date <- c(covid_multi_strain_date_as_date(min(dates)),
+                   as.Date(c("2021-06-11","2021-11-21")),
+                   covid_multi_strain_date_as_date(max(dates)))
+    wave_date <- covid_multi_strain_date(wave_date) - min(dates) + 1
 
-    q_outcomes_list[[i]] <- calculate_outcome_quantiles(states,info,min_ages,Rt)
-    q_outcomes_cntfctl_list[[i]] <- calculate_outcome_quantiles(states_cntfctl,info,min_ages,Rt)
-    q_outcomes_averted_list[[i]] <- calculate_outcome_quantiles(outcomes_averted,info,min_ages,Rt)
-    q_prop_outcomes_averted_list[[i]] <- calculate_outcome_quantiles(prop_outcomes_averted,info,min_ages,Rt)
+    q_outcomes_list[[i]] <- calculate_outcome_quantiles(states,dates,info,min_ages,Rt)
+    q_outcomes_cntfctl_list[[i]] <- calculate_outcome_quantiles(states_cntfctl,dates,info,min_ages,Rt)
+    q_outcomes_averted_list[[i]] <- calculate_outcome_quantiles(outcomes_averted,dates,info,min_ages,Rt)
+    q_prop_outcomes_averted_list[[i]] <- calculate_outcome_quantiles(prop_outcomes_averted,dates,info,min_ages,Rt)
 
     q_total_outcomes_list[[i]] <- calculate_outcomes_by_wave(states,wave_date,info,min_ages,Rt)$q_total
     tmp1 <- calculate_outcomes_by_wave(states_cntfctl,wave_date,info,min_ages,Rt)

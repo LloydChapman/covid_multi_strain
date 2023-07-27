@@ -232,7 +232,7 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
     
     states_cntfctl <- abind(states_cntfctl,along = 2)
     
-    return(list(states_cntfctl = states_cntfctl,states = states,smpl = smpl,info = info))
+    return(list(states_cntfctl = states_cntfctl,states = states,smpl = smpl,info = info,dates = dates))
 }
 
 
@@ -241,10 +241,10 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
 #     return(q)
 # }
 
-calculate_outcome_quantiles <- function(x,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
+calculate_outcome_quantiles <- function(x,dates,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
     # If input is a 3-D array convert to a data table
     if (length(dim(x)) == 3){
-        x <- arr_to_dt(x,info,min_ages,Rt)
+        x <- arr_to_dt(x,dates,info,min_ages,Rt)
     }
     
     out <- x[,.(med = median(value),
@@ -261,9 +261,9 @@ calculate_outcomes_by_wave <- function(x,wave_date,info,min_ages = seq(0,70,by =
     tmp <- vector("list",n_waves)
     for (j in 1:n_waves){
         if (j != n_waves){ # if it's not the final wave, go up to start of next wave
-            date_idx <- (wave_date[j]:(wave_date[j+1]-1)) + 1
+            date_idx <- (wave_date[j]:(wave_date[j+1]-1))
         } else { # if it's the final wave, include last date
-            date_idx <- (wave_date[n_waves]:wave_date[n_waves+1]) + 1
+            date_idx <- (wave_date[n_waves]:wave_date[n_waves+1])
         }
         
         # Calculate total outcomes averted over wave
@@ -645,11 +645,12 @@ setup_future_betas <- function(pars, step_current, step_end, dt) {
 }
 
 
-arr_to_dt <- function(x,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
+arr_to_dt <- function(x,dates,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
     x_long <- as.data.table(x)
     
     names(x_long)[1:3] <- c("state","smpl","day")
     
+    x_long[,day := dates[day]]
     x_long[,state := names(index(info,min_ages = min_ages,Rt = Rt)$state[state])]
     
     return(x_long)
