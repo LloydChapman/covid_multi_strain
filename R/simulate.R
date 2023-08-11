@@ -159,7 +159,7 @@ change_booster_timing <- function(schedule, days_earlier){
 simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
                                     beta_idx,schedule_cntfctl,initial_date,
                                     deterministic,seed = 1L,
-                                    min_ages = seq(0,70,by = 10)){
+                                    min_ages = seq(0,70,by = 10), Rt = FALSE){
     # Load MCMC output
     # load(output)
     dat <- readRDS(output)

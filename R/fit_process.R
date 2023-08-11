@@ -30,7 +30,7 @@ fit_process <- function(samples,pars,filter,simulate_object = TRUE){
     samples$predict <- list(transform = pars$transform,
                             index = index(info)$state,
                             rate = as.integer(1/base$dt),
-                            filter = filter)
+                            filter = filter$inputs())
     
     samples$info <- list(info = info,
                          date = base$end_date,
