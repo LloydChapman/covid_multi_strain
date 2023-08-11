@@ -120,7 +120,7 @@ create_baseline <- function(model_type,epoch_dates,assumptions){
     # Vaccination parameters
     vaccine_progression_rate <- list(
         central = c(0,0,1/(26*7),0,-log(67.7/82.8)/(105-25)), # (Stowe Nat Comm 2022 Table S11)
-        pessimistic = c(0,0,1/(26*7),0,-2*log(67.7/82.8)/(105-25)), # (Stowe Nat Comm 2022 Table S11)
+        pessimistic = c(0,0,1/(26*7),0,-log(67.7/82.8)/(105-25)), # (Stowe Nat Comm 2022 Table S11)
         optimistic = c(0,0,1/(26*7),0,-log(0.923)/140) # (Barnard Nat Comm 2022 Table S4)
     )
     
