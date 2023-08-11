@@ -41,8 +41,8 @@ pop <- fread("data/population.csv")
 
 # Set assumption for booster waning rate
 # assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
-# assumptions <- "pessimistic"
-assumptions <- "optimistic" # -log(0.923)/140 (Barnard Nat Com 2022 Table S4)
+assumptions <- "pessimistic"
+# assumptions <- "optimistic" # -log(0.923)/140 (Barnard Nat Com 2022 Table S4)
 
 ## Load parameters
 # Output pars is a list containing:
@@ -65,12 +65,12 @@ u <- c(1:5,7:9,10:12,14,15:19) # beta parameters, seed date, strain seed date, I
 # u <- c(1:6,8:10,11:13,15,16,17:21) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
 # u <- c(1:3,8,10,13,16:19)
 # u <- c(2:3,8,10,13,16:19)
-n_iters <- 5e4 #4e4 #1e4 #3e4 #
+n_iters <- 4e4 #1e4 #3e4 #5e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 124 #118 #117 #
-n_chains <- 4 #2 #1 #
+run <- 125 #118 #117 #
+n_chains <- 1 #4 #2 #
 deterministic <- T # flag for whether to use deterministic model or not
 fixed_initial <- T #F # flag for whether to use fixed initial values for MCMC chains or not
 Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
@@ -107,7 +107,7 @@ print(tend - tstart)
 
 ## Post processing
 # Set burn-in
-burnin <- 4000 #500 #3000 #2000 #3000 #
+burnin <- 3000 #2000 #3000 #4000 #500 #
 
 # Get results
 samples <- vector("list",n_chains)
