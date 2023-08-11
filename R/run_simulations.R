@@ -22,14 +22,14 @@ source("R/simulate.R")
 
 ## Set MCMC output
 # Change run number for different assumption on booster waning rate
-run <- 126 #77
+run <- 128 #77
 # run <- 78
 # run <- 80
 output <- paste0("output/MCMCoutput",run,".RDS")
 
 ## Run counterfactual simulations
 # Set run number
-sim_run <- 24 #18
+sim_run <- 26 #18
 # sim_run <- 19
 # sim_run <- 20
 # Set whether model is deterministic or stochastic

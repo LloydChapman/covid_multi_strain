@@ -69,7 +69,7 @@ n_iters <- 4e4 #1e4 #3e4 #5e4 #
 # Change run number for different assumption on booster waning rate
 # run <- 77
 # run <- 78
-run <- 126 #118 #117 #
+run <- 128 #118 #117 #
 n_chains <- 1 #4 #2 #
 deterministic <- T # flag for whether to use deterministic model or not
 fixed_initial <- T #F # flag for whether to use fixed initial values for MCMC chains or not

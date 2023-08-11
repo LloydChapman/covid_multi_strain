@@ -8,8 +8,8 @@ compute_severity <- function(pars,severity,dt){
     
     # Probability of death given severe disease
     # p_D_date <- covid_multi_strain_date(c("2019-12-31","2021-07-01","2021-12-01"))
-    p_D_date <- covid_multi_strain_date(c("2020-07-01","2021-07-01","2021-12-01"))
-    p_D_value <- c(p_D,p_D_2,p_D_3)
+    p_D_date <- covid_multi_strain_date(c("2020-07-01","2021-06-11","2021-08-15","2021-11-01"))
+    p_D_value <- c(p_D,p_D,p_D_2,p_D_3)
     # p_D_value <- p_D
     
     # Probability of hospitalisation
