@@ -46,6 +46,8 @@ fit_process <- function(samples,pars,filter,simulate_object = TRUE){
     if (simulate_object){
         start_date_sim <- "2021-11-21"
         simulate <- create_simulate_object(samples, start_date_sim, samples$info$date)
+    } else {
+        simulate <- NULL
     }
     
     list(samples = samples,
