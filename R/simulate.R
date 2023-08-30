@@ -312,11 +312,11 @@ plot_counterfactuals_together <- function(q_outcomes,q_outcomes_cntfctl,outcome,
         geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u,fill = factor(cntfctl)),q_outcomes_cntfctl1,alpha = 0.5) +
         geom_line(aes(x = date,y = med),q_outcomes1,color = "black",linetype = "dashed") +
         geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u),q_outcomes1,fill = "black",alpha = 0.5) +
-        labs(x = "Date") +
+        labs(x = "Date",y = "Number") +
         scale_color_discrete(name = "Counterfactual",labels = lbls) +
         scale_fill_discrete(name = "Counterfactual",labels = lbls) +
         theme_cowplot(font_size = 12) + 
-        theme(axis.title.y = element_blank(),legend.position = "bottom",strip.background = element_blank()) +
+        theme(legend.position = "bottom",strip.background = element_blank()) +
         facet_wrap(~state,nrow = 1,scales = "free",labeller = labeller(state = ttls))
     return(p)
 }
