@@ -218,7 +218,7 @@ hosps_dt3[,`:=`(age = as.integer(sub("_.*","",age)),
                 vaccination_complete = fifelse(vaccination_complete == "Oui",1,0))]
 
 # Hospitalisations Nov-Dec 2021
-hosps_dt_Nov21 <- cases_dt[
+hosps_dt_Nov21 <- cases_dt1[
     hospital != "" & between(date,
                              hosps_dt2[,max(collection_date)],
                              hosps_dt3[,min(date)],incbounds = F),
