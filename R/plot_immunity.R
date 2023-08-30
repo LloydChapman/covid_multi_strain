@@ -11,9 +11,10 @@ source("R/simulate.R")
 pop <- fread("data/population.csv")
 
 # Set age groups
-age_groups <- c("0-9","10-19","20-29","30-39","40-49","50-59","60-69","70+")
+base <- readRDS("parameters/base.rds")
+age_groups <- base$age_groups
 
-run <- 77 #78
+run <- 131
 
 # Set output to use
 output <- paste0("output/MCMCoutput",run,".RDS")
