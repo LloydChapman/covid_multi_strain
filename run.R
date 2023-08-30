@@ -53,7 +53,7 @@ u <- c(1:5,7:9,10:12,14,15:19) # beta parameters, seed date, strain seed date, I
 n_iters <- 5e4 #3e4 #1e4 #3e4 #100 #
 n_chains <- 4 #2 #1 #
     
-for (j in 3){#seq_along(runs)){
+for (j in seq_along(runs)){
     # Run fitting
     run_fitting(runs[j],assumption[j],u,n_iters,n_chains)
     
