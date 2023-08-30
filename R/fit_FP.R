@@ -110,11 +110,14 @@ run_fitting <- function(run,assumptions,u,n_iters,n_chains){
     # Set whether to plot moving average of data
     moving_avg <- F
     
+    # Set whether to plot prediction interval from model
+    pred_intvl <- T
+    
     # Set number of posterior samples for age-decomposition plots
     n_smpls <- 1000 #500 #
     
     # Plot fit
-    plot_fit(dat,pars,run,pop,u,moving_avg,n_smpls)
+    plot_fit(dat,pars,run,pop,u,moving_avg,pred_intvl,n_smpls)
     
     # Process fit
     pars_qntls <- calculate_parameter_quantiles(dat)

@@ -1,25 +1,31 @@
-plot_fit <- function(dat,pars,run,pop,u,moving_avg = FALSE,n_smpls = 1000){
+plot_fit <- function(dat,pars,run,pop,u,moving_avg = FALSE,pred_intvl = FALSE,n_smpls = 1000){
     model_type <- pars$base$model_type
     if (model_type == "NB"){
-        plot_outcome(dat$samples$trajectories,dat$data,"cases",dat$samples$pars[,"phi_cases"],by_age = T,moving_avg = moving_avg)
+        plot_outcome(dat$samples$trajectories,dat$data,"cases",phi = dat$samples$pars[,"phi_cases"],by_age = T,moving_avg = moving_avg,
+                     pred_intvl = pred_intvl,alpha = dat$samples$pars[,"alpha_cases"])
         ggsave(paste0("output/cases_by_age_fit",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 8, height = 6.4)
     }
-    plot_outcome(dat$samples$trajectories,dat$data,"hosps",by_age = T,moving_avg = moving_avg)
+    plot_outcome(dat$samples$trajectories,dat$data,"hosps",by_age = T,moving_avg = moving_avg,
+                 pred_intvl = pred_intvl,alpha = dat$samples$pars[,"alpha_hosp"])
     ggsave(paste0("output/hosps_by_age_fit",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 8)
-    plot_outcome(dat$samples$trajectories,dat$data,"deaths",by_age = T,moving_avg = moving_avg)
+    plot_outcome(dat$samples$trajectories,dat$data,"deaths",by_age = T,moving_avg = moving_avg,
+                 pred_intvl = pred_intvl,alpha = dat$samples$pars[,"alpha_death"])
     ggsave(paste0("output/deaths_by_age_fit",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 8)
     plot_sero(dat$samples$trajectories,dat$data,pop[,.(population = sum(total)),by = .(age_group)],by_age = T)
     ggsave(paste0("output/sero_by_age_fit",run,".pdf"),width = 4, height = 8)
     if (model_type == "NB"){
-        plot_outcome(dat$samples$trajectories,dat$data,"cases",dat$samples$pars[,"phi_cases"],by_age = F,moving_avg = moving_avg)
+        plot_outcome(dat$samples$trajectories,dat$data,"cases",phi = dat$samples$pars[,"phi_cases"],by_age = F,moving_avg = moving_avg,
+                     pred_intvl = pred_intvl,alpha = dat$samples$pars[,"alpha_cases"])
         ggsave(paste0("output/cases",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 2.7)
     } else if (model_type == "BB"){
         plot_tests(dat$samples$trajectories,dat$data,dat$samples$pars[,"p_NC"],pop[,sum(total)],moving_avg = moving_avg)
         ggsave(paste0("output/tests",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 2.7)
     }
-    plot_outcome(dat$samples$trajectories,dat$data,"hosps",moving_avg = moving_avg)
+    plot_outcome(dat$samples$trajectories,dat$data,"hosps",moving_avg = moving_avg,
+                 pred_intvl = pred_intvl,alpha = dat$samples$pars[,"alpha_hosp"])
     ggsave(paste0("output/hosps",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 2.7)
-    plot_outcome(dat$samples$trajectories,dat$data,"deaths",moving_avg = moving_avg)
+    plot_outcome(dat$samples$trajectories,dat$data,"deaths",moving_avg = moving_avg,
+                 pred_intvl = pred_intvl,alpha = dat$samples$pars[,"alpha_death"])
     ggsave(paste0("output/deaths",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 2.7)
     # plot_variant_proportion(dat$samples$trajectories,dat$data,as.Date("2022-01-01"),"Omicron BA.2 proportion")
     # ggsave(paste0("output/variant_proportion",run,".pdf"),width = 4,height = 2.7)
@@ -58,5 +64,5 @@ plot_fit <- function(dat,pars,run,pop,u,moving_avg = FALSE,n_smpls = 1000){
     ggsave(paste0("output/par_posteriors",run,".pdf"),width = 6,height = 6)
     
     p2 <- plot_pairwise_correlation(dat$samples$pars,u)
-    ggsave(paste0("output/par_pairwise_corr",run,".pdf"),p2,width = 10,height = 10)
+    ggsave(paste0("output/par_pairwise_corr",run,".pdf"),p2,width = 12,height = 12)
 }

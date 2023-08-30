@@ -1506,7 +1506,8 @@ covid_multi_strain_transform_multistage <- function(dt,
 }
 
 
-plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, by_age = FALSE, moving_avg = FALSE){
+plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, 
+                         by_age = FALSE, moving_avg = FALSE, pred_intvl = T, alpha = NULL){
     # Extract modelled incidence for outcome vrble from output
     nms <- dimnames(incidence_modelled$state)[[1]]
     if (by_age){
@@ -1522,17 +1523,35 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     inc_dt[,date := covid_multi_strain_date_as_date(incidence_modelled$date[date])]
     inc_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
     if (vrble == "cases"){
-        # Convert to data table with sample number
+        # Convert reporting fraction vector to data table with sample number
         phi_dt <- data.table(sample = seq_along(phi),phi = phi)
         # Add phi to inc_dt
         inc_dt[,phi := phi_dt[match(inc_dt[,sample],sample),phi]]
         # Multiply incidence by reporting rate
-        inc_dt[,value := phi * value]        
+        inc_dt[,value := phi * value]
     }
-    q_inc_dt <- inc_dt[,.(med = quantile(value,0.5),
-                          q95l = quantile(value,0.025),
-                          q95u = quantile(value,0.975)),
-                       by = .(age_group,date)]
+    if (pred_intvl){
+        # Convert overdispersion parameter vector to data table with sample number
+        alpha_dt <- data.table(sample = seq_along(alpha),alpha = alpha)
+        # Add alpha to inc_dt
+        inc_dt[,alpha := alpha_dt[match(inc_dt[,sample],sample),alpha]]
+        # Sample observed value
+        inc_dt[,value_obs := rnbinom(.N,size = 1/alpha,mu = value)]
+        # Calculate median and 95% quantiles
+        q_inc_dt <- inc_dt[,.(med = quantile(value,0.5),
+                              q95l = quantile(value,0.025),
+                              q95u = quantile(value,0.975),
+                              q95l_obs = quantile(value_obs,0.025),
+                              q95u_obs = quantile(value_obs,0.975)),
+                           by = .(age_group,date)]
+    } else {
+        # Calculate median and 95% quantiles
+        q_inc_dt <- inc_dt[,.(med = quantile(value,0.5),
+                              q95l = quantile(value,0.025),
+                              q95u = quantile(value,0.975)),
+                           by = .(age_group,date)]
+    }
+    
     # Extract observed incidence for outcome vrble from data frame
     if (by_age){
         idx_obs <- names(incidence_observed)[grep(paste0(vrble,"_"),names(incidence_observed))]
@@ -1565,6 +1584,9 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
         geom_ribbon(aes(x = date, ymin = q95l, ymax = q95u),q_inc_dt,alpha = 0.5) + 
         labs(x = "Date", y = ylbl) + 
         theme_cowplot(font_size = 12)
+    if (pred_intvl){
+        p <- p + geom_ribbon(aes(x = date, ymin = q95l_obs, ymax = q95u_obs),q_inc_dt,alpha = 0.2)
+    }
     if (by_age){
         if (vrble == "cases"){ # 2 columns for cases as there are more age groups in the data 
             p <- p + facet_wrap(~age_group, ncol = 2) + theme(strip.background = element_blank())
@@ -1999,6 +2021,7 @@ plot_posteriors <- function(pars,u,priors,pars_min,pars_max){
     pars_dt <- as.data.table(pars)
     pars_dt[,iter := seq_len(nrow(pars))]
     pars_long_dt <- melt(pars_dt,id.vars = "iter")
+    pars_long_dt[,variable := factor(variable,levels = unique(variable))]
     
     priors_dt <- data.table()
     for (i in seq_along(u)){
@@ -2015,6 +2038,7 @@ plot_posteriors <- function(pars,u,priors,pars_min,pars_max){
     
     priors_long_dt <- melt(priors_dt,measure.vars = patterns(x = "x_",y = "y_"))
     priors_long_dt[,variable := names(priors)[u[variable]]]
+    priors_long_dt[,variable := factor(variable,levels = unique(variable))]
         
     p <- ggplot() + 
         geom_histogram(aes(x = value,y = ..density..),pars_long_dt) +
@@ -2034,7 +2058,10 @@ plot_pairwise_correlation <- function(pars,u){
     p <- ggpairs(pars_dt) + 
         theme_cowplot(font_size = 10) +
         theme(axis.text.x = element_text(angle = 90),
-              strip.background = element_blank())
+              strip.background = element_blank(),
+              strip.text.x = element_text(angle = 90),
+              strip.text.y = element_text(angle = 0)
+              )
     return(p)
 }
 
