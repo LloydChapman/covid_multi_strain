@@ -1,9 +1,13 @@
-transmission_matrix <- function(country, pop, age_groups){
+transmission_matrix <- function(country, pop, age_groups, density_correct = FALSE){
     # Get contact matrix of country
     contact <- contact_matrix(country)
     
-    # Convert contact matrix for country to one with population age structure pop
-    contact1 <- contact_matrix_density_correction(contact,country,pop)
+    if (density_correct){
+        # Convert contact matrix for country to one with population age structure pop
+        contact1 <- contact_matrix_density_correction(contact,country,pop)        
+    } else {
+        contact1 <- contact
+    }
     
     # Aggregate contacts over age groups
     contact2 <- contact_matrix_aggregate_age_groups(contact1,age_groups,pop)

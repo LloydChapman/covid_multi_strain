@@ -17,9 +17,9 @@ create_baseline <- function(model_type,epoch_dates,assumptions){
     # Transmission matrix
     # use contact matrix for Fiji as an alternative as it is the Pacific island with the most similar geographic and age structure
     if (assumptions == "alt_contact_matrix"){
-        m <- transmission_matrix("FJI", pop, age_groups)    
+        m <- transmission_matrix("FJI", pop, age_groups,T)    
     } else { 
-        m <- transmission_matrix("FRA", pop, age_groups)
+        m <- transmission_matrix("FRA", pop, age_groups,T)
     }
     
     # Transmission and natural history parameters
