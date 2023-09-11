@@ -8,7 +8,7 @@ create_priors <- function(beta_date,pars_info) {
                            shape2 = NA_real_)
     
     p_hps <- data.frame(type = "beta",
-                        name = c("p_H_max","p_D_max"),
+                        name = c("p_H_max","p_D","p_D_2","p_D_3"),
                         scale = NA_real_,
                         shape = NA_real_,
                         shape1 = 1, 
@@ -17,7 +17,11 @@ create_priors <- function(beta_date,pars_info) {
     strain_hps <- data.frame(
         type = "null",
         name = c("rel_strain_transmission","start_date","strain_seed_date",
-                 "rel_strain_transmission1","strain_seed_date1"),
+                 "rel_strain_transmission1","strain_seed_date1",
+                 "rel_strain_transmission2","strain_seed_date2",
+                 "strain_rel_p_hosp_if_sympt"),
+        # scale = c(rep(NA_real_,3),40,rep(NA_real_,3)),
+        # shape = c(rep(NA_real_,3),0.08,rep(NA_real_,3)),
         scale = NA_real_,
         shape = NA_real_,
         shape1 = NA_real_,
@@ -26,7 +30,25 @@ create_priors <- function(beta_date,pars_info) {
     
     case_obs_hps <- data.frame(
         type = "beta",
-        name = c("phi_cases","alpha_cases"),
+        name = c("phi_cases","alpha_cases","p_NC","rho_tests"),
+        scale = NA_real_,
+        shape = NA_real_,
+        shape1 = 1,
+        shape2 = 1
+    )
+    
+    hosp_obs_hps <- data.frame(
+        type = "beta",
+        name = "alpha_hosp",
+        scale = NA_real_,
+        shape = NA_real_,
+        shape1 = 1,
+        shape2 = 1
+    )
+    
+    death_obs_hps <- data.frame(
+        type = "beta",
+        name = "alpha_death",
         scale = NA_real_,
         shape = NA_real_,
         shape1 = 1,
@@ -40,7 +62,12 @@ create_priors <- function(beta_date,pars_info) {
         p_hps,
         strain_hps[strain_hps$name %in%
                        c("rel_strain_transmission1","strain_seed_date1"),],
-        case_obs_hps)
+        strain_hps[strain_hps$name %in% 
+                       c("rel_strain_transmission2","strain_seed_date2"),],
+        strain_hps[strain_hps$name %in% "strain_rel_p_hosp_if_sympt",],
+        case_obs_hps,
+        hosp_obs_hps,
+        death_obs_hps)
     names(ret)[match(c("scale","shape","shape1","shape2"),names(ret))] <- 
         c("gamma_scale","gamma_shape","beta_shape1","beta_shape2")
     

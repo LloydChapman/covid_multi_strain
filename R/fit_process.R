@@ -1,27 +1,4 @@
-# Process MCMC output from fit_covid_multi_strain()
-fit_process <- function(samples,pars,data_raw,filter,burnin = NULL,simulate_object = TRUE){
-    
-    covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
-    info <- covid_multi_strain$new(pars$transform(samples$pars[1,])[[1]]$pars,step = 0,
-                                   n_particles = 1)$info() #filter$model$new(samples$pars[1,],0,1)$info()
-    
-    # Extract baseline parameters
-    base <- pars$base
-    
-    # Convert raw data to required format for particle filter
-    data <- particle_filter_data(data_raw,"day",1/base$dt)
-    
-    samples$predict <- list(transform = pars$transform,
-                            index = index(info)$state,
-                            rate = as.integer(1/base$dt),
-                            filter = filter)
-    
-    samples$info <- list(info = info,
-                         date = covid_multi_strain_date_as_date(dim(samples$trajectories$state)[3] - 1), # SORT THIS OUT, E.G. ADD end_date TO BASELINE PARS
-                         multistrain = info$dim$prob_strain > 1,
-                         beta_date = base$beta_date,
-                         pars = pars$info$name)
-    
+remove_burnin <- function(samples,burnin = NULL){
     if (is.null(burnin)){
         burnin <- round(nrow(samples$pars)/10)
     }
@@ -31,6 +8,35 @@ fit_process <- function(samples,pars,data_raw,filter,burnin = NULL,simulate_obje
     samples$probabilities <- samples$probabilities[idx_drop,]
     samples$state <- samples$state[,idx_drop]
     samples$trajectories$state <- samples$trajectories$state[,idx_drop,]
+    samples
+}
+
+
+# Process MCMC output from fit_run()
+fit_process <- function(samples,pars,filter,simulate_object = TRUE){
+    
+    # covid_multi_strain <- odin_dust("inst/odin/covid_multi_strain.R")
+    # info <- covid_multi_strain$new(pars$transform(samples$pars[1,])[[1]]$pars,step = 0,
+    #                                n_particles = 1)$info()
+    info <- filter$model$new(pars$transform(pars$mcmc$initial())[[1]]$pars,step = 0,n_particles = 1)$info()
+    
+    # Extract baseline parameters
+    base <- pars$base
+    
+    # Convert raw data to required format for particle filter
+    # data <- particle_filter_data(data_raw,"day",1/base$dt)
+    data <- filter$inputs()$data
+    
+    samples$predict <- list(transform = pars$transform,
+                            index = index(info)$state,
+                            rate = as.integer(1/base$dt),
+                            filter = filter$inputs())
+    
+    samples$info <- list(info = info,
+                         date = base$end_date,
+                         multistrain = info$dim$prob_strain > 1,
+                         beta_date = base$beta_date,
+                         pars = pars$info$name)
     
     samples$trajectories$date <- samples$trajectories$step/samples$trajectories$rate
     
@@ -40,6 +46,8 @@ fit_process <- function(samples,pars,data_raw,filter,burnin = NULL,simulate_obje
     if (simulate_object){
         start_date_sim <- "2021-11-21"
         simulate <- create_simulate_object(samples, start_date_sim, samples$info$date)
+    } else {
+        simulate <- NULL
     }
     
     list(samples = samples,

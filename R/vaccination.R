@@ -29,10 +29,10 @@ vaccination_data <- function(vax, delay_dose1, delay_dose2, pop, age_groups_vax,
     # Limit vaccine schedule to end date
     vax_dt <- vax_dt[date <= end_date]
     
-    # Plot to check
-    ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color = age_group)) +
-        geom_line() +
-        facet_wrap(~dose)
+    # # Plot to check
+    # ggplot(vax_dt[age_group!="0-9"],aes(x = date,y = number,group = age_group,color = age_group)) +
+    #     geom_line() +
+    #     facet_wrap(~dose)
     
     # # Check totals are the same
     # print(vax[,sum(number)]) # 465247
@@ -104,6 +104,8 @@ convert_eff_to_rel_param <- function(vax_eff,age_groups){
     # Copy vaccine efficacy data table
     vax_eff_long <- copy(vax_eff)
     
+    vax_eff_long <- melt(vax_eff_long, id.vars = c("outcome","vaccine","dose","variant"),variable.name = "analysis")
+    
     # Convert vaccine efficacy percentage to proportion
     vax_eff_long[,value := value/100]
 
@@ -111,9 +113,10 @@ convert_eff_to_rel_param <- function(vax_eff,age_groups){
     vaccines <- vax_eff_long[,unique(vaccine)]
     doses <- vax_eff_long[,unique(dose)]
     variants <- vax_eff_long[,unique(variant)]
+    analysis <- vax_eff_long[,unique(analysis)]
     
-    vax_eff_by_age <- CJ(age_group = age_groups, outcome = outcomes, vaccine = vaccines, dose = doses, variant = variants, sorted = F)
-    vax_eff_by_age <- merge(vax_eff_by_age, vax_eff_long, by = c("outcome","vaccine","dose","variant"), all.x = T, sort = F)
+    vax_eff_by_age <- CJ(age_group = age_groups, outcome = outcomes, vaccine = vaccines, dose = doses, variant = variants, analysis = analysis, sorted = F)
+    vax_eff_by_age <- merge(vax_eff_by_age, vax_eff_long, by = c("outcome","vaccine","dose","variant","analysis"), all.x = T, sort = F)
     
     prop_vax_type <- CJ(vaccine = vaccines,age_group = age_groups)
     # FOR NOW: Assume all Pfizer based on Mai's comment that most vaccinations were
@@ -123,28 +126,30 @@ convert_eff_to_rel_param <- function(vax_eff,age_groups){
     
     vax_eff_by_age <- merge(vax_eff_by_age, prop_vax_type, by = c("vaccine","age_group"), all.x = T, sort = F)
     # Average effectiveness according to proportions of vaccine types by age
-    vax_eff_by_age <- vax_eff_by_age[,.(value = sum(value * prop)), by = .(age_group, outcome, dose, variant)]
+    vax_eff_by_age <- vax_eff_by_age[,.(value = sum(value * prop)), by = .(age_group, outcome, dose, variant, analysis)]
     
-    vax_eff_arr <- array(vax_eff_by_age[,value], dim = c(length(variants),length(doses),length(outcomes),length(age_groups)),
-                         dimnames = list(variant = variants, dose = doses, outcome = outcomes, age_group = age_groups))
-    # vax_eff_arr <- array(vax_eff_long$value, dim = vax_eff_long[,sapply(.SD,function(x) length(unique(x))),.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],
-    #                      dimnames = lapply(vax_eff_long[,.SD,.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],function(x) unique(x)))
+    vax_eff_by_age <- split(vax_eff_by_age, vax_eff_by_age[,analysis])
     
-    
-    vax_eff_arr <- aperm(vax_eff_arr, c(4,1,2,3))
-    
-    # Calculate relative susceptibility and infectiousness, and conditional 
-    # probabilities of symptoms, hospitalisation and death in different vaccination 
-    # groups according to average vaccine effectiveness for different age groups and 
-    # variants
-    rel_params <- calculate_rel_param(vax_eff_arr)
-    
-    # Mirror parameters for pseudo-strains
-    # strain 3: strain 1 -> strain 2
-    # strain 4: strain 2 -> strain 1
-    rel_params <- lapply(rel_params, mirror_strain)
-    
-    rel_params
+    lapply(vax_eff_by_age,function(vax_eff_by_age){
+        vax_eff_arr <- array(vax_eff_by_age[,value], dim = c(length(variants),length(doses),length(outcomes),length(age_groups)),
+                             dimnames = list(variant = variants, dose = doses, outcome = outcomes, age_group = age_groups))
+        # vax_eff_arr <- array(vax_eff_long$value, dim = vax_eff_long[,sapply(.SD,function(x) length(unique(x))),.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],
+        #                      dimnames = lapply(vax_eff_long[,.SD,.SDcols = names(vax_eff_long)[names(vax_eff_long)!="value"]],function(x) unique(x)))
+        
+        
+        vax_eff_arr <- aperm(vax_eff_arr, c(4,1,2,3))
+        
+        # Calculate relative susceptibility and infectiousness, and conditional 
+        # probabilities of symptoms, hospitalisation and death in different vaccination 
+        # groups according to average vaccine effectiveness for different age groups and 
+        # variants
+        rel_params <- calculate_rel_param(vax_eff_arr)
+        
+        # Mirror parameters for pseudo-strains
+        # strain 3: strain 1 -> strain 2
+        # strain 4: strain 2 -> strain 1
+        lapply(rel_params, mirror_strain)
+    })
 }
 
 

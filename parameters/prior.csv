@@ -8,8 +8,13 @@
 "null","start_date",NA,NA,NA,NA
 "null","strain_seed_date",NA,NA,NA,NA
 "beta","p_H_max",NA,NA,1,1
-"beta","p_D_max",NA,NA,1,1
+"beta","p_D",NA,NA,1,1
+"beta","p_D_2",NA,NA,1,1
+"beta","p_D_3",NA,NA,1,1
 "null","rel_strain_transmission1",NA,NA,NA,NA
 "null","strain_seed_date1",NA,NA,NA,NA
+"null","strain_rel_p_hosp_if_sympt",NA,NA,NA,NA
 "beta","phi_cases",NA,NA,1,1
 "beta","alpha_cases",NA,NA,1,1
+"beta","alpha_hosp",NA,NA,1,1
+"beta","alpha_death",NA,NA,1,1

@@ -286,3 +286,10 @@ get_min_age = function(x){
 get_max_age = function(x){
   as.numeric(sub(".*-","",sub("\\+|<","-",x)))    
 }
+
+reverse_list_structure <- function(x){
+  # get sub-elements in same order
+  ls <- lapply(x, `[`, names(x[[1]]))
+  # stack and reslice
+  apply(do.call(rbind, ls), 2, as.list) 
+}

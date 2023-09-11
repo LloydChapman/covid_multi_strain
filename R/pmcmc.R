@@ -128,7 +128,7 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,idx,
         dt <- transform_pars$dt
     }
     trajectories <- list(
-        step = as.integer((0:(nlayer(trajectories_state)-1))/dt),
+        step = filter$inputs()$data$step_end,
         rate = as.integer(1/dt),
         state = trajectories_state,
         predict = rep(F, nlayer(trajectories_state))

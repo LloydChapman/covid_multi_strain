@@ -1,4 +1,27 @@
-transmission_matrix <- function(country, pop, age_groups){
+transmission_matrix <- function(country, pop, age_groups, density_correct = FALSE){
+    # Get contact matrix of country
+    contact <- contact_matrix(country)
+    
+    if (density_correct){
+        # Convert contact matrix for country to one with population age structure pop
+        contact1 <- contact_matrix_density_correction(contact,country,pop)        
+    } else {
+        contact1 <- contact
+    }
+    
+    # Aggregate contacts over age groups
+    contact2 <- contact_matrix_aggregate_age_groups(contact1,age_groups,pop)
+    
+    # Convert the contact matrix to the "transmission matrix" (the contact matrix weighted by the population in each age group)
+    contact_matrix <- matrix(contact2[,contacts],nrow = length(age_groups),ncol = length(age_groups), byrow = T) # N.B. individuals in rows, contacts in columns
+    population <- pop[,.(sum(total)),by = .(age_group)][,V1]
+    transmission <- contact_matrix/rep(population, each = ncol(contact_matrix))
+    
+    transmission
+}
+
+
+contact_matrix <- function(country){
     # Load contact matrices
     contact_matrices <- fread("data/synthetic_contacts_2020.csv")
     setnames(contact_matrices,"age_cotactee","age_contactee")
@@ -7,7 +30,44 @@ transmission_matrix <- function(country, pop, age_groups){
     contact <- contact_matrices[iso3c == country & setting == "overall" & location_contact == "all"]
     age_cols <- names(contact)[grep("age",names(contact))]
     contact[,(paste0("min_",age_cols)):=lapply(.SD,function(x) as.numeric(sub("\\+","",sub(" to.*","",x)))),.SDcols = age_cols] 
+    # Convert age group columns to factors to maintain ordering 
+    contact[,`:=`(age_contactor = factor(age_contactor,levels = unique(age_contactor)),
+                  age_contactee = factor(age_contactee, levels = unique(age_contactee)))]
     
+    contact
+}
+
+
+contact_matrix_density_correction <- function(contact,cntry,pop){
+    min_ages_contact <- contact[,unique(min_age_contactee)]
+    age_groups_contact <- contact[,unique(age_contactee)]
+    
+    # Get population age structure of country with contact matrix
+    pop_all <- qread("data/unwpp_data.qs")
+    
+    pop_contact <- pop_all[iso3 == cntry & year == 2020,]
+    pop_contact[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
+    pop_contact <- pop_contact[,.(population = sum(total)),by = .(age_group_contact)]
+    pop_contact <- pop_contact[,pop_prop := population/sum(population)]
+    
+    # Get population age structure of country without contact matrix (by contact age groups)
+    pop1 <- copy(pop)
+    pop1[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
+    pop1 <- pop1[,.(population = sum(total)),by = .(age_group_contact)]
+    pop1 <- pop1[,pop_prop := population/sum(population)]
+    
+    # Merge populations of country with contact matrix and country without with contact data
+    contact1 <- merge(contact,pop_contact,by.x = "age_contactee",by.y = "age_group_contact")
+    contact1 <- merge(contact1,pop1,by.x = "age_contactee",by.y = "age_group_contact")
+    
+    # Correct mean number of contacts by relative population densities
+    contact1[,mean_number_of_contacts := mean_number_of_contacts*pop_prop.y/pop_prop.x]
+    
+    contact1
+}
+
+
+contact_matrix_aggregate_age_groups <- function(contact,age_groups,pop){
     # Sum mean numbers of contacts over contact age groups being aggregated
     min_ages <- get_min_age(age_groups)
     contact[,age_contactee := cut(min_age_contactee,c(min_ages,Inf),labels = age_groups,right = F)]
@@ -15,23 +75,23 @@ transmission_matrix <- function(country, pop, age_groups){
     
     min_ages_contact <- contact[,unique(min_age_contactor)]
     age_groups_contact <- contact[,unique(age_contactor)]
-    pop_contact <- copy(pop)
-    pop_contact[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
-    pop_contact <- pop_contact[,.(population = sum(total)),by = .(age_group_contact)]
     
-    contact1 <- merge(contact1,pop_contact,by.x = "age_contactor",by.y = "age_group_contact")
+    # Get population age structure of country without contact matrix (by contactor age groups)
+    pop1 <- copy(pop)
+    pop1[,age_group_contact := cut(age,c(min_ages_contact,Inf),labels = age_groups_contact,right = F)]
+    pop1 <- pop1[,.(population = sum(total)),by = .(age_group_contact)]
+    pop1 <- pop1[,pop_prop := population/sum(population)]
+    
+    contact1 <- merge(contact1,pop1,by.x = "age_contactor",by.y = "age_group_contact")
     contact1[,age_contactor := cut(min_age_contactor,c(min_ages,Inf),labels = age_groups,right = F)]
     
-    # Take population-weighted average of mean number of contacts over "participant" age groups being aggregated
+    # Take population-weighted average of mean number of contacts over contactor age groups being aggregated
     contact2 <- contact1[,.(contacts = sum(contacts * population)/sum(population)), by = .(age_contactor,age_contactee)]
     
-    # Plot
-    ggplot(contact2,aes(x = age_contactee,y = age_contactor,fill = contacts)) + geom_tile()
+    # # Plot
+    # ggplot(contact2,aes(x = age_contactee,y = age_contactor,fill = contacts)) + geom_tile()
     
-    # Convert the contact matrix to the "transmission matrix" (the contact matrix weighted by the population in each age group)
-    contact_matrix <- matrix(contact2[,contacts],nrow = length(age_groups),ncol = length(age_groups), byrow = T) # N.B. individuals in rows, contacts in columns
-    population <- pop[,.(sum(total)),by = .(age_group)][,V1]
-    transmission <- contact_matrix/rep(population, each = ncol(contact_matrix))
+    contact2
 }
 
 
@@ -69,11 +129,7 @@ parameters <- function(dt,
                        gamma_pre_1,
                        gamma_P_1,
                        theta_A,
-                       p_C,
-                       p_H,
-                       p_G,
-                       p_D,
-                       p_P_1,
+                       severity,
                        population,
                        start_date = 1L,
                        initial_seed_size = 10,
@@ -85,6 +141,10 @@ parameters <- function(dt,
                        strain_rel_p_sympt = 1,
                        strain_rel_p_hosp_if_sympt = 1,
                        strain_rel_p_death = 1,
+                       strain_rel_gamma_E = 1,
+                       strain_rel_gamma_P = 1,
+                       strain_rel_gamma_C = 1,
+                       strain_rel_gamma_A = 1,
                        rel_susceptibility = 1,
                        rel_p_sympt = 1,
                        rel_p_hosp_if_sympt = 1,
@@ -101,10 +161,11 @@ parameters <- function(dt,
                        vacc_skip_weight = NULL,
                        waning_rate = 0,
                        cross_immunity = 1,
-                       phi_cases = 1,
-                       kappa_cases = 2,
+                       observation,
                        sero_sensitivity_1 = 0.9,
-                       sero_specificity_1 = 0.99) {
+                       sero_specificity_1 = 0.99,
+                       test_sensitivity = 0.99,
+                       test_specificity = 0.99) {
     
     n_real_strains <- length(strain_transmission)
     
@@ -137,12 +198,7 @@ parameters <- function(dt,
               gamma_G = gamma_G,
               gamma_pre_1 = gamma_pre_1,
               gamma_P_1 = gamma_P_1,
-              theta_A = theta_A,
-              p_C = p_C,
-              p_H = p_H,
-              p_G = p_G,
-              p_D = p_D,
-              p_P_1 = p_P_1)
+              theta_A = theta_A)
     
     # Waning
     p$waning_rate <- waning_rate
@@ -203,17 +259,46 @@ parameters <- function(dt,
                                                  strain$n_strains,
                                                  n_real_strains)
     
-    # Observation parameters
-    p$phi_cases <- phi_cases
-    p$kappa_cases <- kappa_cases
+    # Strain-dependent progression rates
+    strain_rel_gammas <- list(E = strain_rel_gamma_E,
+                              P = strain_rel_gamma_P,
+                              C = strain_rel_gamma_C,
+                              A = strain_rel_gamma_A)
+    for (name in names(strain_rel_gammas)) {
+        rel_gamma <- strain_rel_gammas[[name]]
+        rel_gamma_name <- paste0("rel_gamma_", name)
+        if (is.null(rel_gamma)) {
+            p[[rel_gamma_name]] <- rep(1, strain$n_strains)
+        } else {
+            # rel_gamma <- recycle(assert_non_negative(rel_gamma),
+            #                      n_real_strains)
+            rel_gamma <- recycle(rel_gamma,n_real_strains)
+            if (length(rel_gamma) == 2) {
+                p[[rel_gamma_name]] <- mirror_strain(rel_gamma)
+            } else {
+                p[[rel_gamma_name]] <- rep(1, strain$n_strains)
+            }
+        }
+    }
+    
+    # # Observation parameters
+    # p$phi_cases <- phi_cases
+    # p$kappa_cases <- kappa_cases
+    # p$kappa_hosp <- kappa_hosp
+    # p$kappa_death <- kappa_death
     
     # Sensitivity and specificity of serological tests
     p$sero_sensitivity_1 <- sero_sensitivity_1
     p$sero_specificity_1 <- sero_specificity_1
     
-    # Concatenate parameters into one list
-    p <- c(p,strain,vaccination,vacc_skip)
+    # Sensitivity and specificity of PCR and rapid Ag tests
+    p$test_sensitivity <- test_sensitivity
+    p$test_specificity <- test_specificity
     
+    # Concatenate parameters into one list
+    p <- c(p,severity,strain,vaccination,vacc_skip,observation)
+    
+    p
 }
 
 
@@ -310,6 +395,74 @@ process_strain_rel_p <- function(p, n_strains, n_real_strains) {
         }
     }
     p
+}
+
+
+parameters_severity <- function(dt,
+                                severity,
+                                p_D) {
+    
+    time_varying_severity <- list(D = p_D)
+    
+    get_p_step <- function(x, name) {
+        
+        p_name <- paste0("p_", name)
+        p <- x[[p_name]]
+        time_vary <- time_varying_severity[[name]]
+        
+        if (is.null(time_vary)) {
+            p_value <- NULL
+            p_date <- NULL
+        } else {
+            p_value <- time_vary$value
+            if ("date" %in% names(time_vary)) {
+                p_date <- time_vary$date
+            } else {
+                p_date <- NULL
+            }
+        }
+        
+        if (!is.null(p_value)) {
+            # assert_proportion(p_value, p_name)
+            if (length(p_value) == 1L) {
+                if (length(p_date) != 0) {
+                    stop(sprintf(
+                        "As '%s' has a single 'value', expected NULL or missing 'date'",
+                        p_name))
+                }
+            } else if (length(p_date) != length(p_value)) {
+                stop(sprintf("'date' and 'value' for '%s' must have the same length",
+                             p_name))
+            }
+        }
+        
+        if (all(p == 0)) {
+            psi <- p
+        } else {
+            psi <- p / max(p)
+        }
+        
+        if (is.null(p_value)) {
+            p_step <- max(p)
+        } else {
+            # p_step <- parameters_piecewise_constant(p_date, p_value, dt)
+            p_step <- parameters_piecewise_linear(p_date, p_value, dt)
+        }
+        
+        p_step <- outer(p_step, psi)
+        
+        x[[paste0(p_name, "_step")]] <- p_step
+        x[[paste0(p_name)]] <- NULL
+        x[[paste0("n_", p_name, "_steps")]] <- dim(p_step)[1]
+        
+        x
+    }
+    
+    for (name in names(time_varying_severity)) {
+        severity <- get_p_step(severity, name)
+    }
+    
+    severity
 }
 
 
@@ -589,6 +742,7 @@ index <- function(info, min_ages = seq(0,70,by = 10), Rt = TRUE){
                    # deaths_70_79 = index[["D_inc_70_79"]],
                    # deaths_80_plus = index[["D_inc_80_plus"]]
                    cases = index[["cases_inc"]],
+                   # cases_week = index[["cases_inc_week"]],
                    cases_non_variant = index[["cases_non_variant_inc"]],
                    cases_0_9 = index[["cases_inc_0_9"]],
                    cases_10_19 = index[["cases_inc_10_19"]],
@@ -671,7 +825,7 @@ index <- function(info, min_ages = seq(0,70,by = 10), Rt = TRUE){
 }
 
 
-# log-likelihood of binomial proportion
+# log-likelihood of binomial count
 ll_binom <- function(data_x, data_size, model_prob) {
     if (is.na(data_x) || is.na(data_size)) {
         return(numeric(length(model_prob)))
@@ -698,6 +852,30 @@ ll_nbinom <- function(data, model, kappa, exp_noise){
     }
     mu <- model + rexp(length(model),rate = exp_noise)
     dnbinom(data, kappa, mu = mu, log = TRUE)
+}
+
+
+# log-likelihood of binomial count where success probability is beta-distributed
+ll_betabinom <- function(data_x, data_size, model_prob, rho) {
+    if (is.na(data_x) || is.na(data_size)) {
+        return(numeric(length(model_prob)))
+    }
+    dbetabinom(data_x, data_size, model_prob, rho, log = TRUE)
+}
+
+
+dbetabinom <- function(x, size, prob, rho, log = FALSE) {
+    
+    a <- prob * (1 / rho - 1)
+    b <- (1 - prob) * (1 / rho - 1)
+    
+    out <- lchoose(size, x) + lbeta(x + a, size - x + b) - lbeta(a, b)
+    
+    if (!log) {
+        out <- exp(out)
+    }
+    
+    out
 }
 
 
@@ -730,13 +908,33 @@ test_prob_pos <- function(pos, neg, sensitivity, specificity, exp_noise) {
 
 # Define comparison function for age-stratified data
 compare <- function(state, observed, pars){
+    if (is.null(pars$phi_cases)){
+        phi_cases <- 0.5
+    } else {
+        phi_cases <- pars$phi_cases
+    }
+    if (is.null(pars$kappa_cases)){
+        kappa_cases <- 2
+    } else {
+        kappa_cases <- pars$kappa_cases
+    }
+    if (is.null(pars$p_NC)){
+        p_NC <- 0.002
+    } else {
+        p_NC <- pars$p_NC
+    }
+    if (is.null(pars$rho_tests)){
+        rho_tests <- 0.01
+    } else {
+        rho_tests <- pars$rho_tests
+    }
     if (is.null(pars$kappa_hosp)){
-        kappa_hosp <- 20
+        kappa_hosp <- 2
     } else {
         kappa_hosp <- pars$kappa_hosp
     }
     if (is.null(pars$kappa_death)){
-        kappa_death <- 20
+        kappa_death <- 2
     } else {
         kappa_death <- pars$kappa_death
     }
@@ -786,14 +984,14 @@ compare <- function(state, observed, pars){
     model_cases_60_69 <- state["cases_60_69", ]
     model_cases_70_plus <- state["cases_70_plus", ]
     
-    model_confirmed_cases_0_9 <- pars$phi_cases * model_cases_0_9
-    model_confirmed_cases_10_19 <- pars$phi_cases * model_cases_10_19
-    model_confirmed_cases_20_29 <- pars$phi_cases * model_cases_20_29
-    model_confirmed_cases_30_39 <- pars$phi_cases * model_cases_30_39
-    model_confirmed_cases_40_49 <- pars$phi_cases * model_cases_40_49
-    model_confirmed_cases_50_59 <- pars$phi_cases * model_cases_50_59
-    model_confirmed_cases_60_69 <- pars$phi_cases * model_cases_60_69
-    model_confirmed_cases_70_plus <- pars$phi_cases * model_cases_70_plus
+    model_confirmed_cases_0_9 <- phi_cases * model_cases_0_9
+    model_confirmed_cases_10_19 <- phi_cases * model_cases_10_19
+    model_confirmed_cases_20_29 <- phi_cases * model_cases_20_29
+    model_confirmed_cases_30_39 <- phi_cases * model_cases_30_39
+    model_confirmed_cases_40_49 <- phi_cases * model_cases_40_49
+    model_confirmed_cases_50_59 <- phi_cases * model_cases_50_59
+    model_confirmed_cases_60_69 <- phi_cases * model_cases_60_69
+    model_confirmed_cases_70_plus <- phi_cases * model_cases_70_plus
     
     # Modelled seropositives
     # model_sero_pos_1 can go above N_tot (I think due to reinfection) so cap it to avoid probabilities > 1
@@ -856,6 +1054,16 @@ compare <- function(state, observed, pars){
         model_cases - model_cases_non_variant,
         1, 1, exp_noise)
     
+    # Weekly modelled cases
+    # model_cases_week <- state["cases_week", ]
+    # test_negs <- pars$p_NC * (pars$N_tot - model_cases_week)
+    test_negs <- p_NC * (sum(pars$N_tot) - model_cases)
+    model_test_prob_pos <- test_prob_pos(model_cases,
+                                         test_negs,
+                                         pars$test_sensitivity,
+                                         pars$test_specificity,
+                                         exp_noise)
+    
     # Log-likelihoods for deaths
     # ll_hosps <- ll_nbinom(observed$hosps,model_hosps,kappa_hosp,exp_noise)
     ll_hosps_0_39 <- ll_nbinom(observed$hosps_0_39,model_hosps_0_39,kappa_hosp,exp_noise)
@@ -904,14 +1112,14 @@ compare <- function(state, observed, pars){
     # # ll_deaths_80_plus <- ll_pois(observed$deaths_80_plus,model_deaths_80_plus,exp_noise)
     
     # Log-likelihoods for cases
-    ll_cases_0_9 <- ll_nbinom(observed$cases_0_9,model_confirmed_cases_0_9,pars$kappa_cases,exp_noise)
-    ll_cases_10_19 <- ll_nbinom(observed$cases_10_19,model_confirmed_cases_10_19,pars$kappa_cases,exp_noise)
-    ll_cases_20_29 <- ll_nbinom(observed$cases_20_29,model_confirmed_cases_20_29,pars$kappa_cases,exp_noise)
-    ll_cases_30_39 <- ll_nbinom(observed$cases_30_39,model_confirmed_cases_30_39,pars$kappa_cases,exp_noise)
-    ll_cases_40_49 <- ll_nbinom(observed$cases_40_49,model_confirmed_cases_40_49,pars$kappa_cases,exp_noise)
-    ll_cases_50_59 <- ll_nbinom(observed$cases_50_59,model_confirmed_cases_50_59,pars$kappa_cases,exp_noise)
-    ll_cases_60_69 <- ll_nbinom(observed$cases_60_69,model_confirmed_cases_60_69,pars$kappa_cases,exp_noise)
-    ll_cases_70_plus <- ll_nbinom(observed$cases_70_plus,model_confirmed_cases_70_plus,pars$kappa_cases,exp_noise)
+    ll_cases_0_9 <- ll_nbinom(observed$cases_0_9,model_confirmed_cases_0_9,kappa_cases,exp_noise)
+    ll_cases_10_19 <- ll_nbinom(observed$cases_10_19,model_confirmed_cases_10_19,kappa_cases,exp_noise)
+    ll_cases_20_29 <- ll_nbinom(observed$cases_20_29,model_confirmed_cases_20_29,kappa_cases,exp_noise)
+    ll_cases_30_39 <- ll_nbinom(observed$cases_30_39,model_confirmed_cases_30_39,kappa_cases,exp_noise)
+    ll_cases_40_49 <- ll_nbinom(observed$cases_40_49,model_confirmed_cases_40_49,kappa_cases,exp_noise)
+    ll_cases_50_59 <- ll_nbinom(observed$cases_50_59,model_confirmed_cases_50_59,kappa_cases,exp_noise)
+    ll_cases_60_69 <- ll_nbinom(observed$cases_60_69,model_confirmed_cases_60_69,kappa_cases,exp_noise)
+    ll_cases_70_plus <- ll_nbinom(observed$cases_70_plus,model_confirmed_cases_70_plus,kappa_cases,exp_noise)
     
     # Log-likelihoods for seroprevalence
     # ll_sero_pos_1 <- ll_binom(observed$sero_pos_1,observed$sero_tot_1,model_sero_prob_pos_1)
@@ -925,16 +1133,22 @@ compare <- function(state, observed, pars){
     # Log-likelihood for variant proportion
     ll_strain <- ll_binom(observed$strain_non_variant,observed$strain_tot,model_strain_prob_pos)
     
+    # Log-likelihood for positive tests
+    ll_tests <- ll_betabinom(observed$pos,
+                             observed$tot,
+                             model_test_prob_pos,
+                             rho_tests)
+    
     # Calculate total log-likelihood
     # ll_hosps + ll_deaths
     # ll_hosps + ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus + #ll_hosps_70_79 + ll_hosps_80_plus +
     # ll_deaths + ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus #+ ll_deaths_70_79 + ll_deaths_80_plus
     # ll_hosps_70_plus + ll_deaths_70_plus
     # ll_hosps + ll_deaths + ll_sero_pos_1 + 
-    ll_strain +
-    1*(ll_cases_0_9 + ll_cases_10_19 + ll_cases_20_29 + ll_cases_30_39 + ll_cases_40_49 + ll_cases_50_59 + ll_cases_60_69 + ll_cases_70_plus) +
-        1*(ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus) + 
-        1*(ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus) + 
+    ll_strain + ll_tests +
+    ll_cases_0_9 + ll_cases_10_19 + ll_cases_20_29 + ll_cases_30_39 + ll_cases_40_49 + ll_cases_50_59 + ll_cases_60_69 + ll_cases_70_plus +
+        ll_hosps_0_39 + ll_hosps_40_49 + ll_hosps_50_59 + ll_hosps_60_69 + ll_hosps_70_plus +
+        ll_deaths_0_39 + ll_deaths_40_49 + ll_deaths_50_59 + ll_deaths_60_69 + ll_deaths_70_plus +
         ll_sero_pos_1_20_29 + ll_sero_pos_1_30_39 + ll_sero_pos_1_40_49 + ll_sero_pos_1_50_59 + ll_sero_pos_1_60_69 + ll_sero_pos_1_70_plus
 }
 
@@ -976,6 +1190,7 @@ plot_particle_filter <- function(history, true_history, times, idx, obs_end = NU
 }
 
 
+# Probably delete these transform functions as they're out of date now
 covid_multi_strain_transform <- function(dt,
                                          n_age,
                                          n_vax,
@@ -1295,32 +1510,52 @@ covid_multi_strain_transform_multistage <- function(dt,
 }
 
 
-plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, by_age = FALSE, moving_avg = FALSE){
+plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NULL, 
+                         by_age = FALSE, moving_avg = FALSE, pred_intvl = T, alpha = NULL){
     # Extract modelled incidence for outcome vrble from output
-    nms <- dimnames(incidence_modelled)[[1]]
+    nms <- dimnames(incidence_modelled$state)[[1]]
     if (by_age){
         idx <- grep(paste0(vrble,"_[0-9]+"),nms)
     } else {
         idx <- which(nms == vrble)
     }
-    incidence_modelled <- incidence_modelled[idx,,,drop = F]
+    # Select variables to plot and drop initial conditions
+    state <- incidence_modelled$state[idx,,-1,drop = F]
     # Convert to data table
-    inc_dt <- as.data.table(incidence_modelled)
+    inc_dt <- as.data.table(state)
     names(inc_dt) <- c("age_group","sample","date","value")
-    inc_dt[,date := covid_multi_strain_date_as_date(date)]
+    inc_dt[,date := covid_multi_strain_date_as_date(incidence_modelled$date[date])]
     inc_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
     if (vrble == "cases"){
-        # Convert to data table with sample number
+        # Convert reporting fraction vector to data table with sample number
         phi_dt <- data.table(sample = seq_along(phi),phi = phi)
         # Add phi to inc_dt
         inc_dt[,phi := phi_dt[match(inc_dt[,sample],sample),phi]]
         # Multiply incidence by reporting rate
-        inc_dt[,value := phi * value]        
+        inc_dt[,value := phi * value]
     }
-    q_inc_dt <- inc_dt[,.(med = quantile(value,0.5),
-                          q95l = quantile(value,0.025),
-                          q95u = quantile(value,0.975)),
-                       by = .(age_group,date)]
+    if (pred_intvl){
+        # Convert overdispersion parameter vector to data table with sample number
+        alpha_dt <- data.table(sample = seq_along(alpha),alpha = alpha)
+        # Add alpha to inc_dt
+        inc_dt[,alpha := alpha_dt[match(inc_dt[,sample],sample),alpha]]
+        # Sample observed value
+        inc_dt[,value_obs := rnbinom(.N,size = 1/alpha,mu = value)]
+        # Calculate median and 95% quantiles
+        q_inc_dt <- inc_dt[,.(med = quantile(value,0.5),
+                              q95l = quantile(value,0.025),
+                              q95u = quantile(value,0.975),
+                              q95l_obs = quantile(value_obs,0.025),
+                              q95u_obs = quantile(value_obs,0.975)),
+                           by = .(age_group,date)]
+    } else {
+        # Calculate median and 95% quantiles
+        q_inc_dt <- inc_dt[,.(med = quantile(value,0.5),
+                              q95l = quantile(value,0.025),
+                              q95u = quantile(value,0.975)),
+                           by = .(age_group,date)]
+    }
+    
     # Extract observed incidence for outcome vrble from data frame
     if (by_age){
         idx_obs <- names(incidence_observed)[grep(paste0(vrble,"_"),names(incidence_observed))]
@@ -1333,7 +1568,7 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
     inc_obs_dt[,age_group := sub("_","-",sub(paste0(vrble,"_"),"",age_group))]
     if (moving_avg){
         inc_obs_dt[,value := as.numeric(value)]
-        inc_obs_dt[,value := frollmean(value,7),by = .(age_group)]
+        inc_obs_dt[,value := frollmean(value,7,align = "center"),by = .(age_group)]
     }
     
     # Plot
@@ -1353,6 +1588,9 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
         geom_ribbon(aes(x = date, ymin = q95l, ymax = q95u),q_inc_dt,alpha = 0.5) + 
         labs(x = "Date", y = ylbl) + 
         theme_cowplot(font_size = 12)
+    if (pred_intvl){
+        p <- p + geom_ribbon(aes(x = date, ymin = q95l_obs, ymax = q95u_obs),q_inc_dt,alpha = 0.2)
+    }
     if (by_age){
         if (vrble == "cases"){ # 2 columns for cases as there are more age groups in the data 
             p <- p + facet_wrap(~age_group, ncol = 2) + theme(strip.background = element_blank())
@@ -1364,19 +1602,50 @@ plot_outcome <- function(incidence_modelled, incidence_observed, vrble, phi = NU
 }
 
     
+plot_tests <- function(trajectories, data, p_NC, population, moving_avg = F){
+    state <- trajectories$state
+    pos <- state["cases",,-1]
+    test_negs <- p_NC * (population - pos)
+    model_prob_pos <- test_prob_pos(pos,test_negs,1,1,1e6)
+    
+    q_model_prob_pos <- as.data.table(t(apply(model_prob_pos, 2, function(x) quantile(x,probs = c(0.025,0.5,0.975)))))
+    q_model_prob_pos[,date := covid_multi_strain_date_as_date(trajectories$date)]
+    
+    data_dt <- as.data.table(data[c("day_end","pos","tot")])
+    data_dt[,date := covid_multi_strain_date_as_date(day_end)]
+    data_dt[,prop_pos := pos/tot]
+    if (moving_avg){
+        data_dt[,prop_pos := frollmean(prop_pos,7,align = "center")]
+    }
+    
+    p <- ggplot()
+    if (moving_avg){
+        p <- p + geom_line(aes(x = date,y = prop_pos),data_dt,color = "red")
+    } else {
+        p <- p + geom_point(aes(x = date,y = prop_pos),data_dt,color = "red")
+    }
+    p <- p + geom_line(aes(x = date,y = `50%`),q_model_prob_pos) + 
+        geom_ribbon(aes(x = date,ymin = `2.5%`,ymax = `97.5%`),q_model_prob_pos,alpha = 0.5) + 
+        labs(x = "Date",y = "Proportion positive") + 
+        theme_cowplot(font_size = 12)
+    return(p)
+}
+
+
 plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age = FALSE){
     # Extract modelled seroprevalence from output
-    nms <- dimnames(seroprev_modelled)[[1]]
+    nms <- dimnames(seroprev_modelled$state)[[1]]
     if (by_age){
         idx_sero <- grep("sero_pos_1_",nms) 
     } else {
         idx_sero <- which(nms == "sero_pos_1")
     }
-    seroprev_modelled <- seroprev_modelled[idx_sero,,,drop = F]
+    # Select variables to plot and drop initial conditions
+    state <- seroprev_modelled$state[idx_sero,,-1,drop = F]
     # Convert to data table
-    sero_dt <- as.data.table(seroprev_modelled)
+    sero_dt <- as.data.table(state)
     names(sero_dt) <- c("age_group","sample","date","value")
-    sero_dt[,date := covid_multi_strain_date_as_date(date)]
+    sero_dt[,date := covid_multi_strain_date_as_date(seroprev_modelled$date[date])]
     sero_dt[,age_group := sub("_","-",sub(paste0("sero_pos_1_"),"",age_group))]
     q_sero_dt <- sero_dt[,.(med = quantile(value,0.5),
                            q95l = quantile(value,0.025),
@@ -1387,7 +1656,8 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
         pop_dt[age_group == "70+",age_group := "70-plus"]
         q_sero_dt <- merge(q_sero_dt,pop_dt,by = "age_group",all.x = T)
     } else {
-        q_sero_dt[,population := population[!(age_group %in% c("0-9","10-19")),sum(population)]]
+        # q_sero_dt[,population := population[!(age_group %in% c("0-9","10-19")),sum(population)]]
+        q_sero_dt[,population := population[,sum(population)]]
     }
     # Extract observed seroprevalence
     if (by_age){
@@ -1409,7 +1679,7 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
     p <- ggplot() + 
         geom_point(aes(x = date,y = positive/total),sero_obs_dt,color = "red") + 
         geom_errorbar(aes(x = date,ymin = ci_lb,ymax = ci_ub),sero_obs_dt,color = "red") + 
-        geom_line(aes(x = date,y = pmin(med/population,1)),q_sero_dt) +
+        geom_line(aes(x = date,y = pmin(med/population,1)),q_sero_dt,linetype = 2) +
         geom_ribbon(aes(x = date,ymin = pmin(q95l/population,1),ymax = pmin(q95u/population,1)),q_sero_dt,alpha = 0.5) + 
         labs(x = "Date",y = "Seroprevalence") +
         theme_cowplot(font_size = 12)
@@ -1420,18 +1690,19 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
 }
 
 
-plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,seed = 1){
+plot_outcome_by_age <- function(trajectories,vrble,phi,ttls,n_smpls,seed = 1){
     # Extract modelled incidence for outcome vrble from output
-    nms <- dimnames(state)[[1]]
+    nms <- dimnames(trajectories$state)[[1]]
     idx <- grep(paste0(vrble,"_[0-9]+",collapse = "|"),nms)
-    state <- state[idx,,,drop = F]
+    # Select variables to plot and drop initial values
+    state <- trajectories$state[idx,,-1,drop = F]
     set.seed(1)
     smpl <- sample.int(ncol(state),n_smpls) 
     state <- state[,smpl,,drop = F]
     # Convert to data table
     state_dt <- as.data.table(state)
     names(state_dt) <- c("age_group","sample","date","value")
-    state_dt[,date := covid_multi_strain_date_as_date(date)]
+    state_dt[,date := covid_multi_strain_date_as_date(trajectories$date[date])]
     state_dt[,state := gsub("_[0-9a-z]+","",age_group)]
     state_dt[,age_group := sub("_","-",sub(".*_([0-9]+_[0-9a-z]+)","\\1",age_group))]
     # Aggregate cases in <40 year-olds
@@ -1472,6 +1743,35 @@ plot_outcome_by_age <- function(state,vrble,phi,ttls,n_smpls,seed = 1){
     
     return(list(p = p,p1 = p1))    
 }
+
+
+plot_variant_proportion <- function(trajectories, data, start_date, ylbl = "Variant proportion"){
+    # Select variables and drop initial conditions
+    state <- trajectories$state[c("cases","cases_non_variant"),,-1,drop = F]
+    # Convert to data table
+    state_dt <- as.data.table(state)
+    names(state_dt) <- c("state","sample","date","value")
+    state_dt[,date := covid_multi_strain_date_as_date(trajectories$date[date])]
+    state_dt <- dcast(state_dt,sample + date ~ state,value.var = "value")
+    state_dt[,vrnt_prop := 1 - cases_non_variant/cases]
+    
+    q_state_dt <- state_dt[,.(med = quantile(vrnt_prop,0.5),
+                            q95l = quantile(vrnt_prop,0.025),
+                            q95u = quantile(vrnt_prop,0.975)),
+                         by = .(date)]
+    
+    data_dt <- as.data.table(data[c("day_end","strain_non_variant","strain_tot")])
+    data_dt[,date := covid_multi_strain_date_as_date(day_end)]
+    
+    p <- ggplot() + 
+        geom_point(aes(x = date,y = 1 - strain_non_variant/strain_tot), data_dt[date > start_date], color = "red") + 
+        geom_line(aes(x = date,y = med),q_state_dt[date > start_date,]) + 
+        geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u),q_state_dt[date > start_date],alpha = 0.5) + 
+        labs(x = "Date", y = ylbl) + 
+        theme_cowplot(font_size = 12)
+    return(p)
+}
+
 
 plot_cases <- function(cases_modelled, cases_observed, times){
     # par(mfrow = c(2,1), oma = c(2,3,0,0))
@@ -1721,11 +2021,15 @@ plot_traces <- function(pars,u){
 }
 
 
-plot_posteriors <- function(pars,u,priors,pars_min,pars_max){
+plot_posteriors <- function(pars,u,priors,pars_min,pars_max,lbls){
     pars <- pars[,u]
     pars_dt <- as.data.table(pars)
     pars_dt[,iter := seq_len(nrow(pars))]
     pars_long_dt <- melt(pars_dt,id.vars = "iter")
+    # pars_long_dt[,variable := factor(variable,levels = unique(variable))]
+    names(lbls) <- pars_long_dt[,unique(variable)]
+    lbls <- TeX(lbls[u])
+    levels(pars_long_dt$variable) <- lbls
     
     priors_dt <- data.table()
     for (i in seq_along(u)){
@@ -1742,11 +2046,13 @@ plot_posteriors <- function(pars,u,priors,pars_min,pars_max){
     
     priors_long_dt <- melt(priors_dt,measure.vars = patterns(x = "x_",y = "y_"))
     priors_long_dt[,variable := names(priors)[u[variable]]]
+    priors_long_dt[,variable := factor(variable,levels = unique(variable))]
+    levels(priors_long_dt$variable) <- lbls
         
     p <- ggplot() + 
         geom_histogram(aes(x = value,y = ..density..),pars_long_dt) +
         geom_line(aes(x = x,y = y),priors_long_dt,colour = "red") +
-        facet_wrap(~variable,scales = "free",ncol = 3) + 
+        facet_wrap(~variable,scales = "free",labeller = label_parsed,ncol = 3) + 
         labs(y = "Density") +
         theme_cowplot(font_size = 10) +
         theme(axis.title.x = element_blank(),
@@ -1755,13 +2061,19 @@ plot_posteriors <- function(pars,u,priors,pars_min,pars_max){
     return(p)
 }
 
-plot_pairwise_correlation <- function(pars,u){
+plot_pairwise_correlation <- function(pars,u,lbls){
     pars <- pars[,u]
     pars_dt <- as.data.table(pars)
-    p <- ggpairs(pars_dt) + 
+    # names(pars_dt) <- lbls[u]
+    p <- ggpairs(pars_dt,
+                 columnLabels = TeX(lbls[u],output = "character"),
+                 labeller = label_parsed) + 
         theme_cowplot(font_size = 10) +
         theme(axis.text.x = element_text(angle = 90),
-              strip.background = element_blank())
+              strip.background = element_blank(),
+              # strip.text.x = element_text(angle = 90),
+              strip.text.y = element_text(angle = 0)
+              )
     return(p)
 }
 

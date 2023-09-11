@@ -1,6 +1,7 @@
-simulate <- function(gen_mod, p, n_steps, deterministic = FALSE, 
+simulate <- function(gen_mod, p, step, step1, n_steps, deterministic = FALSE, 
                      keep_all_states = TRUE, min_ages = seq(0,70,by = 10), 
-                     Rt = FALSE, p1 = NULL, n_steps1 = NULL, transform = NULL){
+                     Rt = FALSE, p1 = NULL, n_steps1 = NULL, p2 = NULL,
+                     n_steps2 = NULL, transform = NULL){
     # TODO: Make this work with one list for p rather than separate 
     # objects for each epoch, so it works for an arbitrary number of epochs
     
@@ -11,24 +12,28 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
     info <- mod$info()
     initial_state <- initial(info, NULL, p)
     
-    mod$update_state(state = initial_state)
+    mod$update_state(state = initial_state, step = step)
     
     # Create an array to contain outputs after looping the model.
     x <- array(NA, dim = c(info$len, 1, n_steps+1))
     
     # For loop to run the model iteratively
     x[ , ,1] <- mod$state()
+    
+    # Run model up to step of start of day of first data point
+    mod$run(step1)
+    
     for (t in seq_len(n_steps)) {
-        x[ , ,t+1] <- mod$run(t)
+        x[ , ,t+1] <- mod$run(step1 + t)
     }
     
-    if (!is.null(p1)){
+    simulate_next_epoch <- function(mod,info,p,n_steps,n_steps1,step,x,transform){ 
         # Apply transform function to model state
         state <- mod$state()
         state1 <- transform(state,info)
         
         # Update model parameters and state
-        mod$update_state(pars = p1,state = state1)
+        mod$update_state(pars = p,state = state1)
         
         # Create data to be fitted to
         x1 <- array(NA, dim = c(info$len, 1, n_steps1-n_steps))
@@ -37,11 +42,25 @@ simulate <- function(gen_mod, p, n_steps, deterministic = FALSE,
         # x1[ , ,1] <- mod$state()
         for (t in seq_len(n_steps1-n_steps)) {
             # print(t)
-            x1[ , ,t] <- mod$run(n_steps+t)
+            x1[ , ,t] <- mod$run(step + n_steps + t)
         }
         
         # Join with first epoch
-        x <- array_bind(x,x1)        
+        x <- array_bind(x,x1)
+        
+        return(list(x = x,mod = mod))
+    }
+    
+    if (!is.null(p1)){
+        res <- simulate_next_epoch(mod,info,p1,n_steps,n_steps1,step1,x,transform)
+        x <- res$x
+        mod <- res$mod
+    }
+    
+    if (!is.null(p2)){
+        res <- simulate_next_epoch(mod,info,p2,n_steps1,n_steps2,step1,x,transform)
+        x <- res$x
+        mod <- res$mod
     }
     
     if (!keep_all_states){
@@ -138,8 +157,9 @@ change_booster_timing <- function(schedule, days_earlier){
 
 ## Run counterfactual simulations
 simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
-                                    beta_idx,schedule_cntfctl,deterministic,
-                                    seed = 1L,min_ages = seq(0,70,by = 10)){
+                                    beta_idx,schedule_cntfctl,initial_date,
+                                    deterministic,seed = 1L,
+                                    min_ages = seq(0,70,by = 10), Rt = FALSE){
     # Load MCMC output
     # load(output)
     dat <- readRDS(output)
@@ -162,8 +182,11 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
     
     transform <- dat$samples$predict$transform
     
+    dates <- dat$samples$trajectories$date
+    
     # Remove dat object as it is very large
     rm(dat)
+    gc()
     
     for (i in seq_len(n_smpls)){
         j <- smpl[i] #sample.int(nrow(pars_mcmc),1)
@@ -191,9 +214,10 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
             n_steps1 <- NULL
             transform_state <- NULL
         }
-        n_steps <- base$start_date1/dt
-        n_steps1 <- (dim(states)[3] - 1)/dt
-        out[[i]] <- simulate(covid_multi_strain, p_i, n_steps, 
+        n_steps <- (base$epoch_dates[1] - min(dates) + 1)/dt
+        n_steps1 <- (max(dates) - min(dates) + 1)/dt
+        out[[i]] <- simulate(covid_multi_strain, p_i, initial_date/dt, 
+                             (min(dates)-1)/dt, n_steps, 
                              deterministic, keep_all_states = F,
                              min_ages = min_ages, Rt = Rt,
                              p1 = p1_i, n_steps1 = n_steps1, 
@@ -208,18 +232,19 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
     
     states_cntfctl <- abind(states_cntfctl,along = 2)
     
-    return(list(states_cntfctl = states_cntfctl,states = states,smpl = smpl,info = info))
+    return(list(states_cntfctl = states_cntfctl,states = states,smpl = smpl,info = info,dates = dates))
 }
+
 
 # calculate_quantiles <- function(x, probs = c(0.025,0.5,0.975)){
 #     q <- apply(x,1,function(y) quantile(y, probs = probs))
 #     return(q)
 # }
 
-calculate_outcome_quantiles <- function(x,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
+calculate_outcome_quantiles <- function(x,dates,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
     # If input is a 3-D array convert to a data table
     if (length(dim(x)) == 3){
-        x <- arr_to_dt(x,info,min_ages,Rt)
+        x <- arr_to_dt(x,dates,info,min_ages,Rt)
     }
     
     out <- x[,.(med = median(value),
@@ -236,9 +261,9 @@ calculate_outcomes_by_wave <- function(x,wave_date,info,min_ages = seq(0,70,by =
     tmp <- vector("list",n_waves)
     for (j in 1:n_waves){
         if (j != n_waves){ # if it's not the final wave, go up to start of next wave
-            date_idx <- (wave_date[j]:(wave_date[j+1]-1)) + 1
+            date_idx <- (wave_date[j]:(wave_date[j+1]-1))
         } else { # if it's the final wave, include last date
-            date_idx <- (wave_date[n_waves]:wave_date[n_waves+1]) + 1
+            date_idx <- (wave_date[n_waves]:wave_date[n_waves+1])
         }
         
         # Calculate total outcomes averted over wave
@@ -287,11 +312,11 @@ plot_counterfactuals_together <- function(q_outcomes,q_outcomes_cntfctl,outcome,
         geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u,fill = factor(cntfctl)),q_outcomes_cntfctl1,alpha = 0.5) +
         geom_line(aes(x = date,y = med),q_outcomes1,color = "black",linetype = "dashed") +
         geom_ribbon(aes(x = date,ymin = q95l,ymax = q95u),q_outcomes1,fill = "black",alpha = 0.5) +
-        labs(x = "Date") +
+        labs(x = "Date",y = "Number") +
         scale_color_discrete(name = "Counterfactual",labels = lbls) +
         scale_fill_discrete(name = "Counterfactual",labels = lbls) +
         theme_cowplot(font_size = 12) + 
-        theme(axis.title.y = element_blank(),legend.position = "bottom",strip.background = element_blank()) +
+        theme(legend.position = "bottom",strip.background = element_blank()) +
         facet_wrap(~state,nrow = 1,scales = "free",labeller = labeller(state = ttls))
     return(p)
 }
@@ -620,11 +645,12 @@ setup_future_betas <- function(pars, step_current, step_end, dt) {
 }
 
 
-arr_to_dt <- function(x,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
+arr_to_dt <- function(x,dates,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
     x_long <- as.data.table(x)
     
     names(x_long)[1:3] <- c("state","smpl","day")
     
+    x_long[,day := dates[day]]
     x_long[,state := names(index(info,min_ages = min_ages,Rt = Rt)$state[state])]
     
     return(x_long)
