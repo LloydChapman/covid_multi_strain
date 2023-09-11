@@ -1656,7 +1656,8 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
         pop_dt[age_group == "70+",age_group := "70-plus"]
         q_sero_dt <- merge(q_sero_dt,pop_dt,by = "age_group",all.x = T)
     } else {
-        q_sero_dt[,population := population[!(age_group %in% c("0-9","10-19")),sum(population)]]
+        # q_sero_dt[,population := population[!(age_group %in% c("0-9","10-19")),sum(population)]]
+        q_sero_dt[,population := population[,sum(population)]]
     }
     # Extract observed seroprevalence
     if (by_age){
@@ -1678,7 +1679,7 @@ plot_sero <- function(seroprev_modelled, seroprev_observed, population, by_age =
     p <- ggplot() + 
         geom_point(aes(x = date,y = positive/total),sero_obs_dt,color = "red") + 
         geom_errorbar(aes(x = date,ymin = ci_lb,ymax = ci_ub),sero_obs_dt,color = "red") + 
-        geom_line(aes(x = date,y = pmin(med/population,1)),q_sero_dt) +
+        geom_line(aes(x = date,y = pmin(med/population,1)),q_sero_dt,linetype = 2) +
         geom_ribbon(aes(x = date,ymin = pmin(q95l/population,1),ymax = pmin(q95u/population,1)),q_sero_dt,alpha = 0.5) + 
         labs(x = "Date",y = "Seroprevalence") +
         theme_cowplot(font_size = 12)
@@ -2020,12 +2021,15 @@ plot_traces <- function(pars,u){
 }
 
 
-plot_posteriors <- function(pars,u,priors,pars_min,pars_max){
+plot_posteriors <- function(pars,u,priors,pars_min,pars_max,lbls){
     pars <- pars[,u]
     pars_dt <- as.data.table(pars)
     pars_dt[,iter := seq_len(nrow(pars))]
     pars_long_dt <- melt(pars_dt,id.vars = "iter")
-    pars_long_dt[,variable := factor(variable,levels = unique(variable))]
+    # pars_long_dt[,variable := factor(variable,levels = unique(variable))]
+    names(lbls) <- pars_long_dt[,unique(variable)]
+    lbls <- TeX(lbls[u])
+    levels(pars_long_dt$variable) <- lbls
     
     priors_dt <- data.table()
     for (i in seq_along(u)){
@@ -2043,11 +2047,12 @@ plot_posteriors <- function(pars,u,priors,pars_min,pars_max){
     priors_long_dt <- melt(priors_dt,measure.vars = patterns(x = "x_",y = "y_"))
     priors_long_dt[,variable := names(priors)[u[variable]]]
     priors_long_dt[,variable := factor(variable,levels = unique(variable))]
+    levels(priors_long_dt$variable) <- lbls
         
     p <- ggplot() + 
         geom_histogram(aes(x = value,y = ..density..),pars_long_dt) +
         geom_line(aes(x = x,y = y),priors_long_dt,colour = "red") +
-        facet_wrap(~variable,scales = "free",ncol = 3) + 
+        facet_wrap(~variable,scales = "free",labeller = label_parsed,ncol = 3) + 
         labs(y = "Density") +
         theme_cowplot(font_size = 10) +
         theme(axis.title.x = element_blank(),
@@ -2056,14 +2061,17 @@ plot_posteriors <- function(pars,u,priors,pars_min,pars_max){
     return(p)
 }
 
-plot_pairwise_correlation <- function(pars,u){
+plot_pairwise_correlation <- function(pars,u,lbls){
     pars <- pars[,u]
     pars_dt <- as.data.table(pars)
-    p <- ggpairs(pars_dt) + 
+    # names(pars_dt) <- lbls[u]
+    p <- ggpairs(pars_dt,
+                 columnLabels = TeX(lbls[u],output = "character"),
+                 labeller = label_parsed) + 
         theme_cowplot(font_size = 10) +
         theme(axis.text.x = element_text(angle = 90),
               strip.background = element_blank(),
-              strip.text.x = element_text(angle = 90),
+              # strip.text.x = element_text(angle = 90),
               strip.text.y = element_text(angle = 0)
               )
     return(p)

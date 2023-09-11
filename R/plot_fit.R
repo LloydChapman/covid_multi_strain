@@ -1,4 +1,4 @@
-plot_fit <- function(dat,pars,run,pop,u,moving_avg = FALSE,pred_intvl = FALSE,n_smpls = 1000){
+plot_fit <- function(dat,pars,run,pop,u,lbls,moving_avg = FALSE,pred_intvl = FALSE,n_smpls = 1000){
     model_type <- pars$base$model_type
     if (model_type == "NB"){
         plot_outcome(dat$samples$trajectories,dat$data,"cases",phi = dat$samples$pars[,"phi_cases"],by_age = T,moving_avg = moving_avg,
@@ -12,7 +12,7 @@ plot_fit <- function(dat,pars,run,pop,u,moving_avg = FALSE,pred_intvl = FALSE,n_
                  pred_intvl = pred_intvl,alpha = dat$samples$pars[,"alpha_death"])
     ggsave(paste0("output/deaths_by_age_fit",ifelse(moving_avg,"_moving_avg",""),run,".pdf"),width = 4, height = 8)
     plot_sero(dat$samples$trajectories,dat$data,pop[,.(population = sum(total)),by = .(age_group)],by_age = T)
-    ggsave(paste0("output/sero_by_age_fit",run,".pdf"),width = 4, height = 8)
+    ggsave(paste0("output/sero_by_age_fit",run,".pdf"),width = 4, height = 10)
     if (model_type == "NB"){
         plot_outcome(dat$samples$trajectories,dat$data,"cases",phi = dat$samples$pars[,"phi_cases"],by_age = F,moving_avg = moving_avg,
                      pred_intvl = pred_intvl,alpha = dat$samples$pars[,"alpha_cases"])
@@ -60,9 +60,9 @@ plot_fit <- function(dat,pars,run,pop,u,moving_avg = FALSE,pred_intvl = FALSE,n_
     priors <- lapply(pars$mcmc$.__enclos_env__$private$parameters,"[[","prior")
     pars_min <- pars$info$min
     pars_max <- pars$info$max
-    plot_posteriors(dat$samples$pars,u,priors,pars_min,pars_max)
+    plot_posteriors(dat$samples$pars,u,priors,pars_min,pars_max,lbls)
     ggsave(paste0("output/par_posteriors",run,".pdf"),width = 6,height = 6)
     
-    p2 <- plot_pairwise_correlation(dat$samples$pars,u)
+    p2 <- plot_pairwise_correlation(dat$samples$pars,u,lbls)
     ggsave(paste0("output/par_pairwise_corr",run,".pdf"),p2,width = 12,height = 12)
 }
