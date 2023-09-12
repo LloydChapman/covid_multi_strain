@@ -80,6 +80,9 @@ u <- c(1:5,7:9,10:12,14,15:19)
 n_iters <- 5e4
 # Set number of chains to run
 n_chains <- 4
+
+# Create output directory
+dir.create("output")
     
 for (j in seq_along(runs)){
     # Run fitting
