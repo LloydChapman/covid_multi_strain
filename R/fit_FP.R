@@ -118,17 +118,33 @@ run_fitting <- function(run,assumptions,u,n_iters,n_chains){
     # Set number of posterior samples for age-decomposition plots
     n_smpls <- 1000 #500 #
     
-    # Plot fit
-    lbls <- c(paste0("$\\beta_",seq_along(pars$base$beta_date),"$"),"$\\sigma_{D elta}$","$t_0$","$t_{D elta}$","${p_H}_{max}$",
-              "${p_D}_{max,1}$","${p_D}_{max,2}$","${p_D}_{max,3}$","$\\sigma_{O micron}$",
-              "$t_{O micron}$","${\\pi_H}_{D elta/Wildtype}$","$\\phi_{cases}$",
+    # Plot output
+    lbls <- c(paste0("$\\beta_",seq_along(pars$base$beta_date),"$"),
+              "$\\sigma_{D elta}$","$t_0$","$t_{D elta}$","${p_H}_{max}$",
+              "${p_D}_{max,1}$","${p_D}_{max,2}$","${p_D}_{max,3}$",
+              "$\\sigma_{O micron}$","$t_{O micron}$",
+              "${\\pi_H}_{D elta/Wildtype}$","$\\phi_{cases}$",
               "$\\alpha_{cases}$","$\\alpha_{hosp}$","$\\alpha_{death}$")
+    
     # Combine parameter samples
     pars_samples <- rbindlist(pars_list,idcol = "chain")
     
     # Plot traces from all chains together
     plot_traces_all(pars_samples,u,lbls)
     ggsave(paste0("output/par_traces",run,".pdf"),width = 8,height = 9)
+    
+    # Calculate Gelman-Rubin diagnostic for convergence
+    mcmc_list <- mcmc.list(lapply(pars_list,function(x) coda::mcmc(x[(burnin+1):nrow(x),!"iter"],thin = thinning)))
+    gr_diag <- gelman.diag(mcmc_list,autoburnin = F)
+    gr_diag$max <- max(gr_diag$psrf[,"Point est."])
+    
+    # Calculate effective sample size
+    ESS <- effectiveSize(mcmc_list)
+    ESS <- list(ESS = ESS, min = min(ESS))
+    
+    # Save convergence diagnostics
+    cnvgnce_diag <- list(gr_diag = gr_diag,ESS = ESS)
+    saveRDS(cnvgnce_diag,paste0("output/cnvgnce_diag",run,".RDS"))
     
     # Plot model fit
     plot_fit(dat,pars,run,pop,u,lbls,moving_avg,pred_intvl,n_smpls)
