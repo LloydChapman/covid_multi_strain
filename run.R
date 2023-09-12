@@ -18,6 +18,7 @@ library(abind)
 library(parallel)
 library(latex2exp)
 library(stringr)
+library(ggh4x)
 
 source("R/utils.R")
 source("R/date.R")
@@ -34,6 +35,7 @@ source("R/fit_process.R")
 source("R/plot_fit.R")
 source("R/run_simulations.R")
 source("R/simulate.R")
+source("R/plot_sensitivity_analysis.R")
 
 # Set MCMC run number
 runs <- 130:132
@@ -62,3 +64,6 @@ for (j in seq_along(runs)){
     # Run counterfactual simulations
     run_simulations(runs[j],sim_runs[j],assumption[j])
 }
+
+# Plot sensitivity analysis results
+plot_sensitivity_analysis(sim_runs,assumption)
