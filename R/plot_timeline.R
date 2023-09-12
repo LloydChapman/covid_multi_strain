@@ -1,4 +1,4 @@
-plot_timeline <- function(){
+plot_timeline <- function(data_raw,pop){
     data_raw <- fread("data/data_cases_hosps_deaths_serology.csv")
     pop <- fread("data/population.csv")
     

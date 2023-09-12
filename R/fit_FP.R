@@ -1,11 +1,11 @@
-run_fitting <- function(run,assumptions,u,n_iters,n_chains){
-    # Load data
-    data_raw <- fread("data/data_cases_hosps_deaths_serology.csv")
-    # data_raw <- data_raw[day < covid_multi_strain_date(as.Date("2021-06-01")),]
-    # cols <- setdiff(names(data_raw),"day")
-    # data_raw <- data_raw[!(day <= 213 | day >= covid_multi_strain_date(as.Date("2020-09-15"))),(cols):= NA]
-    vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
-    pop <- fread("data/population.csv")
+run_fitting <- function(run,assumptions,data_raw,vax,pop,u,n_iters,n_chains){
+    # # Load data
+    # data_raw <- fread("data/data_cases_hosps_deaths_serology.csv")
+    # # data_raw <- data_raw[day < covid_multi_strain_date(as.Date("2021-06-01")),]
+    # # cols <- setdiff(names(data_raw),"day")
+    # # data_raw <- data_raw[!(day <= 213 | day >= covid_multi_strain_date(as.Date("2020-09-15"))),(cols):= NA]
+    # vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
+    # pop <- fread("data/population.csv")
     
     # Set assumption for booster waning rate
     # assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
@@ -24,9 +24,8 @@ run_fitting <- function(run,assumptions,u,n_iters,n_chains){
     pars <- fit_pars_load("parameters",assumptions)
     
     # Plot vaccination coverage by age
-    # vaccination_coverage_plot(pars$base$vaccine_schedule,pars$base$age_groups,vax,pop)
-    dir.create("output")
-    # ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
+    vaccination_coverage_plot(pars$base$vaccine_schedule,pars$base$age_groups,vax,pop)
+    ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
     
     # Fit covid_multi_strain to FP data
     # u <- c(1:5,7:9,10:12,14,15:19) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
