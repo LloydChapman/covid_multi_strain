@@ -2021,14 +2021,30 @@ plot_traces <- function(pars,u){
 }
 
 
+plot_traces_all <- function(pars,u,lbls){
+    pars_dt <- melt(pars,id.vars = c("chain","iter"))
+    levels(pars_dt$variable) <- TeX(lbls[u])
+    
+    p <- ggplot(pars_dt,aes(x = iter,y = value,group = as.factor(chain),color = as.factor(chain))) +
+        geom_line() + 
+        facet_wrap(~variable,scales = "free",labeller = label_parsed,ncol = 3) + 
+        labs(x = "Iteration",color = "Chain") + 
+        theme_cowplot(font_size = 10) + 
+        theme(axis.title.y = element_blank(),
+              axis.text.x = element_text(size = 8),
+              strip.background = element_blank())
+    return(p)
+}
+
+
 plot_posteriors <- function(pars,u,priors,pars_min,pars_max,lbls){
     pars <- pars[,u]
     pars_dt <- as.data.table(pars)
     pars_dt[,iter := seq_len(nrow(pars))]
     pars_long_dt <- melt(pars_dt,id.vars = "iter")
     # pars_long_dt[,variable := factor(variable,levels = unique(variable))]
-    names(lbls) <- pars_long_dt[,unique(variable)]
-    lbls <- TeX(lbls[u])
+    lbls <- lbls[u]
+    lbls <- TeX(lbls)
     levels(pars_long_dt$variable) <- lbls
     
     priors_dt <- data.table()

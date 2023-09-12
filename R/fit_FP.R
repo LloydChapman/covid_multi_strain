@@ -79,8 +79,11 @@ run_fitting <- function(run,assumptions,u,n_iters,n_chains){
     
     # Get results
     samples_list <- vector("list",n_chains)
+    pars_list <- vector("list",n_chains)
     for (i in seq_len(n_chains)){
         tmp <- readRDS(results[[i]])
+        pars_list[[i]] <- as.data.table(tmp$pars[-1,u])
+        pars_list[[i]][,iter := seq_len(nrow(tmp$pars)-1)]
         tmp <- remove_burnin(tmp,burnin)
         samples_list[[i]] <- tmp
         rm(tmp)
@@ -106,7 +109,6 @@ run_fitting <- function(run,assumptions,u,n_iters,n_chains){
     # Save output
     saveRDS(dat,paste0("output/MCMCoutput",run,".RDS"))
     
-    
     # Set whether to plot moving average of data
     moving_avg <- F
     
@@ -121,6 +123,14 @@ run_fitting <- function(run,assumptions,u,n_iters,n_chains){
               "${p_D}_{max,1}$","${p_D}_{max,2}$","${p_D}_{max,3}$","$\\sigma_{O micron}$",
               "$t_{O micron}$","${\\pi_H}_{D elta/Wildtype}$","$\\phi_{cases}$",
               "$\\alpha_{cases}$","$\\alpha_{hosp}$","$\\alpha_{death}$")
+    # Combine parameter samples
+    pars_samples <- rbindlist(pars_list,idcol = "chain")
+    
+    # Plot traces from all chains together
+    plot_traces_all(pars_samples,u,lbls)
+    ggsave(paste0("output/par_traces",run,".pdf"),width = 8,height = 9)
+    
+    # Plot model fit
     plot_fit(dat,pars,run,pop,u,lbls,moving_avg,pred_intvl,n_smpls)
     
     # Process fit
