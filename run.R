@@ -17,6 +17,7 @@ library(MASS)
 library(abind)
 library(parallel)
 library(latex2exp)
+library(stringr)
 
 source("R/utils.R")
 source("R/date.R")

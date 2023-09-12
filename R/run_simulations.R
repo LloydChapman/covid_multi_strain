@@ -303,5 +303,62 @@ run_simulations <- function(run,sim_run,assumptions){
     p_cntfctl <- plot_counterfactuals_together(q_outcomes[cntfctl %in% c(1,8,10)],q_outcomes_cntfctl[cntfctl %in% c(1,8,10)],outcome,ttls1,ttls[names(ttls) %in% c(1,8,10)])
     ggsave(paste0("output/cntfctl_cases_hosps_and_deaths",sim_run,".pdf"),p_cntfctl,width = 9,height = 3)
     
+    # Plot numbers of cases, hospitalisations and deaths averted in each wave and overall
+    p_dt <- melt(q_total_outcomes_averted,measure.vars = patterns(c("med","q95l","q95u")),value.name = c("med","q95l","q95u"))
+    p_dt[,variable := cols[variable]]
+    p_dt <- p_dt[(variable %in% outcome) & (cntfctl %in% c(1,8,10))]
+    p_dt[,variable := factor(variable,levels = outcome)]
+    lbls <- c(`1` = "Lockdowns",`8` = "Vaccination",`10` = "Boosters")
+    p_dt[,cntfctl := lbls[match(cntfctl,names(lbls))]]
+    p_dt[,cntfctl := factor(cntfctl,levels = unique(cntfctl))]
+    ggplot(p_dt,aes(x = wave,fill = factor(cntfctl))) +
+        geom_bar(aes(y = -med),position = position_dodge(),stat = "identity") + 
+        geom_errorbar(aes(ymin = -q95l,ymax = -q95u),width = 0.2,position = position_dodge(0.9)) +
+        labs(x = "Wave",y = "Number averted",fill = "Counterfactual") +
+        facet_wrap(~variable,scales = "free",labeller = labeller(variable = ttls1)) +
+        theme_cowplot(font_size = 12) +
+        theme(legend.position = "bottom",
+              strip.background = element_blank())
+    ggsave(paste0("output/cases_hosps_and_deaths_averted",sim_run,".pdf"),width = 8, height = 3.5)
+    
+    # Same plot but with date rather than wave number on the x-axis
+    wave_mid_date <- as.Date(c("2020-11-01","2021-08-15","2022-02-01","2022-07-01"))
+    names(wave_mid_date) <- c("1","2","3","Total")
+    p_dt[,date := wave_mid_date[match(wave,names(wave_mid_date))]]
+    p <- ggplot(p_dt,aes(x = date,fill = factor(cntfctl))) +
+        geom_bar(aes(y = -med),position = position_dodge(width = 70),width = 70,stat = "identity") + 
+        geom_errorbar(aes(ymin = -q95l,ymax = -q95u),position = position_dodge(width = 70),width = 50) +
+        labs(x = "Wave",y = "Change",fill = "Counterfactual") +
+        xlim(covid_multi_strain_date_as_date(min(dates)),covid_multi_strain_date_as_date(max(dates)+100)) +
+        facet_wrap(~variable,scales = "free",labeller = labeller(variable = ttls1)) +
+        theme_cowplot(font_size = 12) +
+        theme(legend.position = "bottom",
+              strip.background = element_blank())
+    ggsave(paste0("output/cases_hosps_and_deaths_averted_date",sim_run,".pdf"),p,width = 10, height = 3.5)
+    
+    # Combine numbers averted plot with counterfactual epidemic waves plot
+    align_labels = function(plotsList){
+        # Extract labels of y-axis
+        # Note: Don't use the as.character on the maximum limit, 
+        #       as decimal places in labels may increase the character count 
+        y.labels <- lapply(plotsList, function(y){lapply(ggplot_build(y)$layout$panel_params, function(x){x$y$get_labels()})})
+        
+        # Calculate the maximum number of characters for each plot's labels
+        maxChars <- lapply(y.labels, function(y){sapply(y, function(x){max(nchar(x),na.rm = T)})})
+        
+        # Define a function that would space-pad the labels and apply
+        format.labels = function(label){str_pad(label, max(sapply(1:length(maxChars[[1]]),function(i) max(sapply(maxChars,"[[",i)))), pad = " ")}
+        return(lapply(plotsList, function(x){return(x + scale_y_continuous(labels = format.labels))}))
+    }
+    
+    p_list <- list(p + theme(axis.line.x = element_blank(),axis.text.x = element_blank(),
+                            axis.ticks.x = element_blank(),axis.title.x = element_blank(),
+                            legend.position = "none"),
+                  p_cntfctl + xlim(NA_Date_,as.Date("2022-05-06")+100) + theme(strip.text = element_blank()))
+    p_list <- align_labels(p_list)
+    plot_grid(plotlist = p_list,nrow = 2,rel_heights = c(0.6,1))
+    ggsave(paste0("output/cntfctl_and_averted_cases_hosps_and_deaths",sim_run,".pdf"),width = 10,height = 4)
+    
+    # Save workspace
     save(list = ls(all.names=T),file = paste0("output/cntfctl_output",sim_run,".RData"),envir = environment())
 }
