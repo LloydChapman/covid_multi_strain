@@ -22,6 +22,7 @@ library(ggh4x)
 
 source("R/utils.R")
 source("R/date.R")
+source("R/plot_timeline.R")
 source("R/vaccination.R")
 source("R/parameters.R")
 source("R/pars.R")
@@ -49,6 +50,10 @@ sim_runs <- 28:30
 # assumptions <- "central"
 # # assumptions <- "alt_contact_matrix"
 # source("R/create_parameters.R")
+
+# Plot timeline of epidemic in French Polynesia
+plot_timeline()
+ggsave("output/timeline_plot.pdf",width = 14,height = 6)
 
 # Parameter assumptions
 assumption <- c("pessimistic","central","optimistic")
