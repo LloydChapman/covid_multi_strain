@@ -26,7 +26,7 @@ remotes::install_github(c(
 Clone/download this project onto your machine.
 
 ## Data
-All data required to run the code are contained in the [data](data) folder and are also available on Zenodo: [doi:10.5281/zenodo.7790839](https://doi.org/10.5281/zenodo.7790839)
+All data required to run the code are contained in the [data](data) folder and are also available on Zenodo: [doi:10.5281/zenodo.8320333](https://doi.org/10.5281/zenodo.8320333)
 
 ## Running the code
 
@@ -36,25 +36,19 @@ odin_dust("inst/odin/covid_multi_strain.R")
 ```
 as in [fit.R](R/fit.R).
 
-The workflow for fitting the model and running counterfactual simulations is as follows. The model can be fit to the data for French Polynesia using the adaptive MCMC algorithm in [pmcmc.R](R/pmcmc.R) by running:
+The whole analysis (fitting + counterfactual simulations) can be run by running the top-level script [run.R](run.R):
 ```R
-source("R/fit_FP.R")
+source("run.R")
 ```
-This produces output called `MCMCoutput<run>.RData` in the `output` folder, where `<run>` is the MCMC `run` number set in [fit_FP.R](R/fit_FP.R), along with trace and posterior plots of the parameters produced by [plot_fit.R](R/plot_fit.R).
+This runs the fitting function [run_fitting()](R/run_fitting.R) and the function for running the counterfactual simulations without vaccinations, boosters, and lockdowns, and with different lockdown timings [run_simulations()](R/run_simulations.R). It produces output called `MCMCoutput<run>.RDS` and `cntfctl_output<sim_run>.RData` in the `output` folder, where `<run>` and `<sim_run>` are the MCMC `run` and simulation `sim_run` numbers set in [run.R](run.R), along with trace and posterior plots of the parameters and model fit produced by [plot_fit.R](R/plot_fit.R) and counterfactual outcome plots.
 
 The breakdown of population immunity over time (Fig. 3 in the preprint) can be plotted with:
 ```R
 source("R/plot_immunity.R")
 ```
-setting the `run` number in [plot_immunity.R](R/plot_immunity.R) to match that in [fit_FP.R](R/fit_FP.R).
+setting the `run` number in [plot_immunity.R](R/plot_immunity.R) to match that in [run.R](run.R).
 
-The counterfactual simulations without vaccinations, boosters, and lockdowns, and with different lockdown timings can then be run with:
-```R
-source("R/run_simulations.R")
-```
-setting `run` in [run_simulations.R](R/run_simulations.R) to match `run` in [fit_FP.R](R/fit_FP.R).
-
-Note that the fitting code takes ~1.5hrs to run (in R 4.1.0 on an 8-core MacBook Pro with an M1 chip and 16GB RAM).
+Note that the fitting code takes ~2.5hrs to run 4 MCMC chains of 50,000 iterations in parallel (in R 4.1.0 on an 8-core MacBook Pro with an M1 chip and 16GB RAM).
 
 ## Built With
 
