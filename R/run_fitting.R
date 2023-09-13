@@ -1,17 +1,4 @@
 run_fitting <- function(run,assumptions,data_raw,vax,pop,u,n_iters,n_chains){
-    # # Load data
-    # data_raw <- fread("data/data_cases_hosps_deaths_serology.csv")
-    # # data_raw <- data_raw[day < covid_multi_strain_date(as.Date("2021-06-01")),]
-    # # cols <- setdiff(names(data_raw),"day")
-    # # data_raw <- data_raw[!(day <= 213 | day >= covid_multi_strain_date(as.Date("2020-09-15"))),(cols):= NA]
-    # vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
-    # pop <- fread("data/population.csv")
-    
-    # Set assumption for booster waning rate
-    # assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
-    # assumptions <- "pessimistic"
-    # assumptions <- "optimistic" # -log(0.923)/140 (Barnard Nat Com 2022 Table S4)
-    
     ## Load parameters
     # Output pars is a list containing:
     # info - the loaded info.csv
@@ -28,16 +15,6 @@ run_fitting <- function(run,assumptions,data_raw,vax,pop,u,n_iters,n_chains){
     ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
     
     # Fit covid_multi_strain to FP data
-    # u <- c(1:5,7:9,10:12,14,15:19) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
-    # # u <- c(1:6,8:10,11:13,15,16,17:21) # beta parameters, seed date, strain seed date, IHR scaling, 2nd strain seed date, reporting rate for confirmed cases
-    # # u <- c(1:3,8,10,13,16:19)
-    # # u <- c(2:3,8,10,13,16:19)
-    # n_iters <- 100 #5e4 #3e4 #1e4 #3e4 #
-    # # Change run number for different assumption on booster waning rate
-    # # run <- 77
-    # # run <- 78
-    # # run <- 130 #118 #117 #
-    # n_chains <- 4 #2 #1 #
     deterministic <- T # flag for whether to use deterministic model or not
     fixed_initial <- T #F # flag for whether to use fixed initial values for MCMC chains or not
     Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
@@ -49,15 +26,6 @@ run_fitting <- function(run,assumptions,data_raw,vax,pop,u,n_iters,n_chains){
     # Run fitting
     thinning <- 10
     results <- as.list(paste0("output/MCMCsamples",run,"_",seq_len(n_chains),".RDS"))
-    # for (i in seq_len(n_chains)) {
-    #     set.seed(i)
-    #     tmp <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning)
-    #     saveRDS(tmp,results[[i]])
-    #     plot_traces(tmp$pars,u)
-    #     ggsave(paste0("output/par_traces",run,"_",i,".pdf"),width = 6,height = 6)
-    #     rm(tmp)
-    #     gc()
-    # }
     
     tstart <- Sys.time()
     mclapply(seq_len(n_chains), function(i){
@@ -74,7 +42,7 @@ run_fitting <- function(run,assumptions,data_raw,vax,pop,u,n_iters,n_chains){
     
     ## Post processing
     # Set burn-in
-    burnin <- 4000 #500 #3000 #2000 #
+    burnin <- 4000
     
     # Get results
     samples_list <- vector("list",n_chains)
@@ -88,14 +56,6 @@ run_fitting <- function(run,assumptions,data_raw,vax,pop,u,n_iters,n_chains){
         rm(tmp)
         gc()
     }
-    
-    # samples <- lapply(results, readRDS)
-    # 
-    # # Remove burn-in
-    # for (i in seq_len(n_chains)){
-    #     samples[[i]] <- remove_burnin(samples[[i]],burnin)
-    # }
-    # samples <- lapply(samples, function(x) remove_burnin(x,burnin))
     
     # Combine chains
     samples <- chains_combine(samples = samples_list)
@@ -115,7 +75,7 @@ run_fitting <- function(run,assumptions,data_raw,vax,pop,u,n_iters,n_chains){
     pred_intvl <- T
     
     # Set number of posterior samples for age-decomposition plots
-    n_smpls <- 1000 #500 #
+    n_smpls <- 1000
     
     # Plot output
     lbls <- c(paste0("$\\beta_",seq_along(pars$base$beta_date),"$"),
