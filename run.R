@@ -86,7 +86,7 @@ dir.create("output")
     
 for (j in seq_along(runs)){
     # Run fitting
-    run_fitting(runs[j],assumption[j],data_raw,vax,pop,u,n_iters,n_chains)
+    run_fitting(runs[j],assumption[j],data_raw,pop,u,n_iters,n_chains)
     
     # Run counterfactual simulations
     run_simulations(runs[j],sim_runs[j],assumption[j])
@@ -95,6 +95,11 @@ for (j in seq_along(runs)){
 # Plot timeline of epidemic in French Polynesia
 plot_timeline(data_raw,pop)
 ggsave("output/timeline_plot.pdf",width = 14,height = 6)
+
+# Plot vaccination coverage by age
+base <- readRDS("parameters/base.rds")
+vaccination_coverage_plot(base$vaccine_schedule,base$age_groups,vax,pop)
+ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
 
 # Plot sensitivity analysis results
 plot_sensitivity_analysis(sim_runs,assumption)

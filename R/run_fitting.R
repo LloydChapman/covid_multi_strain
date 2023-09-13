@@ -1,4 +1,4 @@
-run_fitting <- function(run,assumptions,data_raw,vax,pop,u,n_iters,n_chains){
+run_fitting <- function(run,assumptions,data_raw,pop,u,n_iters,n_chains){
     ## Load parameters
     # Output pars is a list containing:
     # info - the loaded info.csv
@@ -9,10 +9,6 @@ run_fitting <- function(run,assumptions,data_raw,vax,pop,u,n_iters,n_chains){
     # base - the base.rds object, which contains the fixed parameters
     # mcmc - initialisation object built from the above to pass to the mcmc
     pars <- fit_pars_load("parameters",assumptions)
-    
-    # Plot vaccination coverage by age
-    vaccination_coverage_plot(pars$base$vaccine_schedule,pars$base$age_groups,vax,pop)
-    ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
     
     # Fit covid_multi_strain to FP data
     deterministic <- T # flag for whether to use deterministic model or not
