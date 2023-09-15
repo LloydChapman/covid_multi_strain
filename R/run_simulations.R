@@ -1,29 +1,26 @@
 run_simulations <- function(run,sim_run,assumptions){
     ## Set MCMC output
-    # Change run number for different assumption on booster waning rate
-    # run <- 130 #77
-    # run <- 78
-    # run <- 80
     output <- paste0("output/MCMCoutput",run,".RDS")
     
     ## Run counterfactual simulations
-    # Set run number
-    # sim_run <- 28 #18
-    # sim_run <- 19
-    # sim_run <- 20
+    # 1: No lockdowns
+    # 2: 1st lockdown 2 weeks earlier
+    # 3: 1st lockdown 2 weeks later
+    # 4: 2nd lockdown 2 weeks earlier
+    # 5: 2nd lockdown 2 weeks later
+    # 6: Both lockdowns 2 weeks earlier
+    # 7: Both lockdowns 2 weeks later
+    # 8: No vaccination
+    # 9: Boosters 1 month earlier
+    # 10: No boosters
+    
     # Set whether model is deterministic or stochastic
     deterministic <- T 
     # Set whether states required to calculate Rt have been output 
     Rt <- T
     # Set number of parameter samples and burn-in to remove
     n_smpls <- 500
-    # burnin <- 1500
     seed <- 1L
-    
-    # Set assumption for booster waning rate
-    # assumptions <- "central" #-log(67.7/82.8)/(105-25) # (Stowe Nat Comm 2022 Table S11)
-    # assumptions <- "optimistic" # -log(0.923)/140 (Barnard Nat Com 2022 Table S4)
-    # assumptions <- "pessimistic"
     
     ## Load parameters
     # Output pars is a list containing:
@@ -52,9 +49,9 @@ run_simulations <- function(run,sim_run,assumptions){
     # Remove lockdowns
     beta_idx_list[[1]] <- c(1,3,5)
     
-    # Move first lockdown a week earlier
+    # Move first lockdown two weeks earlier
     beta_date_cntfctl_list[[2]][1:2] <- beta_date[1:2] - 14
-    # Move first lockdown a week later
+    # Move first lockdown two weeks later
     beta_date_cntfctl_list[[3]][1:2] <- beta_date[1:2] + 14
     # Move second lockdown two weeks earlier
     beta_date_cntfctl_list[[4]][3:4] <- beta_date[3:4] - 14
@@ -212,8 +209,7 @@ run_simulations <- function(run,sim_run,assumptions){
     tmp[,cntfctl := 0]
     total_outcomes <- rbind(tmp,q_total_outcomes_cntfctl)
     
-    
-    
+    # Create table of total outcomes by wave and overall for different counterfactuals
     tbl <- total_outcomes[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                              Wave = wave,
                              Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,f = 0.001,d = 3,method = "signif"),
@@ -226,6 +222,7 @@ run_simulations <- function(run,sim_run,assumptions){
     write.csv(tbl[c(1,9,11),],paste0("output/table1_vax_",sim_run,".csv"),row.names = F)
     write.csv(tbl[c(1,3:8),],paste0("output/table1_lockdown_",sim_run,".csv"),row.names = F)
     
+    # Create table of total outcomes averted by wave and overall for different counterfactuals
     tbl1 <- q_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                                         Wave = wave,
                                         Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,f = 0.001,d = 1,method = "round"),
@@ -235,6 +232,7 @@ run_simulations <- function(run,sim_run,assumptions){
     tbl1 <- dcast(tbl1, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
     write.csv(tbl1, paste0("output/total_outcomes_averted_",sim_run,".csv"),row.names = F)
     
+    # Create table of proportion of total outcomes averted by wave and overall for different counterfactuals
     tbl2 <- q_prop_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
                                              Wave = wave,
                                              Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,d = 3,method = "round"),
@@ -246,9 +244,6 @@ run_simulations <- function(run,sim_run,assumptions){
     
     # Plot counterfactuals
     plot_simulations(q_outcomes,q_outcomes_cntfctl,q_total_outcomes_averted,ttls,sim_run,cols,dates)
-    
-    # # Save workspace
-    # save(list = ls(all.names=T),file = paste0("output/cntfctl_output",sim_run,".RData"),envir = environment())
     
     # Save output
     res <- list(q_outcomes = q_outcomes,

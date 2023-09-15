@@ -241,6 +241,7 @@ simulate_counterfactual <- function(output,n_smpls,beta_date_cntfctl,
 #     return(q)
 # }
 
+
 calculate_outcome_quantiles <- function(x,dates,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
     # If input is a 3-D array convert to a data table
     if (length(dim(x)) == 3){
@@ -252,6 +253,7 @@ calculate_outcome_quantiles <- function(x,dates,info,min_ages = seq(0,70,by = 10
                 q95u = quantile(value,0.975)), by = .(state,day)]
     return(out)
 }
+
 
 calculate_outcomes_by_wave <- function(x,wave_date,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
     cols <- names(index(info,min_ages = min_ages,Rt = Rt)$state)
@@ -302,6 +304,7 @@ plot_counterfactuals <- function(q_outcomes,q_outcomes_cntfctl,outcome,ylbl,ttls
     return(p)
 }
 
+
 plot_counterfactuals_together <- function(q_outcomes,q_outcomes_cntfctl,outcome,ttls,lbls){
     q_outcomes1 <- q_outcomes[state %in% outcome]
     q_outcomes_cntfctl1 <- q_outcomes_cntfctl[state %in% outcome]
@@ -320,6 +323,7 @@ plot_counterfactuals_together <- function(q_outcomes,q_outcomes_cntfctl,outcome,
         facet_wrap(~state,nrow = 1,scales = "free",labeller = labeller(state = ttls))
     return(p)
 }
+
 
 simulate_prepare <- function(onward,n_smpls,seed = 1L){
     info <- onward$info

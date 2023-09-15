@@ -3,23 +3,22 @@ plot_sensitivity_analysis <- function(sim_runs,assumption){
     q_outcomes_SA_list <- vector("list",length(sim_runs))
     q_outcomes_cntfctl_SA_list <- vector("list",length(sim_runs))
     cntfctls <- c(1,8,10)
-    outcomes <- c("cases","hosps","deaths")
+    outcome <- c("cases","hosps","deaths")
     for (j in seq_along(sim_runs)){
-        # load(paste0("output/cntfctl_output",sim_runs[j],".RData"))
         res <- readRDS(paste0("output/cntfctl_output",sim_runs[j],".RDS"))
-        tmp <- res$q_total_outcomes_averted[cntfctl %in% cntfctls & wave == "Total",c("cntfctl",paste(rep(outcomes,each = 3),c("med","q95l","q95u"),sep = ".")),with = F]
+        tmp <- res$q_total_outcomes_averted[(cntfctl %in% cntfctls) & (wave == "Total"),c("cntfctl",paste(rep(outcome,each = 3),c("med","q95l","q95u"),sep = ".")),with = F]
         q_total_outcomes_averted_SA_list[[j]] <- tmp
-        tmp1 <- res$q_outcomes[cntfctl %in% cntfctls & state %in% outcomes]
-        tmp2 <- res$q_outcomes_cntfctl[cntfctl %in% cntfctls & state %in% outcomes]
+        tmp1 <- res$q_outcomes[(cntfctl %in% cntfctls) & (state %in% outcome)]
+        tmp2 <- res$q_outcomes_cntfctl[(cntfctl %in% cntfctls) & (state %in% outcome)]
         q_outcomes_SA_list[[j]] <- tmp1
         q_outcomes_cntfctl_SA_list[[j]] <- tmp2
     }
     
     q_total_outcomes_averted_SA <- rbindlist(q_total_outcomes_averted_SA_list,idcol = "assumptions")
     q_outcomes_SA <- rbindlist(q_outcomes_SA_list,idcol = "assumptions")
-    q_outcomes_SA[,state := factor(state,levels = outcomes)]
+    q_outcomes_SA[,state := factor(state,levels = outcome)]
     q_outcomes_cntfctl_SA <- rbindlist(q_outcomes_cntfctl_SA_list,idcol = "assumptions")
-    q_outcomes_cntfctl_SA[,state := factor(state,levels = outcomes)]
+    q_outcomes_cntfctl_SA[,state := factor(state,levels = outcome)]
     
     q_total_outcomes_averted_SA_long <- melt(q_total_outcomes_averted_SA,id.vars = c("assumptions","cntfctl")) #measure.vars = patterns("cases","hosps","deaths"),value.name = c("med","q95l","q95u"))
     q_total_outcomes_averted_SA_long[,assumptions := assumption[assumptions]]
@@ -34,7 +33,7 @@ plot_sensitivity_analysis <- function(sim_runs,assumption){
     q_total_outcomes_averted_SA_long[,cntfctl := factor(cntfctl,levels = unique(cntfctl))]
     
     ttls1 <- c("Cases","Hospitalisations","Hospital deaths")
-    names(ttls1) <- outcomes
+    names(ttls1) <- outcome
     ggplot(q_total_outcomes_averted_SA_long,aes(x = cntfctl,fill = assumptions)) + 
         geom_bar(aes(y = -med),position = position_dodge(),stat = "identity") + 
         geom_errorbar(aes(ymin = -q95l,ymax = -q95u),width = 0.2,position = position_dodge(0.9)) + 
