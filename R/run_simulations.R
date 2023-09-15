@@ -247,6 +247,17 @@ run_simulations <- function(run,sim_run,assumptions){
     # Plot counterfactuals
     plot_simulations(q_outcomes,q_outcomes_cntfctl,q_total_outcomes_averted,ttls,sim_run,cols,dates)
     
-    # Save workspace
-    save(list = ls(all.names=T),file = paste0("output/cntfctl_output",sim_run,".RData"),envir = environment())
+    # # Save workspace
+    # save(list = ls(all.names=T),file = paste0("output/cntfctl_output",sim_run,".RData"),envir = environment())
+    
+    # Save output
+    res <- list(q_outcomes = q_outcomes,
+                q_outcomes_cntfctl = q_outcomes_cntfctl,
+                q_outcomes_averted = q_outcomes_averted,
+                q_prop_outcomes_averted = q_prop_outcomes_averted,
+                q_total_outcomes = q_total_outcomes,
+                q_total_outcomes_cntfctl = q_total_outcomes_cntfctl,
+                q_total_outcomes_averted = q_total_outcomes_averted,
+                q_prop_total_outcomes_averted = q_prop_total_outcomes_averted)
+    saveRDS(res,paste0("output/cntfctl_output",sim_run,".RDS"))
 }

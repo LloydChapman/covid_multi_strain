@@ -5,11 +5,12 @@ plot_sensitivity_analysis <- function(sim_runs,assumption){
     cntfctls <- c(1,8,10)
     outcomes <- c("cases","hosps","deaths")
     for (j in seq_along(sim_runs)){
-        load(paste0("output/cntfctl_output",sim_runs[j],".RData"))
-        tmp <- q_total_outcomes_averted[cntfctl %in% cntfctls & wave == "Total",c("cntfctl",paste(rep(outcomes,each = 3),c("med","q95l","q95u"),sep = ".")),with = F]
+        # load(paste0("output/cntfctl_output",sim_runs[j],".RData"))
+        res <- readRDS(paste0("output/cntfctl_output",sim_runs[j],".RDS"))
+        tmp <- res$q_total_outcomes_averted[cntfctl %in% cntfctls & wave == "Total",c("cntfctl",paste(rep(outcomes,each = 3),c("med","q95l","q95u"),sep = ".")),with = F]
         q_total_outcomes_averted_SA_list[[j]] <- tmp
-        tmp1 <- q_outcomes[cntfctl %in% cntfctls & state %in% outcomes]
-        tmp2 <- q_outcomes_cntfctl[cntfctl %in% cntfctls & state %in% outcomes]
+        tmp1 <- res$q_outcomes[cntfctl %in% cntfctls & state %in% outcomes]
+        tmp2 <- res$q_outcomes_cntfctl[cntfctl %in% cntfctls & state %in% outcomes]
         q_outcomes_SA_list[[j]] <- tmp1
         q_outcomes_cntfctl_SA_list[[j]] <- tmp2
     }
