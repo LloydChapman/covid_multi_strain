@@ -210,36 +210,18 @@ run_simulations <- function(run,sim_run,assumptions){
     total_outcomes <- rbind(tmp,q_total_outcomes_cntfctl)
     
     # Create table of total outcomes by wave and overall for different counterfactuals
-    tbl <- total_outcomes[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
-                             Wave = wave,
-                             Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,f = 0.001,d = 3,method = "signif"),
-                             Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = 3,method = "signif"),
-                             `Hospital deaths` = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "signif"))]
-    tbl[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
-    tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
+    tbl <- write_table(total_outcomes,ttls,f_cases = 0.001)
     write.csv(tbl[c(1,2,9,11),],paste0("output/table1_",sim_run,".csv"),row.names = F)
     
     write.csv(tbl[c(1,9,11),],paste0("output/table1_vax_",sim_run,".csv"),row.names = F)
     write.csv(tbl[c(1,3:8),],paste0("output/table1_lockdown_",sim_run,".csv"),row.names = F)
     
     # Create table of total outcomes averted by wave and overall for different counterfactuals
-    tbl1 <- q_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
-                                        Wave = wave,
-                                        Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,f = 0.001,d = 1,method = "round"),
-                                        Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = 0,method = "round"),
-                                        `Hospital deaths` = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 0,method = "round"))]
-    tbl1[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
-    tbl1 <- dcast(tbl1, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
+    tbl1 <- write_table(q_total_outcomes_averted,ttls,f_cases = 0.001,d_cases = 1,d_hosps = 0,d_deaths = 0,method = "round")
     write.csv(tbl1, paste0("output/total_outcomes_averted_",sim_run,".csv"),row.names = F)
     
     # Create table of proportion of total outcomes averted by wave and overall for different counterfactuals
-    tbl2 <- q_prop_total_outcomes_averted[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
-                                             Wave = wave,
-                                             Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,d = 3,method = "round"),
-                                             Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = 3,method = "round"),
-                                             `Hospital deaths` = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = 3,method = "round"))]
-    tbl2[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
-    tbl2 <- dcast(tbl2, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
+    tbl2 <- write_table(q_prop_total_outcomes_averted,ttls,method = "round")
     write.csv(tbl2,paste0("output/prop_total_outcomes_averted_",sim_run,".csv"),row.names = F)
     
     # Plot counterfactuals

@@ -661,10 +661,13 @@ arr_to_dt <- function(x,dates,info,min_ages = seq(0,70,by = 10),Rt = FALSE){
 }
 
 
-med_and_CI = function(x,l,u,f=1,d=1,method="round"){
-    if (method=="signif"){
-        paste0(signif(f*x,d)," (",signif(f*l,d)," -- ",signif(f*u,d),")")
-    } else if (method=="round"){
-        paste0(round(f*x,d)," (",round(f*l,d)," -- ",round(f*u,d),")")
-    }
+write_table <- function(x,ttls,f_cases = 1,d_cases = 3,d_hosps = 3,d_deaths = 3,method = "signif"){
+    tbl <- x[,.(Counterfactual = ttls[match(cntfctl,names(ttls))],
+                      Wave = wave,
+                      Cases = med_and_CI(cases.med,cases.q95l,cases.q95u,f = f_cases,d = d_cases,method = method),
+                      Hospitalisations = med_and_CI(hosps.med,hosps.q95l,hosps.q95u,d = d_hosps,method = method),
+                      `Hospital deaths` = med_and_CI(deaths.med,deaths.q95l,deaths.q95u,d = d_deaths,method = method))]
+    tbl[,Counterfactual := factor(Counterfactual, levels = unique(Counterfactual))]
+    tbl <- dcast(tbl, Counterfactual ~ Wave, value.var = c("Cases","Hospitalisations","Hospital deaths"))
+    return(tbl)
 }

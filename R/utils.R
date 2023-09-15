@@ -293,3 +293,12 @@ reverse_list_structure <- function(x){
   # stack and reslice
   apply(do.call(rbind, ls), 2, as.list) 
 }
+
+
+med_and_CI = function(x,l,u,f=1,d=1,method="round"){
+  if (method=="signif"){
+    paste0(signif(f*x,d)," (",signif(f*l,d)," -- ",signif(f*u,d),")")
+  } else if (method=="round"){
+    paste0(round(f*x,d)," (",round(f*l,d)," -- ",round(f*u,d),")")
+  }
+}
