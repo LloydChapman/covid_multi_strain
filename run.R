@@ -36,6 +36,7 @@ source("R/fit_process.R")
 source("R/plot_fit.R")
 source("R/run_simulations.R")
 source("R/simulate.R")
+source("R/plot_simulations.R")
 source("R/plot_sensitivity_analysis.R")
 
 # Set MCMC run number
