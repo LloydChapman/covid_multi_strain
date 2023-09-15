@@ -40,7 +40,7 @@ The whole analysis (fitting + counterfactual simulations) can be run by running 
 ```R
 source("run.R")
 ```
-This runs the fitting function [run_fitting()](R/run_fitting.R) and the function for running the counterfactual simulations without vaccinations, boosters, and lockdowns, and with different lockdown timings [run_simulations()](R/run_simulations.R). It produces output called `MCMCoutput<run>.RDS` and `cntfctl_output<sim_run>.RData` in the `output` folder, where `<run>` and `<sim_run>` are the MCMC `run` and simulation `sim_run` numbers set in [run.R](run.R), along with trace and posterior plots of the parameters and model fit produced by [plot_fit.R](R/plot_fit.R) and counterfactual outcome plots.
+This runs the fitting function [run_fitting()](R/run_fitting.R) and the function for running the counterfactual simulations without vaccinations, boosters, and lockdowns, and with different lockdown timings [run_simulations()](R/run_simulations.R). It produces output called `MCMCoutput<run>.RDS` and `cntfctl_output<sim_run>.RDS` in the `output` folder, where `<run>` and `<sim_run>` are the MCMC `run` and simulation `sim_run` numbers set in [run.R](run.R), along with trace and posterior plots of the parameters and model fit produced by [plot_fit.R](R/plot_fit.R) and counterfactual outcome plots.
 
 The breakdown of population immunity over time (Fig. 3 in the preprint) can be plotted with:
 ```R
