@@ -318,7 +318,7 @@ plot_counterfactuals_together <- function(q_outcomes,q_outcomes_cntfctl,outcome,
         labs(x = "Date",y = "Number") +
         scale_color_discrete(name = "Counterfactual",labels = lbls) +
         scale_fill_discrete(name = "Counterfactual",labels = lbls) +
-        theme_cowplot(font_size = 12) + 
+        theme_cowplot(font_size = 10) + 
         theme(legend.position = "bottom",strip.background = element_blank()) +
         facet_wrap(~state,nrow = 1,scales = "free",labeller = labeller(state = ttls))
     return(p)
