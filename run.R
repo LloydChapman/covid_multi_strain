@@ -59,6 +59,8 @@ assumption <- c("pessimistic","central","optimistic")
 data_raw <- fread("data/data_cases_hosps_deaths_serology.csv")
 vax <- fread("data/data_vaccination.csv", colClasses = c(number = "numeric"))
 pop <- fread("data/population.csv")
+hosps_by_age <- fread("data/hosps_by_age.csv")
+deaths_by_age <- fread("data/deaths_by_age.csv")
 
 # Set parameters to fit
 # 1-5: transmission rate parameters (beta1-beta5)
@@ -94,13 +96,13 @@ for (j in seq_along(runs)){
 }
 
 # Plot timeline of epidemic in French Polynesia
-plot_timeline(data_raw,pop)
+plot_timeline(data_raw,pop,hosps_by_age,deaths_by_age)
 ggsave("output/timeline_plot.pdf",width = 14,height = 6)
 
 # Plot vaccination coverage by age
 base <- readRDS("parameters/base.rds")
 vaccination_coverage_plot(base$vaccine_schedule,base$age_groups,vax,pop)
-ggsave("output/vax_cov_by_dose.pdf",width = 9,height = 3)
+ggsave("output/vax_cov_by_dose.pdf",width = 7,height = 2.33)
 
 # Plot sensitivity analysis results
 plot_sensitivity_analysis(sim_runs,assumption)

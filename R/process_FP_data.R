@@ -282,6 +282,22 @@ hosps <- hosps_dt[,.(hosps = .N),by = .(age_group,date)]
 # Plot hospitalisations
 ggplot(hosps,aes(x = date,y = hosps,group = age_group,color = age_group)) + geom_line()
 
+# Make data table of total hospitalisations by 10-year age group
+hosps_by_age_dt <- copy(hosps_dt)
+hosps_by_age_dt[,age_group := cut(age,c(min_ages,Inf),labels = age_groups,right = F)]
+
+# Aggregate over age groups
+hosps_by_age <- hosps_by_age_dt[,.(hosps = .N),by = .(age_group,date)]
+
+# Plot hospitalisations by 10-year age groups
+ggplot(hosps_by_age,aes(x = date,y = hosps,group = age_group,color = age_group)) + geom_line()
+
+# Aggregate over time
+hosps_by_age <- hosps_by_age[,.(hosps = sum(hosps)),by = .(age_group)][order(age_group)]
+
+# Save
+write.csv(hosps_by_age,"data/hosps_by_age.csv",row.names = F)
+
 ## Deaths
 deaths_dt <- hosps_dt[!is.na(death_date)]
 
@@ -317,6 +333,12 @@ ggplot() +
     geom_point(aes(x = Date,y = `Nombre total de décès`),weekly_dt,color = "blue") + 
     geom_point(aes(x = Date,y = `Nombre total de décès hospitaliers`),weekly_dt,color = "red")
 # ggsave("output/total_deaths.pdf",width = 5, height = 4)
+
+# Make data table of total deaths by 10-year age group
+deaths_by_age <- hosps_by_age_dt[,.(deaths = sum(!is.na(death_date))),by = .(age_group)][order(age_group)]
+
+# Save
+write.csv(deaths_by_age,"data/deaths_by_age.csv",row.names = F)
 
 ## Seroprevalence
 process_sero_data <- function(sero_dt,sample_date,age_groups,min_ages){
