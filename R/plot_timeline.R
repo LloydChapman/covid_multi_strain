@@ -9,16 +9,9 @@ plot_timeline <- function(data_raw,pop,hosps_by_age,deaths_by_age){
         scale_color_manual(name = "", values = c("Hospitalisations" = "red","Deaths" = "black"), breaks = c("Hospitalisations", "Deaths")) + 
         labs(x = "Date") +
         theme_cowplot(font_size = 12) +
-        theme(#axis.line.y = element_line(color = "blue"),
-            #axis.text.y.left = element_text(color = "blue"),
-            #axis.title.y.left = element_text(color = "blue"),
-            #axis.line.y.right = element_line(color = "red"),
-            #axis.text.y.right = element_text(color = "red"),
-            #axis.title.y.right = element_text(color = "red")
-            legend.position = c(0.01,0.97),
-            legend.direction = "horizontal",
-            legend.box = "horizontal"
-        )
+        theme(legend.position = c(0.01,0.97),
+              legend.direction = "horizontal",
+              legend.box = "horizontal")
     
     # Annotate plot with major changes in restrictions
     p1_annttd <- p1 + annotate("text", x = as.Date("2020-07-25"), y = 650, label = "Borders reopened to\ninternational tourism +\nall quarantine\nmeasures lifted") + 
@@ -89,11 +82,6 @@ plot_timeline <- function(data_raw,pop,hosps_by_age,deaths_by_age){
               axis.title.y = element_blank(),
               axis.text.y = element_blank())
     
-    # p_list <- list(p2,p4,p5,p6)
-    # p_list <- align_labels_x(p_list)
-    # p7 <- grid.arrange(plot_grid(plotlist = p_list,nrow = 1,rel_widths = c(1,0.85,0.85,0.85)),
-    #              left = textGrob("Age group (years)", 
-    #                              gp=gpar(fontsize=10), rot=90))
     # Combine bar plots
     p6 <- plot_grid(p2,p3,p4,p5,nrow = 1,rel_widths = c(1,0.75,0.75,0.75))
     
@@ -106,8 +94,3 @@ plot_timeline <- function(data_raw,pop,hosps_by_age,deaths_by_age){
     return(p7)
 }
 
-# data_raw_long <- melt(data_raw,id.vars = "day",measure.vars = patterns(cases = "cases_",hosps = "hosps_",deaths = "deaths_"))
-# data_raw_long[,age_group := age_groups[variable]]
-# outcomes_by_age <- data_raw_long[,lapply(.SD,function(x) sum(x,na.rm = T)),.SDcols = c("cases","hosps","deaths"),by = .(age_group)]
-# 
-# plot_grid(p11, p2, rel_widths = c(1,0.4), labels = "auto")
