@@ -34,10 +34,10 @@ plot_sensitivity_analysis <- function(sim_runs,assumption){
     
     ttls1 <- c("Cases","Hospitalisations","Hospital deaths")
     names(ttls1) <- outcome
-    ggplot(q_total_outcomes_averted_SA_long,aes(x = cntfctl,fill = assumptions)) + 
-        geom_bar(aes(y = -med),position = position_dodge(),stat = "identity") + 
-        geom_errorbar(aes(ymin = -q95l,ymax = -q95u),width = 0.2,position = position_dodge(0.9)) + 
-        labs(x = "Intervention",y = "Number averted",fill = "Parameter assumptions") +
+    ggplot(q_total_outcomes_averted_SA_long,aes(x = cntfctl,fill = assumptions,color = assumptions)) + 
+        geom_boxplot(aes(middle = -med,lower = -q95u,upper = -q95l,ymin = -q95u,ymax = -q95l),stat = "identity",alpha = 0.2,coef = 0) + 
+        geom_hline(yintercept = 0,alpha = 0.1) + 
+        labs(x = "Intervention",y = "Number averted",fill = "Parameter assumptions",color = "Parameter assumptions") +
         facet_wrap(~variable,scales = "free",labeller = labeller(variable = ttls1)) + 
         theme_cowplot(font_size = 11) +
         theme(legend.position = "bottom",strip.background = element_blank())

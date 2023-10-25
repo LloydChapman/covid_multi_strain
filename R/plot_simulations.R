@@ -42,9 +42,9 @@ plot_simulations <- function(q_outcomes,q_outcomes_cntfctl,q_total_outcomes_aver
     p_list <- list(p_outcomes_averted_date + theme(axis.line.x = element_blank(),axis.text.x = element_blank(),
                              axis.ticks.x = element_blank(),axis.title.x = element_blank(),
                              legend.position = "none"),
-                   p_cntfctl + xlim(NA_Date_,as.Date("2022-05-06")+100) + theme(strip.text = element_blank()))
+                   p_cntfctl + xlim(NA_Date_,as.Date("2022-05-06")+150) + theme(strip.text = element_blank()))
     p_list <- align_labels(p_list)
-    plot_grid(plotlist = p_list,nrow = 2,rel_heights = c(0.6,1))
+    plot_grid(plotlist = p_list,nrow = 2,rel_heights = c(0.8,1))
     ggsave(paste0("output/cntfctl_and_averted_cases_hosps_and_deaths",sim_run,".pdf"),width = 10,height = 4)
 }
 
@@ -82,10 +82,9 @@ plot_outcomes_averted <- function(q_total_outcomes_averted,cols,outcome,lbls,ttl
     p_dt[,cntfctl := lbls[match(cntfctl,names(lbls))]]
     p_dt[,cntfctl := factor(cntfctl,levels = unique(cntfctl))]
     if (by_wave){
-        p <- ggplot(p_dt,aes(x = wave,fill = factor(cntfctl))) +
-            geom_bar(aes(y = -med),position = position_dodge(),stat = "identity") + 
-            geom_errorbar(aes(ymin = -q95l,ymax = -q95u),width = 0.2,position = position_dodge(0.9)) +
-            labs(x = "Wave",y = "Number averted",fill = "Counterfactual") +
+        p <- ggplot(p_dt,aes(x = wave,fill = factor(cntfctl),color = factor(cntfctl))) +
+            geom_boxplot(aes(middle = -med,lower = -q95u,upper = -q95l,ymin = -q95u,ymax = -q95l),stat = "identity",alpha = 0.2) +
+            labs(x = "Wave",y = "Number averted",fill = "Counterfactual",color = "Counterfactual") +
             facet_wrap(~variable,scales = "free",labeller = labeller(variable = ttls1)) +
             theme_cowplot(font_size = 12) +
             theme(legend.position = "bottom",
@@ -94,13 +93,13 @@ plot_outcomes_averted <- function(q_total_outcomes_averted,cols,outcome,lbls,ttl
         wave_mid_date <- as.Date(c("2020-11-01","2021-08-15","2022-02-01","2022-07-01"))
         names(wave_mid_date) <- c("1","2","3","Total")
         p_dt[,date := wave_mid_date[match(wave,names(wave_mid_date))]]
-        p <- ggplot(p_dt,aes(x = date,fill = factor(cntfctl))) +
-            geom_bar(aes(y = -med),position = position_dodge(width = 70),width = 70,stat = "identity") + 
-            geom_errorbar(aes(ymin = -q95l,ymax = -q95u),position = position_dodge(width = 70),width = 50) +
-            labs(x = "Wave",y = "Change",fill = "Counterfactual") +
-            xlim(covid_multi_strain_date_as_date(min(dates)),covid_multi_strain_date_as_date(max(dates)+100)) +
+        p <- ggplot(p_dt,aes(x = date,group = interaction(date,factor(cntfctl)),fill = factor(cntfctl),color = factor(cntfctl))) +
+            geom_boxplot(aes(middle = -med,lower = -q95u,upper = -q95l,ymin = -q95u,ymax = -q95l),stat = "identity",alpha = 0.2) +
+            geom_hline(yintercept = 0,alpha = 0.1) + 
+            labs(x = "Date",y = "Change",fill = "Counterfactual",color = "Counterfactual") +
+            xlim(covid_multi_strain_date_as_date(min(dates)),covid_multi_strain_date_as_date(max(dates)+150)) +
             facet_wrap(~variable,scales = "free",labeller = labeller(variable = ttls1)) +
-            theme_cowplot(font_size = 12) +
+            theme_cowplot(font_size = 10) +
             theme(legend.position = "bottom",
                   strip.background = element_blank())
     }
