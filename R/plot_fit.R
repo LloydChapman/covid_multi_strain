@@ -64,5 +64,5 @@ plot_fit <- function(dat,pars,run,pop,u,lbls,moving_avg = FALSE,pred_intvl = FAL
     ggsave(paste0("output/par_posteriors",run,".pdf"),width = 6,height = 6)
     
     p2 <- plot_pairwise_correlation(dat$samples$pars,u,lbls)
-    ggsave(paste0("output/par_pairwise_corr",run,".pdf"),p2,width = 12,height = 12)
+    ggsave(paste0("output/par_pairwise_corr",run,".pdf"),p2,width = 14,height = 14)
 }
