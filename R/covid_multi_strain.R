@@ -1835,7 +1835,9 @@ plot_immune_status <- function(output,pop,age_groups,n_smpls = 1000,seed = 1){
     
     set.seed(seed)
     smpl <- sample.int(ncol(dat$samples$trajectories$state),n_smpls)
-    state <- dat$samples$trajectories$state[,smpl,,drop = F]
+    # Select samples to include and drop initial conditions
+    state <- dat$samples$trajectories$state[,smpl,-1,drop = F]
+    dates <- dat$samples$trajectories$date
     
     rm(dat)
     gc()
@@ -1907,7 +1909,7 @@ plot_immune_status <- function(output,pop,age_groups,n_smpls = 1000,seed = 1){
     names(S_R_by_vacc_inf_long) <- c("state","sample","date","value")
     
     # Convert dates
-    S_R_by_vacc_inf_long[, date := covid_multi_strain_date_as_date(date)]
+    S_R_by_vacc_inf_long[, date := covid_multi_strain_date_as_date(dates[date])]
     
     # Add age and vaccination status variables
     S_R_by_vacc_inf_long[,age := sub("[A-Za-z]+_([0-9]+).*","\\1",state)]

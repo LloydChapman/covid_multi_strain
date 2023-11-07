@@ -20,7 +20,7 @@ run <- 131
 output <- paste0("output/MCMCoutput",run,".RDS")
 
 # Set number of posterior samples for age-decomposition plots
-n_smpls <- 1000 #10 #
+n_smpls <- 1000
 
 # Set seed for immune status plot
 seed <- 1L
