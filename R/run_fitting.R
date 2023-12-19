@@ -1,4 +1,4 @@
-run_fitting <- function(run,assumptions,data_raw,pop,u,n_iters,n_chains){
+run_fitting <- function(run,assumptions,data_raw,deterministic,Rt,pop,u,n_iters,n_chains,fixed_initial,thinning,burnin,n_smpls){
     ## Load parameters
     # Output pars is a list containing:
     # info - the loaded info.csv
@@ -10,17 +10,13 @@ run_fitting <- function(run,assumptions,data_raw,pop,u,n_iters,n_chains){
     # mcmc - initialisation object built from the above to pass to the mcmc
     pars <- fit_pars_load("parameters",assumptions)
     
-    # Fit covid_multi_strain to FP data
-    deterministic <- T # flag for whether to use deterministic model or not
-    fixed_initial <- T #F # flag for whether to use fixed initial values for MCMC chains or not
-    Rt <- T #F # flag for whether to return variables needed for calculating Rt in "state" object
+    # Fit covid_multi_strain to data
     initial_date <- pars$info$min[pars$info$name == "start_date"] - 1
     
     # Construct particle filter
     filter <- covid_multi_strain_particle_filter(data_raw,pars,deterministic,Rt,initial_date)
     
     # Run fitting
-    thinning <- 10
     results <- as.list(paste0("output/MCMCsamples",run,"_",seq_len(n_chains),".RDS"))
     
     tstart <- Sys.time()
@@ -37,9 +33,6 @@ run_fitting <- function(run,assumptions,data_raw,pop,u,n_iters,n_chains){
     print(tend - tstart)
     
     ## Post processing
-    # Set burn-in
-    burnin <- 4000
-    
     # Get results
     samples_list <- vector("list",n_chains)
     pars_list <- vector("list",n_chains)
@@ -69,9 +62,6 @@ run_fitting <- function(run,assumptions,data_raw,pop,u,n_iters,n_chains){
     
     # Set whether to plot prediction interval from model
     pred_intvl <- T
-    
-    # Set number of posterior samples for age-decomposition plots
-    n_smpls <- 1000
     
     # Plot output
     lbls <- c(paste0("$\\beta_",seq_along(pars$base$beta_date),"$"),

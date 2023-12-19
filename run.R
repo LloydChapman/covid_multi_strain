@@ -83,16 +83,31 @@ u <- c(1:5,7:9,10:12,14,15:19)
 n_iters <- 5e4
 # Set number of chains to run
 n_chains <- 4
+# Set flag for whether to use deterministic model or not
+deterministic <- T
+# Set flag for whether to return variables needed for calculating Rt in "state" object
+Rt <- T
+# Set flag for whether to use "fixed" initial parameter values for MCMC chains 
+# or not (i.e. values slightly perturbed from initial values in parameters/info.csv)
+fixed_initial <- T
+# Set factor by which to thin MCMC samples
+thinning <- 10
+# Set burn-in for post processing
+burnin <- 4000
+# Set number of posterior samples for age-decomposition plots
+n_smpls <- 1000
+# Set number of simulations
+n_sims <- 500
 
 # Create output directory
 dir.create("output")
     
 for (j in seq_along(runs)){
     # Run fitting
-    run_fitting(runs[j],assumption[j],data_raw,pop,u,n_iters,n_chains)
+    run_fitting(runs[j],assumption[j],data_raw,deterministic,Rt,pop,u,n_iters,n_chains,fixed_initial,thinning,burnin,n_smpls)
     
     # Run counterfactual simulations
-    run_simulations(runs[j],sim_runs[j],assumption[j])
+    run_simulations(runs[j],sim_runs[j],assumption[j],deterministic,Rt,n_sims)
 }
 
 # Plot timeline of epidemic in French Polynesia

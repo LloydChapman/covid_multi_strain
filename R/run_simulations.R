@@ -1,4 +1,4 @@
-run_simulations <- function(run,sim_run,assumptions){
+run_simulations <- function(run,sim_run,assumptions,deterministic,Rt,n_smpls){
     ## Set MCMC output
     output <- paste0("output/MCMCoutput",run,".RDS")
     
@@ -14,12 +14,7 @@ run_simulations <- function(run,sim_run,assumptions){
     # 9: Boosters 1 month earlier
     # 10: No boosters
     
-    # Set whether model is deterministic or stochastic
-    deterministic <- T 
-    # Set whether states required to calculate Rt have been output 
-    Rt <- T
-    # Set number of parameter samples and burn-in to remove
-    n_smpls <- 500
+    # Set random number seed
     seed <- 1L
     
     ## Load parameters
