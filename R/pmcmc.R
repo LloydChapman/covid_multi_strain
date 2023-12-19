@@ -1,7 +1,7 @@
 mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,idx,
                  scaling_factor_start,proposal_matrix,pars_min,pars_max,iter0,
                  discrete = rep(FALSE,length(curr_pars)),u = seq_along(curr_pars),
-                 thinning = 1){
+                 thinning = 1,rerun_every = Inf){
     # Get number of parameters being fitted
     n_pars <- length(curr_pars)
     n_u <- length(u)
@@ -62,14 +62,24 @@ mcmc <- function(transform,filter,curr_pars,priors,n_particles,n_iters,idx,
     prop_pars <- curr_pars
         
     for (iter in seq_len(n_iters)){
+        # Rerun particle filter on current accepted state every rerun_every iterations
+        if (iter %% rerun_every == 0){
+            transform_pars <- transform(curr_pars)
+            curr_ll <- filter$run(transform_pars,save_history = T)
+            curr_lpost <- curr_ll + curr_lprior
+            idx_particle <- sample.int(n_particles,1)
+            curr_state <- filter$state()[,idx_particle]
+            curr_trajectories <- filter$history(idx_particle)[, , ,drop=T]
+        }
+        
         # Propose new parameter values
         # prop_pars <- rmvn(n = 1, mu = curr_pars, sigma = proposal_matrix)
         prop_pars[u] <- mvrnorm(n = 1, mu = curr_pars[u], Sigma = 2.38^2/n_u*scaling_factor[iter]^2*proposal_matrix[u,u])
         prop_pars[discrete] <- round(prop_pars[discrete])
         if (all(prop_pars >= pars_min & prop_pars <= pars_max)){
             transform_pars <- transform(prop_pars)
-            prop_ll <- filter$run(pars = transform_pars,save_history = T)
-            prop_lprior <- calc_lprior(pars = prop_pars,priors = priors)
+            prop_ll <- filter$run(transform_pars,save_history = T)
+            prop_lprior <- calc_lprior(prop_pars,priors)
             prop_lpost <- prop_ll + prop_lprior
             idx_particle <- sample.int(n_particles,1)
             prop_state <- filter$state()[,idx_particle]

@@ -96,7 +96,7 @@ thinning <- 10
 burnin <- 4000
 # Set number of posterior samples for age-decomposition plots
 n_smpls <- 1000
-# Set number of simulations
+# Set number of samples for counterfactual simulations
 n_sims <- 500
 
 # Create output directory

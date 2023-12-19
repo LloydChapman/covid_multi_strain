@@ -16,13 +16,15 @@ run_fitting <- function(run,assumptions,data_raw,deterministic,Rt,pop,u,n_iters,
     # Construct particle filter
     filter <- covid_multi_strain_particle_filter(data_raw,pars,deterministic,Rt,initial_date)
     
+    # Set number of iterations at which to rerun particle filter on current accepted state
+    rerun_every <- if (deterministic) Inf else 100
+    
     # Run fitting
     results <- as.list(paste0("output/MCMCsamples",run,"_",seq_len(n_chains),".RDS"))
-    
     tstart <- Sys.time()
     mclapply(seq_len(n_chains), function(i){
         set.seed(i)
-        tmp <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning)
+        tmp <- fit_run(pars,filter,u,n_iters,deterministic,fixed_initial,Rt,thinning,rerun_every)
         saveRDS(tmp,results[[i]])
         plot_traces(tmp$pars,u)
         ggsave(paste0("output/par_traces",run,"_",i,".pdf"),width = 6,height = 6)

@@ -28,7 +28,7 @@ covid_multi_strain_particle_filter <- function(data, pars, deterministic = TRUE,
 }
 
 
-fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,fixed_initial = T,Rt = FALSE,thinning = 1){
+fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,fixed_initial = T,Rt = FALSE,thinning = 1,rerun_every = Inf){
     if (n_iters < 100){
         stop("n_iters must be at least 100")
     }
@@ -73,7 +73,7 @@ fit_run <- function(pars,filter,u,n_iters,deterministic = TRUE,fixed_initial = T
     tstart <- Sys.time()
     res <- mcmc(transform,filter,pars_init,priors,n_particles,n_iters,index(info,min_ages,Rt),
                 scaling_factor_start,proposal,pars_min,pars_max,iter0,discrete,
-                u,thinning)
+                u,thinning,rerun_every)
     tend <- Sys.time()
     print(tend - tstart)
     
